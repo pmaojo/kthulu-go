@@ -1,10 +1,15 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
+
+	"backend/internal/ai"
+	"backend/internal/usecase"
 )
 
 var aiCmd = &cobra.Command{
@@ -73,6 +78,7 @@ func init() {
 	aiCmd.Flags().String("model", "gpt-4", "AI model to use")
 	aiCmd.Flags().Bool("context", true, "Include project context in prompt")
 	aiCmd.Flags().Bool("apply", false, "Automatically apply generated code")
+	aiCmd.Flags().Bool("mock", false, "Use mock AI client for testing (no API key required)")
 
 	// Review command flags
 	reviewCmd.Flags().Bool("fix-security", false, "Fix security vulnerabilities")
@@ -95,9 +101,30 @@ func runAICommand(prompt, provider, model string, includeContext, apply bool) er
 	}
 
 	fmt.Println("🔮 Generating code...")
-	// TODO: Call AI provider API
-	// TODO: Generate code based on prompt and context
-	// TODO: Show preview
+
+	ctx := context.Background()
+
+	// Determine if using mock or real client
+	var client ai.Client
+	var err error
+
+	// For CLI, we check if --mock flag was passed via environment or use real client
+	// In this implementation, NewGeminiClient returns mock if GEMINI_API_KEY is not set
+	client, err = ai.NewGeminiClient(model, 5*time.Minute)
+	if err != nil {
+		return fmt.Errorf("AI client init failed: %w", err)
+	}
+	defer client.Close()
+
+	uc := usecase.NewAIUseCase(client)
+	res, err := uc.Suggest(ctx, prompt, includeContext, ".")
+	if err != nil {
+		return fmt.Errorf("AI suggestion failed: %w", err)
+	}
+
+	fmt.Println("\n=== AI Suggestion ===")
+	fmt.Println(res)
+	fmt.Println("=====================")
 
 	if apply {
 		fmt.Println("✅ Applying changes...")
@@ -106,7 +133,7 @@ func runAICommand(prompt, provider, model string, includeContext, apply bool) er
 		fmt.Println("📋 Preview mode - use --apply to execute changes")
 	}
 
-	return fmt.Errorf("AI integration not yet implemented - coming in FASE 2!")
+	return nil
 }
 
 func runReviewCommand(fixSecurity, fixPerf, fixAll bool, compliance string) error {

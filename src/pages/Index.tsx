@@ -11,6 +11,8 @@ import { ModuleCatalog } from "@/components/ModuleCatalog";
 import { ComponentScaffolder } from "@/components/ComponentScaffolder";
 import { TemplateManager } from "@/components/TemplateManager";
 import { AuditWorkbench } from "@/components/AuditWorkbench";
+import { AIAssistant } from "@/components/AIAssistant";
+import { AIChat } from "@/components/AIChat";
 import { Terminal as TerminalIcon, Layers, Code2, BarChart3, Eye, Zap, WifiOff, Wifi } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -67,6 +69,13 @@ const Index = () => {
 
       case "audit":
         return <AuditWorkbench />;
+
+      case "ai":
+        return (
+          <div className="flex-1 bg-kthulu-surface1 p-4">
+            <AIChat />
+          </div>
+        );
       
       case "settings":
         return (

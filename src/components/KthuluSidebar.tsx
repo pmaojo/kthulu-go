@@ -12,7 +12,8 @@ import {
   PackageSearch,
   Puzzle,
   FileStack,
-  ShieldCheck
+  ShieldCheck,
+  Sparkles
 } from "lucide-react";
 
 import {
@@ -42,6 +43,7 @@ const toolsItems = [
   { title: "Componentes", icon: Puzzle, id: "components" },
   { title: "Templates", icon: FileStack, id: "templates" },
   { title: "Auditoría", icon: ShieldCheck, id: "audit" },
+  { title: "IA Asistente", icon: Sparkles, id: "ai" },
   { title: "Generar", icon: Zap, id: "generate" },
   { title: "Vista Previa", icon: Eye, id: "preview" },
   { title: "Código", icon: Code, id: "code" },

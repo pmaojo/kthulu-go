@@ -182,3 +182,55 @@ export interface ApiError {
   error: string;
   details?: string;
 }
+
+export interface AISuggestionRequest {
+  prompt: string;
+  include_context?: boolean;
+  project_path?: string;
+  model?: string;
+  provider?: string;
+}
+
+export interface AISuggestionResponse {
+  result: string;
+  model?: string;
+  provider?: string;
+  timestamp?: string;
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+  };
+}
+
+export interface HealthResponse {
+  status: string;
+  timestamp: string;
+  version?: string;
+  uptime?: string;
+  checks?: Record<string, 'healthy' | 'degraded' | 'unhealthy'>;
+}
+
+export interface SecurityConfig {
+  rbac?: {
+    enabled: boolean;
+    default_deny_policy: boolean;
+    strict_mode: boolean;
+    contextual_security: boolean;
+    hierarchical_roles: boolean;
+    cache_enabled: boolean;
+    cache_ttl: string;
+    audit_enabled: boolean;
+  };
+  audit?: {
+    enabled: boolean;
+    log_level: string;
+    retention_days: number;
+    storage_type: string;
+  };
+  session?: {
+    secure_cookie: boolean;
+    same_site: string;
+    max_age?: number;
+  };
+}

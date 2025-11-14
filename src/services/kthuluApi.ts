@@ -14,6 +14,10 @@ import type {
   AuditRequest,
   AuditResult,
   ApiError,
+  AISuggestionRequest,
+  AISuggestionResponse,
+  HealthResponse,
+  SecurityConfig,
 } from '@/types/kthulu';
 
 const API_BASE_URL = 'http://localhost:8080';
@@ -39,7 +43,7 @@ export const kthuluApi = {
   // System
   async health() {
     const response = await fetch(`${API_BASE_URL}/health`);
-    return handleResponse<{ status: string; timestamp: string }>(response);
+    return handleResponse<HealthResponse>(response);
   },
 
   // Projects
@@ -203,6 +207,81 @@ export const kthuluApi = {
       body: JSON.stringify(request),
     });
     return handleResponse<AuditResult>(response);
+  },
+
+  // AI
+  async suggestAI(request: AISuggestionRequest) {
+    const response = await fetch(`${API_BASE_URL}/api/v1/ai/suggest`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
+    return handleResponse<AISuggestionResponse>(response);
+  },
+
+  async getAIProviders() {
+    const response = await fetch(`${API_BASE_URL}/api/v1/ai/providers`);
+    return handleResponse<{ providers: Array<{ id: string; name: string; enabled: boolean }> }>(response);
+  },
+
+  async setAIProvider(provider: string) {
+    const response = await fetch(`${API_BASE_URL}/api/v1/ai/provider`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider }),
+    });
+    return handleResponse<{ status: string }>(response);
+  },
+
+  // Components
+  async listComponents() {
+    const response = await fetch(`${API_BASE_URL}/api/v1/components`);
+    return handleResponse<Array<{ id: string; name: string; type: string }>>(response);
+  },
+
+  async generateComponent(request: ComponentRequest) {
+    const response = await fetch(`${API_BASE_URL}/api/v1/components`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
+    return handleResponse<{ status: string; componentId: string }>(response);
+  },
+
+  async getComponent(id: string) {
+    const response = await fetch(`${API_BASE_URL}/api/v1/components/${id}`);
+    return handleResponse<{ id: string; name: string; type: string; config: Record<string, unknown> }>(response);
+  },
+
+  async updateComponent(id: string, config: Record<string, unknown>) {
+    const response = await fetch(`${API_BASE_URL}/api/v1/components/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config),
+    });
+    return handleResponse<{ status: string }>(response);
+  },
+
+  async deleteComponent(id: string) {
+    const response = await fetch(`${API_BASE_URL}/api/v1/components/${id}`, {
+      method: 'DELETE',
+    });
+    return handleResponse<{ status: string }>(response);
+  },
+
+  // Security
+  async getSecurityConfig() {
+    const response = await fetch(`${API_BASE_URL}/api/v1/security/config`);
+    return handleResponse<SecurityConfig>(response);
+  },
+
+  async updateSecurityConfig(config: Partial<SecurityConfig>) {
+    const response = await fetch(`${API_BASE_URL}/api/v1/security/config`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config),
+    });
+    return handleResponse<SecurityConfig>(response);
   },
 };
 
