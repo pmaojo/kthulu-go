@@ -82,11 +82,24 @@ build-frontend:
 dev-frontend: ## Start frontend dev server (Terminal 1)
 	cd frontend && bun install && bun run dev
 
-dev-backend: ## Start backend server (Terminal 2)
+dev-backend: ## Start backend server (Terminal 2) - requires make dev-db running
 	cd backend/backend && go run ./cmd/service
+
+dev-db: ## Start PostgreSQL + Redis in Docker (Terminal 1 or background)
+	docker compose up db redis
 
 dev-setup: ## Install frontend dependencies (run once before dev-frontend)
 	cd frontend && bun install
+
+dev-local: ## Full local setup: Terminal 1: make dev-db, Terminal 2: make dev-backend, Terminal 3: make dev-frontend
+	@echo "🐙 Kthulu Local Development Setup"
+	@echo ""
+	@echo "Run these commands in separate terminals:"
+	@echo ""
+	@echo "Terminal 1: make dev-db"
+	@echo "Terminal 2: make dev-backend"
+	@echo "Terminal 3: make dev-frontend"
+	@echo ""
 
 # Clean build artifacts
 clean:
@@ -123,22 +136,22 @@ test-contracts: ## Run contract tests
 	@cd backend && make test-contracts
 
 test-all: test test-contracts test-integration test-e2e ## Run all types of tests
-        @echo "✅ All tests completed!"
+	@echo "✅ All tests completed!"
 
 # Kubernetes deployment
 IMAGE_REPOSITORY ?= ghcr.io/example/kthulu
 IMAGE_TAG ?= latest
 
 deploy-k8s: ## Deploy the Kthulu application to Kubernetes via kustomize
-        kustomize build kustomize/overlays/dev \
-                --load-restrictor LoadRestrictionsNone \
-                --enable-helm \
-                --helm-set image.repository=$(IMAGE_REPOSITORY) \
-                --helm-set image.tag=$(IMAGE_TAG) | kubectl apply -f -
+	kustomize build kustomize/overlays/dev \
+		--load-restrictor LoadRestrictionsNone \
+		--enable-helm \
+		--helm-set image.repository=$(IMAGE_REPOSITORY) \
+		--helm-set image.tag=$(IMAGE_TAG) | kubectl apply -f -
 
 # Help
 help: ## Show this help message
-        @echo "🐙 Kthulu - Full-Stack ERP Application"
+	@echo "🐙 Kthulu - Full-Stack ERP Application"
 	@echo ""
 	@echo "Available commands:"
 	@grep -E '^[[:alnum:]_-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
