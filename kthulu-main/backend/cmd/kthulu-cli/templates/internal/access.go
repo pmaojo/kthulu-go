@@ -1,0 +1,26 @@
+// @kthulu:module:access
+package modules
+
+import (
+	"go.uber.org/fx"
+
+	"backend/internal/infrastructure/db"
+	"backend/internal/repository"
+	"backend/internal/usecase"
+)
+
+// AccessModule provides access control functionality
+var AccessModule = fx.Options(
+	// Repositories (PermissionRepository is specific to this module)
+	fx.Provide(
+		fx.Annotate(
+			db.NewPermissionRepository,
+			fx.As(new(repository.PermissionRepository)),
+		),
+	),
+
+	// Use cases
+	fx.Provide(
+		usecase.NewAccessUseCase,
+	),
+)

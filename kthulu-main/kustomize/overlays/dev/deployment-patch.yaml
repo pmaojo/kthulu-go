@@ -1,0 +1,14 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kthulu
+spec:
+  template:
+    spec:
+      containers:
+      - name: kthulu
+        env:
+        - name: ISSUER
+          value: https://dev.kthulu.local
+        - name: DATABASE_URL
+          value: postgres://devuser:devpass@dev-db:5432/kthulu

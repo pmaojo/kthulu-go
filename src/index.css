@@ -1,0 +1,160 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Kthulu UI - Brutalista Theme */
+    --background: 220 15% 8%;
+    --foreground: 120 100% 90%;
+
+    --card: 220 13% 12%;
+    --card-foreground: 120 100% 90%;
+
+    --popover: 220 13% 10%;
+    --popover-foreground: 120 100% 90%;
+
+    /* Neon Primary - Electric Green */
+    --primary: 120 100% 50%;
+    --primary-foreground: 220 15% 8%;
+
+    /* Neon Secondary - Magenta */
+    --secondary: 300 100% 60%;
+    --secondary-foreground: 220 15% 8%;
+
+    /* Muted Dark */
+    --muted: 220 13% 15%;
+    --muted-foreground: 120 30% 60%;
+
+    /* Neon Accent - Orange */
+    --accent: 30 100% 60%;
+    --accent-foreground: 220 15% 8%;
+
+    --destructive: 0 100% 60%;
+    --destructive-foreground: 120 100% 90%;
+
+    --border: 220 13% 20%;
+    --input: 220 13% 15%;
+    --ring: 120 100% 50%;
+
+    --radius: 0.2rem;
+
+    /* Sidebar Dark Theme */
+    --sidebar-background: 220 15% 6%;
+    --sidebar-foreground: 120 100% 85%;
+    --sidebar-primary: 120 100% 50%;
+    --sidebar-primary-foreground: 220 15% 8%;
+    --sidebar-accent: 220 13% 18%;
+    --sidebar-accent-foreground: 120 100% 85%;
+    --sidebar-border: 220 13% 25%;
+    --sidebar-ring: 120 100% 50%;
+
+    /* Custom Kthulu Tokens */
+    --kthulu-neon-cyan: 180 100% 50%;
+    --kthulu-neon-purple: 270 100% 60%;
+    --kthulu-surface-1: 220 13% 10%;
+    --kthulu-surface-2: 220 13% 14%;
+    --kthulu-surface-3: 220 13% 18%;
+    
+    /* Gradients */
+    --gradient-neon: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+    --gradient-dark: linear-gradient(180deg, hsl(var(--kthulu-surface-1)), hsl(var(--kthulu-surface-2)));
+    --gradient-cyber: linear-gradient(45deg, hsl(var(--kthulu-neon-cyan)), hsl(var(--kthulu-neon-purple)));
+    
+    /* Shadows & Effects */
+    --shadow-neon: 0 0 20px hsl(var(--primary) / 0.5);
+    --shadow-brutal: 4px 4px 0px hsl(var(--primary));
+    --transition-cyber: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark {
+    /* Dark mode inherits the same brutal aesthetic */
+    --background: 220 15% 4%;
+    --foreground: 120 100% 95%;
+    --card: 220 13% 8%;
+    --card-foreground: 120 100% 95%;
+    --popover: 220 13% 6%;
+    --popover-foreground: 120 100% 95%;
+    --primary: 120 100% 60%;
+    --primary-foreground: 220 15% 4%;
+    --secondary: 300 100% 70%;
+    --secondary-foreground: 220 15% 4%;
+    --muted: 220 13% 10%;
+    --muted-foreground: 120 30% 70%;
+    --accent: 30 100% 70%;
+    --accent-foreground: 220 15% 4%;
+    --destructive: 0 100% 70%;
+    --destructive-foreground: 120 100% 95%;
+    --border: 220 13% 15%;
+    --input: 220 13% 10%;
+    --ring: 120 100% 60%;
+    --sidebar-background: 220 15% 2%;
+    --sidebar-foreground: 120 100% 90%;
+    --sidebar-primary: 120 100% 60%;
+    --sidebar-primary-foreground: 220 15% 4%;
+    --sidebar-accent: 220 13% 12%;
+    --sidebar-accent-foreground: 120 100% 90%;
+    --sidebar-border: 220 13% 20%;
+    --sidebar-ring: 120 100% 60%;
+    
+    /* Enhanced effects for dark mode */
+    --shadow-neon: 0 0 30px hsl(var(--primary) / 0.7);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-mono;
+  }
+  
+  /* Custom Kthulu classes */
+  .kthulu-glow {
+    box-shadow: var(--shadow-neon);
+  }
+  
+  .kthulu-brutal {
+    box-shadow: var(--shadow-brutal);
+  }
+  
+  .kthulu-surface {
+    background: hsl(var(--kthulu-surface-1));
+  }
+  
+  .kthulu-gradient-neon {
+    background: var(--gradient-neon);
+  }
+  
+  .kthulu-gradient-cyber {
+    background: var(--gradient-cyber);
+  }
+  
+  .kthulu-transition {
+    transition: var(--transition-cyber);
+  }
+  
+  /* Scrollbars */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--kthulu-surface-1));
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary));
+    border-radius: 0;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--accent));
+  }
+}

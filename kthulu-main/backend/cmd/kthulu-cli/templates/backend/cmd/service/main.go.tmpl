@@ -1,0 +1,18 @@
+package main
+
+import (
+	"context"
+
+	"go.uber.org/fx"
+)
+
+func main() {
+	fx.New(
+		fx.Invoke(func(lc fx.Lifecycle) {
+			lc.Append(fx.Hook{
+				OnStart: func(ctx context.Context) error { return nil },
+				OnStop:  func(ctx context.Context) error { return nil },
+			})
+		}),
+	).Run()
+}

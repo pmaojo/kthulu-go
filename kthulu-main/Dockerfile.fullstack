@@ -1,0 +1,67 @@
+# @kthulu:core
+# Multi-stage Dockerfile for building a single binary with embedded frontend
+
+# Stage 1: Build frontend
+FROM node:18-alpine AS frontend-builder
+
+WORKDIR /app/frontend
+
+# Copy package files
+COPY frontend/package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production=false
+
+# Copy frontend source
+COPY frontend/ ./
+
+# Build frontend (outputs to ../backend/public)
+RUN npm run build
+
+# Stage 2: Build backend
+FROM golang:1.22-alpine AS backend-builder
+
+# Install build dependencies
+RUN apk add --no-cache git ca-certificates tzdata
+
+WORKDIR /app
+
+# Copy go mod files
+COPY backend/go.mod backend/go.sum ./
+
+# Download dependencies
+RUN go mod download
+
+# Copy backend source
+COPY backend/ ./
+
+# Copy built frontend from previous stage
+COPY --from=frontend-builder /app/backend/public ./public
+
+# Build the binary
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -ldflags='-w -s -extldflags "-static"' \
+    -a -installsuffix cgo \
+    -o kthulu-app \
+    ./cmd/service
+
+# Stage 3: Final minimal image
+FROM scratch
+
+# Copy timezone data and certificates
+COPY --from=backend-builder /usr/share/zoneinfo /usr/share/zoneinfo
+COPY --from=backend-builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+# Copy the binary and static files
+COPY --from=backend-builder /app/kthulu-app /kthulu-app
+COPY --from=backend-builder /app/public /public
+
+# Expose port
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD ["/kthulu-app", "-health-check"] || exit 1
+
+# Run the binary
+ENTRYPOINT ["/kthulu-app"]

@@ -1,0 +1,15 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/service cmd/service/main.go"
+  bin = "./tmp/service"
+  include_ext = ["go", "tpl", "tmpl", "html", "yaml", "yml"]
+  exclude_dir = ["tmp", "vendor"]
+
+[log]
+  time = true
+
+[watch]
+  dirs = ["."]
+  exclude_dir = ["tmp", "vendor"]
