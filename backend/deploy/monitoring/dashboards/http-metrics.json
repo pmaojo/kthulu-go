@@ -1,0 +1,27 @@
+{
+  "uid": "http-metrics",
+  "title": "HTTP Metrics",
+  "schemaVersion": 38,
+  "version": 1,
+  "time": {
+    "from": "now-5m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "HTTP Requests",
+      "id": 1,
+      "targets": [
+        {
+          "expr": "rate(http_requests_total[1m])",
+          "legendFormat": "{{method}} {{code}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PROMETHEUS_DS"
+          }
+        }
+      ]
+    }
+  ]
+}

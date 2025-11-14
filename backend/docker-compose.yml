@@ -1,0 +1,46 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: app
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  api:
+    image: golang:1.21
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    environment:
+      HTTP_ADDR: ":${API_PORT}"
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@db:${DB_PORT}/app?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      SERVICE_VERSION: ${SERVICE_VERSION:-dev}
+    depends_on:
+      - db
+    command: go run ./cmd/service
+    ports:
+      - "${API_PORT}:${API_PORT}"
+
+  web:
+    image: node:18
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    environment:
+      VITE_API_URL: http://api:${API_PORT}
+    command: npm run dev
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORT}:5173"
+
+volumes:
+  db_data:

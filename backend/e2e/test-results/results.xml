@@ -1,0 +1,383 @@
+<testsuites id="" name="" tests="9" failures="9" skipped="0" errors="0" time="30.456179">
+<testsuite name="auth.spec.ts" timestamp="2025-08-04T17:01:09.683Z" hostname="chromium" tests="9" failures="9" skipped="0" time="111.208" errors="0">
+<testcase name="Authentication Flow › should register a new user successfully" classname="auth.spec.ts" time="13.574">
+<failure message="auth.spec.ts:14:7 should register a new user successfully" type="FAILURE">
+<![CDATA[  [chromium] › auth.spec.ts:14:7 › Authentication Flow › should register a new user successfully ───
+
+    TimeoutError: page.fill: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="email-input"]')
+
+
+       at ../utils/test-helpers.ts:77
+
+      75 |   async fillForm(formData: Record<string, string>): Promise<void> {
+      76 |     for (const [field, value] of Object.entries(formData)) {
+    > 77 |       await this.page.fill(`[data-testid="${field}-input"]`, value);
+         |                       ^
+      78 |     }
+      79 |   }
+      80 |
+        at TestHelpers.fillForm (/Users/pelayo/projects/kthulu/e2e/utils/test-helpers.ts:77:23)
+        at /Users/pelayo/projects/kthulu/e2e/tests/auth.spec.ts:18:19
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../test-results/auth-Authentication-Flow-s-53dd2-ter-a-new-user-successfully-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../test-results/auth-Authentication-Flow-s-53dd2-ter-a-new-user-successfully-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../test-results/auth-Authentication-Flow-s-53dd2-ter-a-new-user-successfully-chromium/error-context.md
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|auth-Authentication-Flow-s-53dd2-ter-a-new-user-successfully-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|auth-Authentication-Flow-s-53dd2-ter-a-new-user-successfully-chromium/video.webm]]
+
+[[ATTACHMENT|auth-Authentication-Flow-s-53dd2-ter-a-new-user-successfully-chromium/error-context.md]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Authentication Flow › should login with valid credentials" classname="auth.spec.ts" time="13.37">
+<failure message="auth.spec.ts:33:7 should login with valid credentials" type="FAILURE">
+<![CDATA[  [chromium] › auth.spec.ts:33:7 › Authentication Flow › should login with valid credentials ───────
+
+    TimeoutError: page.fill: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="email-input"]')
+
+
+       at ../utils/test-helpers.ts:77
+
+      75 |   async fillForm(formData: Record<string, string>): Promise<void> {
+      76 |     for (const [field, value] of Object.entries(formData)) {
+    > 77 |       await this.page.fill(`[data-testid="${field}-input"]`, value);
+         |                       ^
+      78 |     }
+      79 |   }
+      80 |
+        at TestHelpers.fillForm (/Users/pelayo/projects/kthulu/e2e/utils/test-helpers.ts:77:23)
+        at /Users/pelayo/projects/kthulu/e2e/tests/auth.spec.ts:36:19
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../test-results/auth-Authentication-Flow-should-login-with-valid-credentials-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../test-results/auth-Authentication-Flow-should-login-with-valid-credentials-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../test-results/auth-Authentication-Flow-should-login-with-valid-credentials-chromium/error-context.md
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|auth-Authentication-Flow-should-login-with-valid-credentials-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|auth-Authentication-Flow-should-login-with-valid-credentials-chromium/video.webm]]
+
+[[ATTACHMENT|auth-Authentication-Flow-should-login-with-valid-credentials-chromium/error-context.md]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Authentication Flow › should show error for invalid credentials" classname="auth.spec.ts" time="13.338">
+<failure message="auth.spec.ts:51:7 should show error for invalid credentials" type="FAILURE">
+<![CDATA[  [chromium] › auth.spec.ts:51:7 › Authentication Flow › should show error for invalid credentials ─
+
+    TimeoutError: page.fill: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="email-input"]')
+
+
+       at ../utils/test-helpers.ts:77
+
+      75 |   async fillForm(formData: Record<string, string>): Promise<void> {
+      76 |     for (const [field, value] of Object.entries(formData)) {
+    > 77 |       await this.page.fill(`[data-testid="${field}-input"]`, value);
+         |                       ^
+      78 |     }
+      79 |   }
+      80 |
+        at TestHelpers.fillForm (/Users/pelayo/projects/kthulu/e2e/utils/test-helpers.ts:77:23)
+        at /Users/pelayo/projects/kthulu/e2e/tests/auth.spec.ts:54:19
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../test-results/auth-Authentication-Flow-s-c1b41-ror-for-invalid-credentials-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../test-results/auth-Authentication-Flow-s-c1b41-ror-for-invalid-credentials-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../test-results/auth-Authentication-Flow-s-c1b41-ror-for-invalid-credentials-chromium/error-context.md
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|auth-Authentication-Flow-s-c1b41-ror-for-invalid-credentials-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|auth-Authentication-Flow-s-c1b41-ror-for-invalid-credentials-chromium/video.webm]]
+
+[[ATTACHMENT|auth-Authentication-Flow-s-c1b41-ror-for-invalid-credentials-chromium/error-context.md]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Authentication Flow › should logout successfully" classname="auth.spec.ts" time="13.573">
+<failure message="auth.spec.ts:68:7 should logout successfully" type="FAILURE">
+<![CDATA[  [chromium] › auth.spec.ts:68:7 › Authentication Flow › should logout successfully ────────────────
+
+    TimeoutError: page.fill: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="email-input"]')
+
+
+       at ../utils/test-helpers.ts:26
+
+      24 |     await this.page.goto('/login');
+      25 |     
+    > 26 |     await this.page.fill('[data-testid="email-input"]', email);
+         |                     ^
+      27 |     await this.page.fill('[data-testid="password-input"]', password);
+      28 |     await this.page.click('[data-testid="login-button"]');
+      29 |     
+        at TestHelpers.login (/Users/pelayo/projects/kthulu/e2e/utils/test-helpers.ts:26:21)
+        at TestHelpers.loginAsAdmin (/Users/pelayo/projects/kthulu/e2e/utils/test-helpers.ts:12:5)
+        at /Users/pelayo/projects/kthulu/e2e/tests/auth.spec.ts:70:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../test-results/auth-Authentication-Flow-should-logout-successfully-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../test-results/auth-Authentication-Flow-should-logout-successfully-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../test-results/auth-Authentication-Flow-should-logout-successfully-chromium/error-context.md
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|auth-Authentication-Flow-should-logout-successfully-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|auth-Authentication-Flow-should-logout-successfully-chromium/video.webm]]
+
+[[ATTACHMENT|auth-Authentication-Flow-should-logout-successfully-chromium/error-context.md]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Authentication Flow › should handle password reset flow" classname="auth.spec.ts" time="13.593">
+<failure message="auth.spec.ts:86:7 should handle password reset flow" type="FAILURE">
+<![CDATA[  [chromium] › auth.spec.ts:86:7 › Authentication Flow › should handle password reset flow ─────────
+
+    TimeoutError: page.click: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="forgot-password-link"]')
+
+
+      88 |     
+      89 |     // Click forgot password link
+    > 90 |     await page.click('[data-testid="forgot-password-link"]');
+         |                ^
+      91 |     await helpers.expectToBeOnPage('/forgot-password');
+      92 |     
+      93 |     // Enter email
+        at /Users/pelayo/projects/kthulu/e2e/tests/auth.spec.ts:90:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../test-results/auth-Authentication-Flow-should-handle-password-reset-flow-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../test-results/auth-Authentication-Flow-should-handle-password-reset-flow-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../test-results/auth-Authentication-Flow-should-handle-password-reset-flow-chromium/error-context.md
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|auth-Authentication-Flow-should-handle-password-reset-flow-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|auth-Authentication-Flow-should-handle-password-reset-flow-chromium/video.webm]]
+
+[[ATTACHMENT|auth-Authentication-Flow-should-handle-password-reset-flow-chromium/error-context.md]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Authentication Flow › should validate form fields" classname="auth.spec.ts" time="10.951">
+<failure message="auth.spec.ts:104:7 should validate form fields" type="FAILURE">
+<![CDATA[  [chromium] › auth.spec.ts:104:7 › Authentication Flow › should validate form fields ──────────────
+
+    TimeoutError: page.click: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="register-form"] [type="submit"]')
+
+
+       at ../utils/test-helpers.ts:82
+
+      80 |
+      81 |   async submitForm(formTestId = 'form'): Promise<void> {
+    > 82 |     await this.page.click(`[data-testid="${formTestId}"] [type="submit"]`);
+         |                     ^
+      83 |   }
+      84 |
+      85 |   // Wait helpers
+        at TestHelpers.submitForm (/Users/pelayo/projects/kthulu/e2e/utils/test-helpers.ts:82:21)
+        at /Users/pelayo/projects/kthulu/e2e/tests/auth.spec.ts:108:19
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../test-results/auth-Authentication-Flow-should-validate-form-fields-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../test-results/auth-Authentication-Flow-should-validate-form-fields-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../test-results/auth-Authentication-Flow-should-validate-form-fields-chromium/error-context.md
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|auth-Authentication-Flow-should-validate-form-fields-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|auth-Authentication-Flow-should-validate-form-fields-chromium/video.webm]]
+
+[[ATTACHMENT|auth-Authentication-Flow-should-validate-form-fields-chromium/error-context.md]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Authentication Flow › should persist authentication across page reloads" classname="auth.spec.ts" time="11.041">
+<failure message="auth.spec.ts:135:7 should persist authentication across page reloads" type="FAILURE">
+<![CDATA[  [chromium] › auth.spec.ts:135:7 › Authentication Flow › should persist authentication across page reloads 
+
+    TimeoutError: page.fill: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="email-input"]')
+
+
+       at ../utils/test-helpers.ts:26
+
+      24 |     await this.page.goto('/login');
+      25 |     
+    > 26 |     await this.page.fill('[data-testid="email-input"]', email);
+         |                     ^
+      27 |     await this.page.fill('[data-testid="password-input"]', password);
+      28 |     await this.page.click('[data-testid="login-button"]');
+      29 |     
+        at TestHelpers.login (/Users/pelayo/projects/kthulu/e2e/utils/test-helpers.ts:26:21)
+        at TestHelpers.loginAsAdmin (/Users/pelayo/projects/kthulu/e2e/utils/test-helpers.ts:12:5)
+        at /Users/pelayo/projects/kthulu/e2e/tests/auth.spec.ts:137:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../test-results/auth-Authentication-Flow-s-1627b-ication-across-page-reloads-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../test-results/auth-Authentication-Flow-s-1627b-ication-across-page-reloads-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../test-results/auth-Authentication-Flow-s-1627b-ication-across-page-reloads-chromium/error-context.md
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|auth-Authentication-Flow-s-1627b-ication-across-page-reloads-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|auth-Authentication-Flow-s-1627b-ication-across-page-reloads-chromium/video.webm]]
+
+[[ATTACHMENT|auth-Authentication-Flow-s-1627b-ication-across-page-reloads-chromium/error-context.md]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Authentication Flow › should handle token expiration gracefully" classname="auth.spec.ts" time="10.717">
+<failure message="auth.spec.ts:148:7 should handle token expiration gracefully" type="FAILURE">
+<![CDATA[  [chromium] › auth.spec.ts:148:7 › Authentication Flow › should handle token expiration gracefully 
+
+    TimeoutError: page.fill: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="email-input"]')
+
+
+       at ../utils/test-helpers.ts:26
+
+      24 |     await this.page.goto('/login');
+      25 |     
+    > 26 |     await this.page.fill('[data-testid="email-input"]', email);
+         |                     ^
+      27 |     await this.page.fill('[data-testid="password-input"]', password);
+      28 |     await this.page.click('[data-testid="login-button"]');
+      29 |     
+        at TestHelpers.login (/Users/pelayo/projects/kthulu/e2e/utils/test-helpers.ts:26:21)
+        at TestHelpers.loginAsAdmin (/Users/pelayo/projects/kthulu/e2e/utils/test-helpers.ts:12:5)
+        at /Users/pelayo/projects/kthulu/e2e/tests/auth.spec.ts:150:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../test-results/auth-Authentication-Flow-s-069fe-token-expiration-gracefully-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../test-results/auth-Authentication-Flow-s-069fe-token-expiration-gracefully-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../test-results/auth-Authentication-Flow-s-069fe-token-expiration-gracefully-chromium/error-context.md
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|auth-Authentication-Flow-s-069fe-token-expiration-gracefully-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|auth-Authentication-Flow-s-069fe-token-expiration-gracefully-chromium/video.webm]]
+
+[[ATTACHMENT|auth-Authentication-Flow-s-069fe-token-expiration-gracefully-chromium/error-context.md]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Authentication Flow › should handle concurrent login sessions" classname="auth.spec.ts" time="11.051">
+<failure message="auth.spec.ts:167:7 should handle concurrent login sessions" type="FAILURE">
+<![CDATA[  [chromium] › auth.spec.ts:167:7 › Authentication Flow › should handle concurrent login sessions ──
+
+    TimeoutError: page.fill: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="email-input"]')
+
+
+       at ../utils/test-helpers.ts:26
+
+      24 |     await this.page.goto('/login');
+      25 |     
+    > 26 |     await this.page.fill('[data-testid="email-input"]', email);
+         |                     ^
+      27 |     await this.page.fill('[data-testid="password-input"]', password);
+      28 |     await this.page.click('[data-testid="login-button"]');
+      29 |     
+        at TestHelpers.login (/Users/pelayo/projects/kthulu/e2e/utils/test-helpers.ts:26:21)
+        at TestHelpers.loginAsAdmin (/Users/pelayo/projects/kthulu/e2e/utils/test-helpers.ts:12:5)
+        at /Users/pelayo/projects/kthulu/e2e/tests/auth.spec.ts:169:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../test-results/auth-Authentication-Flow-s-666a7-e-concurrent-login-sessions-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../test-results/auth-Authentication-Flow-s-666a7-e-concurrent-login-sessions-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../test-results/auth-Authentication-Flow-s-666a7-e-concurrent-login-sessions-chromium/error-context.md
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|auth-Authentication-Flow-s-666a7-e-concurrent-login-sessions-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|auth-Authentication-Flow-s-666a7-e-concurrent-login-sessions-chromium/video.webm]]
+
+[[ATTACHMENT|auth-Authentication-Flow-s-666a7-e-concurrent-login-sessions-chromium/error-context.md]]
+]]>
+</system-out>
+</testcase>
+</testsuite>
+</testsuites>

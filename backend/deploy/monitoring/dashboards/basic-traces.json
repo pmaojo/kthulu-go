@@ -1,0 +1,22 @@
+{
+  "uid": "basic-traces",
+  "title": "Basic Traces",
+  "schemaVersion": 38,
+  "version": 1,
+  "panels": [
+    {
+      "type": "traces",
+      "title": "Recent Traces",
+      "id": 1,
+      "datasource": {
+        "type": "jaeger",
+        "uid": "JAEGER_DS"
+      },
+      "targets": [
+        {
+          "query": ""
+        }
+      ]
+    }
+  ]
+}

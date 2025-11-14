@@ -1,0 +1,23 @@
+{
+  "audit": {
+    "enabled": true,
+    "log_level": "INFO",
+    "retention_days": 90,
+    "storage_type": "database"
+  },
+  "rbac": {
+    "audit_enabled": true,
+    "cache_enabled": true,
+    "cache_ttl": "5m",
+    "contextual_security": true,
+    "default_deny_policy": true,
+    "enabled": true,
+    "hierarchical_roles": true,
+    "strict_mode": true
+  },
+  "session": {
+    "same_site": "strict",
+    "secure_cookie": true,
+    "timeout": "30m"
+  }
+}

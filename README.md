@@ -1,73 +1,141 @@
-# Welcome to your Lovable project
+# Kthulu Forge — Full-Stack ERP Platform
 
-## Project info
+A monolithic full-stack application combining a **Go backend** and **React frontend** with a **Bun-powered** build toolchain.
 
-**URL**: https://lovable.dev/projects/5affd530-e7cf-45db-bc68-88219326fa69
+## Project Structure
 
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/5affd530-e7cf-45db-bc68-88219326fa69) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+kthulu-forge/
+├── backend/              # Go backend (REST API, database, business logic)
+├── frontend/             # React TypeScript frontend (Vite, Bun, Tailwind)
+├── docker-compose.yml    # Local development stack (Bun, Go, PostgreSQL)
+├── Dockerfile.fullstack  # Multi-stage build for production binary
+└── README.md            # This file
 ```
 
-**Edit a file directly in GitHub**
+## Getting Started
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Prerequisites
 
-**Use GitHub Codespaces**
+- **Docker** & **Docker Compose** (for full-stack development)
+- **Bun** (for local frontend development) — [install](https://bun.sh)
+- **Go 1.22+** (for backend development) — [install](https://golang.org)
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### Quick Start (Docker)
 
-## What technologies are used for this project?
+Start the entire stack with one command:
 
-This project is built with:
+```sh
+# From repository root
+docker compose up --build
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+This runs:
+- PostgreSQL database on `${DB_PORT}`
+- Go API server on `${API_PORT}`
+- Vite dev server (via Bun) on `${WEB_PORT}` (default 5173)
 
-## How can I deploy this project?
+See [DOCKER.md](./DOCKER.md) for more options.
 
-Simply open [Lovable](https://lovable.dev/projects/5affd530-e7cf-45db-bc68-88219326fa69) and click on Share -> Publish.
+### Local Development
 
-## Can I connect a custom domain to my Lovable project?
+#### Frontend (Bun + Vite + React)
 
-Yes, you can!
+```sh
+cd frontend
+bun install          # Install dependencies
+bun run dev          # Start dev server (hot reload)
+bun run build        # Build for production
+bun test             # Run tests
+bun run lint         # Lint code
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+#### Backend (Go)
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+```sh
+cd backend/backend
+go run ./cmd/service  # Run API server
+go test ./...        # Run tests
+```
+
+#### Database
+
+```sh
+cd backend
+make migrate-up       # Apply migrations
+make db-ping         # Test connection
+```
+
+## Technology Stack
+
+### Frontend
+- **Vite** — Fast build tool
+- **React 18** — UI library
+- **TypeScript** — Type safety
+- **Tailwind CSS** — Styling
+- **shadcn/ui** — Component library
+- **React Router** — Routing
+- **Bun** — Runtime & package manager
+
+### Backend
+- **Go 1.22** — Server language
+- **PostgreSQL** — Database
+- **Chi** — HTTP router
+- **GORM** — ORM
+- **JWT** — Authentication
+
+### DevOps
+- **Docker** — Containerization
+- **Docker Compose** — Local orchestration
+- **Kustomize** — Kubernetes configs
+- **Playwright** — E2E testing
+
+## Development Commands
+
+### From Project Root
+
+```sh
+# Full stack (Docker)
+docker compose up --build
+
+# Build production binary with embedded frontend
+docker build -f Dockerfile.fullstack -t kthulu:latest .
+```
+
+### From Backend Directory
+
+```sh
+cd backend/backend
+make dev               # Start full stack via Docker Compose
+make test              # Run backend + frontend tests
+make build-backend     # Build Go binary
+make migrate-up        # Apply database migrations
+make lint              # Lint code
+```
+
+### From Frontend Directory
+
+```sh
+cd frontend
+bun install            # Install dependencies
+bun run dev            # Start Vite dev server
+bun run build          # Build for production
+bun test               # Run Vitest tests
+bun run lint           # Lint TypeScript
+```
+
+## API Documentation
+
+Once the server is running:
+
+```
+http://localhost:${API_PORT}/docs
+```
+
+## Contributing
+
+See [backend/CONTRIBUTING.md](./backend/CONTRIBUTING.md) for guidelines.
+
+## License
+
+MIT — see [backend/LICENSE](./backend/LICENSE)

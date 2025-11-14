@@ -1,7 +1,0 @@
-apiVersion: security.istio.io/v1beta1
-kind: PeerAuthentication
-metadata:
-  name: {{ .Chart.Name }}-mtls
-spec:
-  mtls:
-    mode: STRICT

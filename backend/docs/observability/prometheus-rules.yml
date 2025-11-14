@@ -1,0 +1,10 @@
+groups:
+  - name: kthulu
+    rules:
+      - alert: HighErrorRate
+        expr: rate(http_server_requests_total{status="500"}[5m]) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: High error rate detected
