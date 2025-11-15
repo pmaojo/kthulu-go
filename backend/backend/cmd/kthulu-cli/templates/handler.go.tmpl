@@ -1,8 +1,75 @@
 package {{.Package}}
 
-import "net/http"
+import (
+        "encoding/json"
+        "errors"
+        "net/http"
 
-// {{.HandlerName}} handles HTTP requests.
-func {{.HandlerName}}(w http.ResponseWriter, r *http.Request) {
+        "github.com/go-chi/chi/v5"
+)
+
+// {{.HandlerName}}Handler exposes HTTP endpoints backed by the domain port.
+type {{.HandlerName}}Handler struct {
+        svc {{.ServiceInterface}}
 }
 
+// New{{.HandlerName}} wires the handler with its dependency so Fx can inject it.
+func New{{.HandlerName}}(svc {{.ServiceInterface}}) *{{.HandlerName}}Handler {
+        return &{{.HandlerName}}Handler{svc: svc}
+}
+
+// RegisterRoutes keeps routing separate from business logic.
+func (h *{{.HandlerName}}Handler) RegisterRoutes(router chi.Router) {
+        router.Method(http.MethodPost, "{{.Route}}", http.HandlerFunc(h.Handle))
+}
+
+// {{.HandlerName}}Request represents the transport payload.
+type {{.HandlerName}}Request struct {
+        Payload string `json:"payload"`
+}
+
+// {{.HandlerName}}Response is serialized back to the caller.
+type {{.HandlerName}}Response struct {
+        Result string `json:"result"`
+}
+
+func decode{{.HandlerName}}Request(r *http.Request) (*{{.HandlerName}}Request, error) {
+        if r.Body == nil {
+                return nil, errors.New("request body required")
+        }
+        defer r.Body.Close()
+
+        var req {{.HandlerName}}Request
+        if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+                return nil, err
+        }
+        return &req, nil
+}
+
+func encode{{.HandlerName}}Response(w http.ResponseWriter, resp *{{.HandlerName}}Response) {
+        if resp == nil {
+                w.WriteHeader(http.StatusNoContent)
+                return
+        }
+        w.Header().Set("Content-Type", "application/json")
+        if err := json.NewEncoder(w).Encode(resp); err != nil {
+                http.Error(w, err.Error(), http.StatusInternalServerError)
+        }
+}
+
+// Handle converts HTTP state into DTOs and delegates to the injected port.
+func (h *{{.HandlerName}}Handler) Handle(w http.ResponseWriter, r *http.Request) {
+        req, err := decode{{.HandlerName}}Request(r)
+        if err != nil {
+                http.Error(w, err.Error(), http.StatusBadRequest)
+                return
+        }
+
+        resp, err := h.svc.{{.ServiceMethod}}(r.Context(), req)
+        if err != nil {
+                http.Error(w, err.Error(), http.StatusInternalServerError)
+                return
+        }
+
+        encode{{.HandlerName}}Response(w, resp)
+}
