@@ -62,8 +62,10 @@ go test ./...        # Run tests
 
 #### Database
 
+Run these helpers from the repository root—the commands are provided by the
+top-level `Makefile`, so you won't find a separate one under `backend/`.
+
 ```sh
-cd backend
 make migrate-up       # Apply migrations
 make db-ping         # Test connection
 ```
