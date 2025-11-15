@@ -1,4 +1,5 @@
 # Kthulu Forge — AI-assisted Software Foundry
+<img width="1280" height="776" alt="17632490833207369194639774853762" src="https://github.com/user-attachments/assets/231fe84d-9dab-4485-8733-4791168ad931" />
 
 Kthulu Forge packages an AI-ready **Go backend** with a **React/Bun frontend** to help teams plan, model, and generate modular software projects. The platform exposes two primary interfaces:
 
