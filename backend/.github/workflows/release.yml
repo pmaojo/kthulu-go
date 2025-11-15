@@ -1,0 +1,54 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  discussions: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/backend/go.mod
+
+      - name: Run tests
+        working-directory: backend/backend
+        run: go test ./...
+
+      - name: Import GPG signing key
+        if: ${{ secrets.GORELEASER_GPG_PRIVATE_KEY != '' }}
+        run: |
+          echo "${{ secrets.GORELEASER_GPG_PRIVATE_KEY }}" | gpg --batch --import
+
+      - name: Configure cosign key (optional)
+        if: ${{ secrets.COSIGN_PRIVATE_KEY != '' }}
+        run: |
+          echo "${{ secrets.COSIGN_PRIVATE_KEY }}" > cosign.key
+          echo "COSIGN_PRIVATE_KEY_FILE=${GITHUB_WORKSPACE}/cosign.key" >> "$GITHUB_ENV"
+
+      - name: Release
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --clean
+          workdir: backend/backend
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GORELEASER_GPG_PASSPHRASE: ${{ secrets.GORELEASER_GPG_PASSPHRASE }}
+          GORELEASER_GPG_PRIVATE_KEY: ${{ secrets.GORELEASER_GPG_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+          COSIGN_PRIVATE_KEY_FILE: ${{ env.COSIGN_PRIVATE_KEY_FILE }}
