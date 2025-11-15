@@ -74,7 +74,7 @@ go run ./cmd/service  # Run API server
 go test ./...        # Run tests
 ```
 
-#### CLI installation
+#### CLI installation & releases
 
 You can install the `kthulu-cli` binary in two ways:
 
@@ -82,6 +82,8 @@ You can install the `kthulu-cli` binary in two ways:
 2. **`go install` (cuando el módulo tenga ruta canónica).** Ejecute `go install github.com/<org>/kthulu-go/backend/cmd/kthulu-cli@latest` para compilar y situar la herramienta en su `$GOBIN`.
 
 Ambos métodos respetan la inyección de metadatos de versión y build realizados durante el proceso de release.
+
+¿Necesita ejecutar su **primer release automático**? Consulte [backend/docs/releases.md](backend/docs/releases.md) para ver los pasos de preparación, los secretos requeridos y cómo se conecta GoReleaser con el workflow de GitHub Actions que publica los binarios multiplataforma.
 
 #### Database
 
