@@ -28,3 +28,7 @@ kthulu-cli make:handler health
 kthulu-cli make:service-test account
 ```
 
+El generador `make:handler` ahora crea un struct que recibe su puerto por constructor,
+expone `RegisterRoutes(chi.Router)` para mantener el ruteo fuera de la lógica y añade un
+`_handler_test.go` basado en `httptest` para demostrar la delegación al servicio inyectado.
+
