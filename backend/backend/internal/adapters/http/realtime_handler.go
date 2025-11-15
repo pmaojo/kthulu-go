@@ -3,7 +3,7 @@ package adapterhttp
 import (
 	"github.com/go-chi/chi/v5"
 
-	adapterrealtime "backend/internal/adapters/realtime"
+	adapterrealtime "github.com/kthulu/kthulu-go/backend/internal/adapters/realtime"
 )
 
 // RealtimeHandler registers WebSocket routes.

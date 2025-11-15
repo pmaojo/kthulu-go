@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 
-	"backend/internal/infrastructure/queues"
+	"github.com/kthulu/kthulu-go/backend/internal/infrastructure/queues"
 )
 
 // QueueProducerExample muestra cómo enviar un mensaje a una cola.

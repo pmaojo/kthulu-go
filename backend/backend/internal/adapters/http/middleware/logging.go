@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"backend/internal/observability"
+	"github.com/kthulu/kthulu-go/backend/internal/observability"
 )
 
 var randRead = rand.Read

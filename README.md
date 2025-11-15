@@ -213,6 +213,9 @@ go run ./cmd/kthulu-cli --help
 # Build and expose a reusable binary
 go build -o bin/kthulu ./cmd/kthulu-cli
 export PATH="$(pwd)/bin:$PATH"   # or copy the binary somewhere on your PATH
+
+# Install globally from the module path
+go install github.com/kthulu/kthulu-go/backend/cmd/kthulu-cli@latest
 ```
 
 ### Core commands

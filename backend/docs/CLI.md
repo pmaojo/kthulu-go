@@ -13,6 +13,14 @@ Ejemplo rápido para crear un módulo backend:
 kthulu-cli make:module user
 ```
 
+## Instalación
+
+Instale el CLI desde el módulo Go oficial:
+
+```sh
+go install github.com/kthulu/kthulu-go/backend/cmd/kthulu-cli@latest
+```
+
 Otros generadores disponibles:
 
 ```sh

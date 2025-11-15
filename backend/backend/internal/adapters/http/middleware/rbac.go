@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"backend/internal/domain"
-	"backend/internal/repository"
+	"github.com/kthulu/kthulu-go/backend/internal/domain"
+	"github.com/kthulu/kthulu-go/backend/internal/repository"
 )
 
 // RoleKey is the context key for user role

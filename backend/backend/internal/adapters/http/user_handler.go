@@ -8,10 +8,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 
-	"backend/core"
-	"backend/internal/adapters/http/middleware"
-	"backend/internal/domain"
-	"backend/internal/usecase"
+	"github.com/kthulu/kthulu-go/backend/core"
+	"github.com/kthulu/kthulu-go/backend/internal/adapters/http/middleware"
+	"github.com/kthulu/kthulu-go/backend/internal/domain"
+	"github.com/kthulu/kthulu-go/backend/internal/usecase"
 )
 
 // UserHandler exposes user profile endpoints.

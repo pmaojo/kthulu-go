@@ -1,8 +1,8 @@
 package contracts
 
 import (
-	"backend/internal/infrastructure/db"
-	"backend/internal/repository"
+	"github.com/kthulu/kthulu-go/backend/internal/infrastructure/db"
+	"github.com/kthulu/kthulu-go/backend/internal/repository"
 )
 
 // Ensure db.RoleRepository satisfies repository.RoleRepository at compile time.

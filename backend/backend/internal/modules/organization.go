@@ -4,8 +4,8 @@ package modules
 import (
 	"go.uber.org/fx"
 
-	adapterhttp "backend/internal/adapters/http"
-	"backend/internal/usecase"
+	adapterhttp "github.com/kthulu/kthulu-go/backend/internal/adapters/http"
+	"github.com/kthulu/kthulu-go/backend/internal/usecase"
 )
 
 // OrganizationModule provides organization functionality.

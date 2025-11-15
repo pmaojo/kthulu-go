@@ -1,7 +1,7 @@
 package modules
 
 import (
-	flagcfg "backend/internal/modules/flags"
+	flagcfg "github.com/kthulu/kthulu-go/backend/internal/modules/flags"
 	"go.uber.org/fx"
 )
 

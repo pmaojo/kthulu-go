@@ -4,9 +4,9 @@ package modules
 import (
 	"go.uber.org/fx"
 
-	"backend/internal/infrastructure/db"
-	"backend/internal/repository"
-	"backend/internal/usecase"
+	"github.com/kthulu/kthulu-go/backend/internal/infrastructure/db"
+	"github.com/kthulu/kthulu-go/backend/internal/repository"
+	"github.com/kthulu/kthulu-go/backend/internal/usecase"
 )
 
 // AccessModule provides access control functionality

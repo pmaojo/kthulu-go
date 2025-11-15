@@ -131,14 +131,17 @@ func (g *SecurityGenerator) generateMiddlewareFile(projectPath string) error {
 
 // generateMiddlewareCode creates the RBAC middleware code
 func (g *SecurityGenerator) generateMiddlewareCode() string {
-	return `package middleware
+	return `//go:build enterprise
+// +build enterprise
+
+package middleware
 
 import (
-	"strings"
-	"time"
+        "strings"
+        "time"
 
 	"github.com/gin-gonic/gin"
-	"backend/cmd/kthulu-cli/internal/security"
+	"github.com/kthulu/kthulu-go/backend/cmd/kthulu-cli/internal/security"
 )
 
 // RBACMiddleware provides enterprise role-based access control

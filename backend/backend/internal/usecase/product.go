@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"backend/internal/domain"
-	"backend/internal/repository"
+	"github.com/kthulu/kthulu-go/backend/internal/domain"
+	"github.com/kthulu/kthulu-go/backend/internal/repository"
 
 	"go.uber.org/zap"
 )

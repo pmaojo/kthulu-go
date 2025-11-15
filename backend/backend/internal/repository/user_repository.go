@@ -5,7 +5,7 @@ import (
 	"context"
 	"time"
 
-	"backend/internal/domain"
+	"github.com/kthulu/kthulu-go/backend/internal/domain"
 )
 
 // UserRepository defines behavior for user persistence.

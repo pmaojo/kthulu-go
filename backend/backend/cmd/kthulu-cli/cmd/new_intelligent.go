@@ -8,9 +8,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"backend/cmd/kthulu-cli/internal/generator"
-	"backend/cmd/kthulu-cli/internal/parser"
-	"backend/cmd/kthulu-cli/internal/resolver"
+	"github.com/kthulu/kthulu-go/backend/cmd/kthulu-cli/internal/generator"
+	"github.com/kthulu/kthulu-go/backend/cmd/kthulu-cli/internal/parser"
+	"github.com/kthulu/kthulu-go/backend/cmd/kthulu-cli/internal/resolver"
 )
 
 // Template definitions

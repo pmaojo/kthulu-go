@@ -7,7 +7,7 @@ import (
 	"strings"
 	"text/template"
 
-	"backend/cmd/kthulu-cli/internal/resolver"
+	"github.com/kthulu/kthulu-go/backend/cmd/kthulu-cli/internal/resolver"
 )
 
 // TemplateGenerator generates code templates based on dependency analysis
@@ -260,7 +260,7 @@ import (
 
 	"go.uber.org/fx"
 
-	"backend/internal/core"
+	"github.com/kthulu/kthulu-go/backend/internal/core"
 %s
 )
 
@@ -419,7 +419,7 @@ func (g *TemplateGenerator) generateModuleImports() string {
 	// Use resolved dependencies, not just initial features
 	plan, _ := g.resolver.ResolveDependencies(g.config.Features)
 	for _, module := range plan.RequiredModules {
-		imports = append(imports, fmt.Sprintf(`	"backend/internal/modules/%s"`, module))
+		imports = append(imports, fmt.Sprintf(`	"github.com/kthulu/kthulu-go/backend/internal/modules/%s"`, module))
 	}
 	return strings.Join(imports, "\n")
 }
@@ -533,7 +533,7 @@ type %sService interface {
 `, name, capName, name, capName,
 		capName, capName, capName, capName, capName, capName,
 		capName, capName, capName, capName, capName, capName,
-		capName, capName, pluralName, capName)
+		capName, capName, pluralName, capName, capName)
 }
 
 func (g *TemplateGenerator) generateRepositoryFile(name string, info *resolver.ModuleInfo) string {
@@ -543,7 +543,7 @@ package repository
 
 import (
 	"gorm.io/gorm"
-	"backend/internal/modules/%s/domain"
+	"github.com/kthulu/kthulu-go/backend/internal/modules/%s/domain"
 )
 
 type %sRepository struct {
@@ -579,7 +579,8 @@ func (r *%sRepository) List() ([]*domain.%s, error) {
 }
 `, name, name, capName, capName, capName,
 		capName, capName, capName, capName, capName, capName,
-		capName, capName, capName, capName, capName, capName)
+		capName, capName, capName, capName, capName, capName,
+		capName)
 }
 
 func (g *TemplateGenerator) generateServiceFile(name string, info *resolver.ModuleInfo) string {
@@ -589,7 +590,7 @@ func (g *TemplateGenerator) generateServiceFile(name string, info *resolver.Modu
 package service
 
 import (
-	"backend/internal/modules/%s/domain"
+	"github.com/kthulu/kthulu-go/backend/internal/modules/%s/domain"
 )
 
 type %sService struct {
@@ -640,7 +641,7 @@ import (
 	"strconv"
 	
 	"github.com/gorilla/mux"
-	"backend/internal/modules/%s/domain"
+	"github.com/kthulu/kthulu-go/backend/internal/modules/%s/domain"
 )
 
 type %sHandler struct {

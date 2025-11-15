@@ -1,3 +1,3 @@
 package b
 
-import _ "backend/internal/cli/depanalysis/testdata/cycle/internal/usecase/a"
+import _ "github.com/kthulu/kthulu-go/backend/internal/cli/depanalysis/testdata/cycle/internal/usecase/a"

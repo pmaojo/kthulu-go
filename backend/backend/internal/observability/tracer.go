@@ -1,8 +1,8 @@
 package observability
 
 import (
-	"backend/core"
 	"fmt"
+	"github.com/kthulu/kthulu-go/backend/core"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/jaeger"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"

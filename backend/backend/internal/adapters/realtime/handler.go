@@ -5,7 +5,7 @@ import (
 
 	"nhooyr.io/websocket"
 
-	"backend/internal/repository"
+	"github.com/kthulu/kthulu-go/backend/internal/repository"
 )
 
 // Handler upgrades HTTP connections to WebSocket and tracks clients.

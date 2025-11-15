@@ -11,9 +11,9 @@ import (
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
 
-	"backend/internal/domain"
-	"backend/internal/repository"
-	"backend/internal/usecase"
+	"github.com/kthulu/kthulu-go/backend/internal/domain"
+	"github.com/kthulu/kthulu-go/backend/internal/repository"
+	"github.com/kthulu/kthulu-go/backend/internal/usecase"
 )
 
 // ProductHandler handles HTTP requests for product operations

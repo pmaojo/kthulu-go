@@ -4,8 +4,8 @@ package calendar
 import (
 	"go.uber.org/fx"
 
-	"backend/internal/infrastructure/db"
-	"backend/internal/repository"
+	"github.com/kthulu/kthulu-go/backend/internal/infrastructure/db"
+	"github.com/kthulu/kthulu-go/backend/internal/repository"
 )
 
 // Module provides fx.Options for calendar (scheduling) module.

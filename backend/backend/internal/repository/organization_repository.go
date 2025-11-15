@@ -5,7 +5,7 @@ import (
 	"context"
 	"time"
 
-	"backend/internal/domain"
+	"github.com/kthulu/kthulu-go/backend/internal/domain"
 )
 
 // OrganizationRepository defines behavior for organization persistence.

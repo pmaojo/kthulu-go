@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"testing"
 
-	"backend/internal/testutils"
+	"github.com/kthulu/kthulu-go/backend/internal/testutils"
 )
 
 func TestValidateDPoP(t *testing.T) {

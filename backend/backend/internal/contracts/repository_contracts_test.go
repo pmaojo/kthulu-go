@@ -10,10 +10,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"backend/internal/domain"
-	db "backend/internal/infrastructure/db"
-	"backend/internal/repository"
-	"backend/internal/testutils"
+	"github.com/kthulu/kthulu-go/backend/internal/domain"
+	db "github.com/kthulu/kthulu-go/backend/internal/infrastructure/db"
+	"github.com/kthulu/kthulu-go/backend/internal/repository"
+	"github.com/kthulu/kthulu-go/backend/internal/testutils"
 )
 
 // TestRepositoryContracts verifies that all repository implementations satisfy their interfaces

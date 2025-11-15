@@ -61,7 +61,7 @@ func ValidateGraph(g *Graph) error {
 	}
 
 	if len(violations) > 0 {
-		return fmt.Errorf(strings.Join(violations, "; "))
+		return fmt.Errorf("%s", strings.Join(violations, "; "))
 	}
 	return nil
 }

@@ -12,9 +12,9 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 
-	"backend/core"
-	"backend/internal/domain"
-	"backend/internal/repository"
+	"github.com/kthulu/kthulu-go/backend/core"
+	"github.com/kthulu/kthulu-go/backend/internal/domain"
+	"github.com/kthulu/kthulu-go/backend/internal/repository"
 )
 
 // AuthUseCase orchestrates user authentication workflows.
