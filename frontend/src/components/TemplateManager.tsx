@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Box,
@@ -29,6 +29,7 @@ import type {
   TemplateRenderResult,
   TemplateSyncResult,
   TemplateDriftReport,
+  Template,
 } from '@/types/kthulu';
 
 interface TaskLogEntry {
@@ -65,6 +66,9 @@ export function TemplateManager() {
   const [isRunning, setIsRunning] = useState(false);
   const [taskLog, setTaskLog] = useState<TaskLogEntry[]>([]);
   const [renderPreview, setRenderPreview] = useState<TemplateRenderResult | null>(null);
+  const [templateDetails, setTemplateDetails] = useState<Record<string, Template>>({});
+  const [detailLoading, setDetailLoading] = useState<Record<string, boolean>>({});
+  const [detailErrors, setDetailErrors] = useState<Record<string, string>>({});
 
   const { data: templates = [], isLoading, refetch } = useQuery({
     queryKey: ['templates'],
@@ -139,6 +143,27 @@ export function TemplateManager() {
       setIsRunning(false);
     }
   };
+
+  const fetchTemplateDetail = async (name: string) => {
+    if (!name || templateDetails[name] || detailLoading[name]) return;
+    setDetailLoading((previous) => ({ ...previous, [name]: true }));
+    setDetailErrors((previous) => ({ ...previous, [name]: '' }));
+    try {
+      const detail = await kthuluApi.getTemplate(name);
+      setTemplateDetails((previous) => ({ ...previous, [name]: detail }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'No se pudo cargar el template seleccionado.';
+      setDetailErrors((previous) => ({ ...previous, [name]: message }));
+    } finally {
+      setDetailLoading((previous) => ({ ...previous, [name]: false }));
+    }
+  };
+
+  useEffect(() => {
+    if (selectedTemplate) {
+      void fetchTemplateDetail(selectedTemplate.name);
+    }
+  }, [selectedTemplate]);
 
   const handleValidate = () => {
     if (!selectedTemplate) {
@@ -394,6 +419,11 @@ export function TemplateManager() {
                     <FileJson className="w-4 h-4 mr-2" /> Render
                   </Button>
                 </div>
+                <TemplateDetailPanel
+                  detail={selectedTemplate ? templateDetails[selectedTemplate.name] : undefined}
+                  isLoading={!!selectedTemplate && detailLoading[selectedTemplate.name]}
+                  errorMessage={selectedTemplate ? detailErrors[selectedTemplate.name] : undefined}
+                />
                 <div className="space-y-2">
                   <Textarea
                     rows={4}
@@ -587,6 +617,77 @@ export function TemplateManager() {
           </CardContent>
         </Card>
       </div>
+    </div>
+  );
+}
+
+interface TemplateDetailPanelProps {
+  detail?: Template;
+  isLoading: boolean;
+  errorMessage?: string;
+}
+
+export function TemplateDetailPanel({ detail, isLoading, errorMessage }: TemplateDetailPanelProps) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Loader2 className="w-3 h-3 animate-spin" />
+        <span>Obteniendo detalles del template…</span>
+      </div>
+    );
+  }
+
+  if (errorMessage) {
+    return (
+      <div className="p-2 border border-destructive/30 text-destructive text-xs rounded">
+        {errorMessage}
+      </div>
+    );
+  }
+
+  if (!detail) {
+    return null;
+  }
+
+  const fileCount = Object.keys(detail.content ?? {}).length;
+  const variables = detail.variables ? Object.entries(detail.variables) : [];
+
+  return (
+    <div className="border border-primary/20 rounded-sm p-3 space-y-3 bg-kthulu-surface1">
+      <div className="grid grid-cols-2 gap-3 text-[11px]">
+        <div>
+          <span className="text-muted-foreground">Archivos:</span>
+          <span className="ml-2 text-primary">{fileCount}</span>
+        </div>
+        <div>
+          <span className="text-muted-foreground">Última actualización:</span>
+          <span className="ml-2 text-primary">{detail.updatedAt || 'N/D'}</span>
+        </div>
+        {detail.metadata && (
+          <div className="col-span-2 truncate">
+            <span className="text-muted-foreground">Metadata:</span>
+            <span className="ml-2 text-primary">{Object.keys(detail.metadata).join(', ') || 'N/A'}</span>
+          </div>
+        )}
+      </div>
+      {variables.length > 0 && (
+        <div className="space-y-1">
+          <p className="text-[11px] text-muted-foreground">Variables declaradas:</p>
+          <div className="space-y-1 max-h-32 overflow-y-auto">
+            {variables.map(([key, meta]) => (
+              <div key={key} className="border border-primary/10 rounded px-2 py-1">
+                <p className="text-[11px] text-primary font-semibold">{key}</p>
+                {meta.description && (
+                  <p className="text-[11px] text-muted-foreground">{meta.description}</p>
+                )}
+                {meta.default && (
+                  <p className="text-[10px] text-muted-foreground">Default: {meta.default}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

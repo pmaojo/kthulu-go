@@ -14,7 +14,8 @@ import { TemplateManager } from "@/components/TemplateManager";
 import { AuditWorkbench } from "@/components/AuditWorkbench";
 import { AIAssistant } from "@/components/AIAssistant";
 import { AIChat } from "@/components/AIChat";
-import { Terminal as TerminalIcon, Layers, Code2, BarChart3, Eye, Zap, WifiOff, Wifi, Command } from "lucide-react";
+import { SecurityPanel } from "@/components/SecurityPanel";
+import { Terminal as TerminalIcon, Layers, Code2, Eye, Zap, WifiOff, Wifi, Command } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useKthuluConnection } from "@/hooks/useKthuluConnection";
@@ -96,17 +97,7 @@ const Index = () => {
         );
       
       case "settings":
-        return (
-          <div className="flex-1 bg-kthulu-surface1 flex items-center justify-center">
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 bg-gradient-cyber rounded-lg flex items-center justify-center mx-auto">
-                <BarChart3 className="w-8 h-8 text-background" />
-              </div>
-              <h2 className="text-xl font-mono text-accent">CONFIGURACIÓN</h2>
-              <p className="text-muted-foreground font-mono">Panel de configuración próximamente...</p>
-            </div>
-          </div>
-        );
+        return <SecurityPanel />;
       
       default:
         return <ServiceCanvas className="flex-1" onNodeSelect={handleNodeSelect} />;

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Zap, Package, Database, Layout, GitBranch, FileCode } from 'lucide-react';
+import { Loader2, Zap, Package, Database, Layout, GitBranch, FileCode, Volume2, VolumeX } from 'lucide-react';
 import { kthuluApi } from '@/services/kthuluApi';
 import { useToast } from '@/hooks/use-toast';
 import type { ProjectRequest, ProjectPlan } from '@/types/kthulu';
@@ -21,6 +21,9 @@ export function ProjectGeneratorDialog({ open, onOpenChange }: ProjectGeneratorD
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [projectPlan, setProjectPlan] = useState<ProjectPlan | null>(null);
+  const [audioMuted, setAudioMuted] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState<ProjectRequest>({
@@ -55,11 +58,82 @@ export function ProjectGeneratorDialog({ open, onOpenChange }: ProjectGeneratorD
     }));
   };
 
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return undefined;
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setPrefersReducedMotion(mediaQuery.matches);
+    const handler = (event: MediaQueryListEvent) => setPrefersReducedMotion(event.matches);
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, []);
+
+  const audioEnabled = open && !audioMuted && !prefersReducedMotion;
+
+  useEffect(() => {
+    if (audioEnabled && !audioContextRef.current) {
+      audioContextRef.current = new AudioContext();
+    }
+    if ((!open || !audioEnabled) && audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+  }, [audioEnabled, open]);
+
+  useEffect(() => () => {
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+  }, []);
+
+  const ensureAudioContext = async () => {
+    if (!audioEnabled) return null;
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContext();
+    }
+    if (audioContextRef.current.state === 'suspended') {
+      await audioContextRef.current.resume();
+    }
+    return audioContextRef.current;
+  };
+
+  const playFmTone = async (intent: 'preview' | 'generate') => {
+    const context = await ensureAudioContext();
+    if (!context) return;
+
+    const now = context.currentTime;
+    const duration = intent === 'generate' ? 0.7 : 0.4;
+    const carrier = context.createOscillator();
+    const modulator = context.createOscillator();
+    const modulationGain = context.createGain();
+    const gain = context.createGain();
+
+    carrier.type = 'sine';
+    modulator.type = 'sine';
+    carrier.frequency.setValueAtTime(intent === 'generate' ? 440 : 320, now);
+    modulator.frequency.setValueAtTime(intent === 'generate' ? 160 : 110, now);
+    modulationGain.gain.setValueAtTime(intent === 'generate' ? 220 : 140, now);
+
+    modulator.connect(modulationGain);
+    modulationGain.connect(carrier.frequency);
+    carrier.connect(gain);
+    gain.connect(context.destination);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(intent === 'generate' ? 0.5 : 0.35, now + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    carrier.start(now);
+    modulator.start(now);
+    carrier.stop(now + duration);
+    modulator.stop(now + duration);
+  };
+
   const handlePreview = async () => {
     try {
       setIsPreviewing(true);
       const plan = await kthuluApi.planProject(formData);
       setProjectPlan(plan);
+      void playFmTone('preview');
       
       toast({
         title: 'Plan generado',
@@ -90,11 +164,12 @@ export function ProjectGeneratorDialog({ open, onOpenChange }: ProjectGeneratorD
     try {
       setIsGenerating(true);
       const result = await kthuluApi.generateProject(formData);
-      
+
       toast({
         title: '¡Proyecto generado!',
         description: `${result.projectDirectories?.length || 0} directorios creados exitosamente`,
       });
+      void playFmTone('generate');
 
       onOpenChange(false);
       setFormData({
@@ -135,6 +210,28 @@ export function ProjectGeneratorDialog({ open, onOpenChange }: ProjectGeneratorD
           <DialogDescription className="font-mono text-muted-foreground">
             Configura y genera un nuevo microservicio con arquitectura hexagonal
           </DialogDescription>
+          <div className="flex items-center justify-end gap-2 pt-2">
+            {prefersReducedMotion && (
+              <span className="text-xs text-muted-foreground font-mono">
+                Audio desactivado por preferencias del sistema
+              </span>
+            )}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={audioMuted ? 'Activar sonido' : 'Silenciar sonido'}
+              onClick={() => setAudioMuted((prev) => !prev)}
+              disabled={prefersReducedMotion}
+              className="hover:bg-primary/10"
+            >
+              {audioMuted || prefersReducedMotion ? (
+                <VolumeX className="w-4 h-4" />
+              ) : (
+                <Volume2 className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
         </DialogHeader>
 
         <div className="space-y-6 py-4">

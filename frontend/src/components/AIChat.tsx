@@ -25,6 +25,8 @@ interface AIProvider {
   enabled: boolean
 }
 
+const PROVIDER_STORAGE_KEY = 'kthulu.ai.provider'
+
 export const AIChat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -36,25 +38,66 @@ export const AIChat: React.FC = () => {
   const [selectedProvider, setSelectedProvider] = useState('litellm')
   const [models, setModels] = useState<string[]>([])
   const [selectedModel, setSelectedModel] = useState('gpt-4')
+  const [isPersistingProvider, setIsPersistingProvider] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  const getCachedProvider = () => {
+    try {
+      return window.localStorage.getItem(PROVIDER_STORAGE_KEY)
+    } catch (err) {
+      console.warn('No se pudo leer proveedor almacenado', err)
+      return null
+    }
+  }
+
+  const persistProviderSelection = (providerId: string) => {
+    try {
+      window.localStorage.setItem(PROVIDER_STORAGE_KEY, providerId)
+    } catch (err) {
+      console.warn('No se pudo guardar el proveedor preferido', err)
+    }
+  }
 
   // Load providers and models on mount
   useEffect(() => {
+    const cachedProvider = getCachedProvider()
+    if (cachedProvider) {
+      setSelectedProvider(cachedProvider)
+    }
     loadProviders()
     loadModels()
   }, [])
 
   // Auto-scroll to bottom
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const node = messagesEndRef.current
+    if (node && typeof node.scrollIntoView === 'function') {
+      node.scrollIntoView({ behavior: 'smooth' })
+    }
   }, [messages])
 
   const loadProviders = async () => {
     try {
       const response = await kthuluApi.getAIProviders()
       setProviders(response.providers)
+      reconcileProviderSelection(response.providers)
     } catch (err) {
       console.error('Failed to load providers:', err)
+    }
+  }
+
+  const reconcileProviderSelection = (available: AIProvider[]) => {
+    const cachedProvider = getCachedProvider()
+    if (cachedProvider && available.some((provider) => provider.id === cachedProvider)) {
+      setSelectedProvider(cachedProvider)
+      return
+    }
+
+    if (!available.some((provider) => provider.id === selectedProvider)) {
+      const fallback = available.find((provider) => provider.enabled) ?? available[0]
+      if (fallback) {
+        setSelectedProvider(fallback.id)
+      }
     }
   }
 
@@ -120,6 +163,24 @@ export const AIChat: React.FC = () => {
     }
   }
 
+  const handleProviderChange = async (providerId: string) => {
+    if (providerId === selectedProvider) return
+    setIsPersistingProvider(true)
+    setError('')
+    try {
+      await kthuluApi.setAIProvider(providerId)
+      setSelectedProvider(providerId)
+      persistProviderSelection(providerId)
+      await loadProviders()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo actualizar el proveedor'
+      setError(message)
+      persistProviderSelection(providerId)
+    } finally {
+      setIsPersistingProvider(false)
+    }
+  }
+
   const handleCopy = (content: string) => {
     navigator.clipboard.writeText(content)
     setCopied(true)
@@ -141,6 +202,7 @@ export const AIChat: React.FC = () => {
               size="sm"
               variant="ghost"
               onClick={() => setShowSettings(!showSettings)}
+              aria-label={showSettings ? 'Cerrar configuración' : 'Abrir configuración'}
               className="hover:bg-primary/10"
             >
               <Settings2 className="h-4 w-4" />
@@ -151,11 +213,13 @@ export const AIChat: React.FC = () => {
           {showSettings && (
             <div className="mt-4 p-3 bg-kthulu-surface2 rounded border border-primary/20 space-y-3">
               <div>
-                <label className="text-sm font-medium block mb-2">Provider</label>
+                <label className="text-sm font-medium block mb-2" htmlFor="ai-provider-select">Provider</label>
                 <select
+                  id="ai-provider-select"
                   value={selectedProvider}
-                  onChange={(e) => setSelectedProvider(e.target.value)}
-                  className="w-full px-3 py-2 bg-kthulu-surface1 border border-primary/30 rounded text-sm"
+                  onChange={(e) => handleProviderChange(e.target.value)}
+                  disabled={isPersistingProvider}
+                  className="w-full px-3 py-2 bg-kthulu-surface1 border border-primary/30 rounded text-sm disabled:opacity-50"
                 >
                   {providers.map((p) => (
                     <option
@@ -170,8 +234,9 @@ export const AIChat: React.FC = () => {
               </div>
 
               <div>
-                <label className="text-sm font-medium block mb-2">Model</label>
+                <label className="text-sm font-medium block mb-2" htmlFor="ai-model-select">Model</label>
                 <select
+                  id="ai-model-select"
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value)}
                   className="w-full px-3 py-2 bg-kthulu-surface1 border border-primary/30 rounded text-sm"

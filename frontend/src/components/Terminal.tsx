@@ -13,9 +13,110 @@ interface LogEntry {
   message: string;
 }
 
+interface CommandDescriptor {
+  id: string;
+  command: string;
+  helpLabel: string;
+  description: string;
+  quick?: boolean;
+  includeInHelp?: boolean;
+  category?: string;
+}
+
+const commandCatalog: CommandDescriptor[] = [
+  { id: 'health', command: 'health', helpLabel: 'health', description: 'Verifica estado del API', quick: true },
+  { id: 'modules-list', command: 'modules list', helpLabel: 'modules list', description: 'Lista módulos disponibles', quick: true },
+  { id: 'modules-validate', command: 'modules validate core', helpLabel: 'modules validate', description: 'Valida módulos' },
+  { id: 'templates-list', command: 'templates list', helpLabel: 'templates list', description: 'Lista templates', quick: true },
+  { id: 'audit', command: 'audit', helpLabel: 'audit', description: 'Ejecuta audit del proyecto', quick: true },
+  {
+    id: 'kthulu-generate',
+    command: 'kthulu generate --module core --with-tests',
+    helpLabel: 'kthulu generate',
+    description: 'Genera código y artefactos',
+    quick: true,
+    category: 'Generación',
+  },
+  {
+    id: 'kthulu-migrate',
+    command: 'kthulu migrate --database postgres',
+    helpLabel: 'kthulu migrate',
+    description: 'Ejecuta migraciones pendientes',
+    quick: true,
+    category: 'Base de Datos',
+  },
+  {
+    id: 'kthulu-build',
+    command: 'kthulu build',
+    helpLabel: 'kthulu build',
+    description: 'Compila el proyecto',
+    quick: true,
+    category: 'Construcción',
+  },
+  {
+    id: 'kthulu-deploy',
+    command: 'kthulu deploy --cloud=aws --region=us-east-1',
+    helpLabel: 'kthulu deploy',
+    description: 'Despliega artefactos',
+    quick: true,
+    category: 'Despliegue',
+  },
+  {
+    id: 'kthulu-test',
+    command: 'kthulu test --suite smoke',
+    helpLabel: 'kthulu test',
+    description: 'Corre suites de pruebas',
+    quick: true,
+    category: 'Testing',
+  },
+  {
+    id: 'kthulu-validate',
+    command: 'kthulu validate',
+    helpLabel: 'kthulu validate',
+    description: 'Revisa arquitectura y dependencias',
+    quick: true,
+    category: 'Validación',
+  },
+  { id: 'clear', command: 'clear', helpLabel: 'clear', description: 'Limpia la consola' },
+  { id: 'help', command: 'help', helpLabel: 'help', description: 'Muestra esta ayuda', quick: true },
+];
+
+const helpEntries = commandCatalog.filter((entry) => entry.includeInHelp !== false);
+const helpLabelPadding = helpEntries.reduce((max, entry) => Math.max(max, entry.helpLabel.length), 0) + 2;
+const quickCommandEntries = commandCatalog.filter((entry) => entry.quick);
+const panelCommandEntries = commandCatalog.filter((entry) => entry.category);
+
 const initialLogEntries: LogEntry[] = [
   { time: new Date().toLocaleTimeString(), type: 'info', message: 'Terminal Kthulu inicializada' },
 ];
+
+const parseCliArgs = (cliArgs: string[]) => {
+  const payload: Record<string, unknown> = { args: cliArgs };
+  const options: Record<string, string | boolean> = {};
+  const targets: string[] = [];
+
+  for (let i = 0; i < cliArgs.length; i += 1) {
+    const token = cliArgs[i];
+    if (token.startsWith('--')) {
+      const withoutPrefix = token.slice(2);
+      const [flag, value] = withoutPrefix.split('=');
+      if (value !== undefined) {
+        options[flag] = value;
+      } else if (cliArgs[i + 1] && !cliArgs[i + 1].startsWith('--')) {
+        options[flag] = cliArgs[i + 1];
+        i += 1;
+      } else {
+        options[flag] = true;
+      }
+    } else {
+      targets.push(token);
+    }
+  }
+
+  if (Object.keys(options).length) payload.options = options;
+  if (targets.length) payload.targets = targets;
+  return payload;
+};
 
 export function Terminal() {
   const [currentCommand, setCurrentCommand] = useState('');
@@ -46,15 +147,16 @@ export function Terminal() {
     setConsoleOutput(prev => [...prev, text]);
   };
 
-  const executeCommand = async () => {
-    if (!currentCommand.trim()) return;
+  const executeCommand = async (manualCommand?: string) => {
+    const commandToRun = manualCommand?.trim() ?? currentCommand.trim();
+    if (!commandToRun) return;
 
     setIsRunning(true);
-    addConsoleOutput(`$ ${currentCommand}`);
-    addLog('info', `Ejecutando: ${currentCommand}`);
+    addConsoleOutput(`$ ${commandToRun}`);
+    addLog('info', `Ejecutando: ${commandToRun}`);
 
     try {
-      const parts = currentCommand.trim().split(' ');
+      const parts = commandToRun.split(' ');
       const command = parts[0];
       const args = parts.slice(1);
 
@@ -114,15 +216,61 @@ export function Terminal() {
           addLog('info', 'Terminal limpiada');
           break;
 
+        case 'kthulu': {
+          const subCommand = args[0];
+          if (!subCommand) {
+            addConsoleOutput('✗ Uso: kthulu <comando> [opciones]');
+            break;
+          }
+
+          const cliArgs = args.slice(1);
+          const payload = parseCliArgs(cliArgs);
+          let result;
+
+          switch (subCommand) {
+            case 'generate':
+              result = await kthuluApi.runGenerateCommand(payload);
+              break;
+            case 'migrate':
+              result = await kthuluApi.runMigrateCommand(payload);
+              break;
+            case 'build':
+              result = await kthuluApi.runBuildCommand(payload);
+              break;
+            case 'deploy':
+              result = await kthuluApi.runDeployCommand(payload);
+              break;
+            case 'test':
+              result = await kthuluApi.runTestCommand(payload);
+              break;
+            case 'validate':
+              result = await kthuluApi.runValidateCommand(payload);
+              break;
+            default:
+              addConsoleOutput(`✗ Subcomando no soportado: ${subCommand}`);
+              addLog('warning', `kthulu ${subCommand} no implementado`);
+              result = null;
+          }
+
+          if (result) {
+            addConsoleOutput(`✓ kthulu ${subCommand} (${result.status})`);
+            result.output.forEach((line) => addConsoleOutput(`  ${line}`));
+            result.warnings?.forEach((line) => addConsoleOutput(`  ⚠️ ${line}`));
+            result.errors?.forEach((line) => addConsoleOutput(`  ✗ ${line}`));
+            if (result.duration) {
+              addConsoleOutput(`  Duración: ${result.duration}`);
+            }
+            addLog('success', `Comando kthulu ${subCommand} finalizado`);
+          }
+          break;
+        }
+
         case 'help':
           addConsoleOutput('Comandos disponibles:');
-          addConsoleOutput('  health              - Verifica estado del API');
-          addConsoleOutput('  modules list        - Lista módulos disponibles');
-          addConsoleOutput('  modules validate    - Valida módulos');
-          addConsoleOutput('  templates list      - Lista templates');
-          addConsoleOutput('  audit              - Ejecuta audit del proyecto');
-          addConsoleOutput('  clear              - Limpia la consola');
-          addConsoleOutput('  help               - Muestra esta ayuda');
+          helpEntries.forEach((entry) => {
+            const label = entry.helpLabel.padEnd(helpLabelPadding, ' ');
+            addConsoleOutput(`  ${label}- ${entry.description}`);
+          });
           break;
 
         default:
@@ -261,16 +409,16 @@ export function Terminal() {
           <div className="space-y-2">
             <div className="text-xs text-muted-foreground font-mono">COMANDOS RÁPIDOS:</div>
             <div className="flex flex-wrap gap-2">
-              {['health', 'modules list', 'templates list', 'audit', 'help'].map((cmd, index) => (
+              {quickCommandEntries.map((entry) => (
                 <Button
-                  key={index}
+                  key={entry.id}
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentCommand(cmd)}
+                  onClick={() => executeCommand(entry.command)}
                   disabled={isRunning}
                   className="bg-kthulu-surface2 border-primary/30 hover:bg-primary/10 font-mono text-xs disabled:opacity-50"
                 >
-                  {cmd}
+                  {entry.command}
                 </Button>
               ))}
             </div>
@@ -282,20 +430,13 @@ export function Terminal() {
             <div className="space-y-4">
               <div className="text-sm font-mono text-primary mb-4">COMANDOS DISPONIBLES:</div>
               
-              {[
-                { cmd: 'kthulu generate', desc: 'Genera código para servicios, entidades o casos de uso', category: 'Generación' },
-                { cmd: 'kthulu migrate', desc: 'Ejecuta migraciones de base de datos', category: 'Base de Datos' },
-                { cmd: 'kthulu build', desc: 'Compila el proyecto completo', category: 'Construcción' },
-                { cmd: 'kthulu deploy', desc: 'Despliega a plataforma especificada', category: 'Despliegue' },
-                { cmd: 'kthulu test', desc: 'Ejecuta tests unitarios y de integración', category: 'Testing' },
-                { cmd: 'kthulu validate', desc: 'Valida arquitectura y dependencias', category: 'Validación' },
-              ].map((item, index) => (
-                <div key={index} className="p-3 bg-kthulu-surface2 border border-primary/20 rounded-sm">
+              {panelCommandEntries.map((item) => (
+                <div key={item.id} className="p-3 bg-kthulu-surface2 border border-primary/20 rounded-sm">
                   <div className="flex items-center justify-between mb-2">
-                    <code className="text-primary font-mono text-sm">{item.cmd}</code>
+                    <code className="text-primary font-mono text-sm">{item.helpLabel}</code>
                     <Badge variant="outline" className="text-xs font-mono">{item.category}</Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground font-mono">{item.desc}</p>
+                  <p className="text-xs text-muted-foreground font-mono">{item.description}</p>
                 </div>
               ))}
             </div>

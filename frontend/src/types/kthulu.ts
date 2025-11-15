@@ -124,8 +124,29 @@ export interface TemplateInfo {
   url?: string;
 }
 
+export interface TemplateVariable {
+  description?: string;
+  default?: string;
+  example?: string;
+  type?: string;
+}
+
 export interface Template {
-  [key: string]: any;
+  id?: number;
+  name: string;
+  version?: string;
+  latest_version?: string;
+  description?: string;
+  author?: string;
+  category?: string;
+  tags?: string[];
+  content?: Record<string, string>;
+  variables?: Record<string, TemplateVariable>;
+  remote?: boolean;
+  url?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface TemplateRenderRequest {
@@ -233,4 +254,15 @@ export interface SecurityConfig {
     same_site: string;
     max_age?: number;
   };
+}
+
+export interface CliCommandResult {
+  command: string;
+  status: string;
+  output: string[];
+  warnings?: string[];
+  errors?: string[];
+  artifacts?: string[];
+  duration?: string;
+  metadata?: Record<string, unknown>;
 }
