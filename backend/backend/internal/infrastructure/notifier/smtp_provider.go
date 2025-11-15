@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/smtp"
 
-	"backend/core"
-	"backend/internal/repository"
+	"github.com/kthulu/kthulu-go/backend/core"
+	"github.com/kthulu/kthulu-go/backend/internal/repository"
 )
 
 // SMTPConfig holds SMTP configuration

@@ -7,7 +7,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
-	"backend/core"
+	"github.com/kthulu/kthulu-go/backend/core"
 )
 
 // JWTTraceMiddleware extracts the jti from the JWT and attaches it to the current span.

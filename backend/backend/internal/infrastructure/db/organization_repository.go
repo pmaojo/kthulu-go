@@ -8,8 +8,8 @@ import (
 
 	"gorm.io/gorm"
 
-	"backend/internal/domain"
-	"backend/internal/repository"
+	"github.com/kthulu/kthulu-go/backend/internal/domain"
+	"github.com/kthulu/kthulu-go/backend/internal/repository"
 )
 
 // organizationModel represents the database model for organizations

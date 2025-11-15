@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"backend/internal/repository"
+	"github.com/kthulu/kthulu-go/backend/internal/repository"
 )
 
 // PaginationHelper provides utilities for database pagination

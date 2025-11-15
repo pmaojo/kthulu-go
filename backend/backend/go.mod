@@ -1,4 +1,4 @@
-module backend
+module github.com/kthulu/kthulu-go/backend
 
 go 1.24
 

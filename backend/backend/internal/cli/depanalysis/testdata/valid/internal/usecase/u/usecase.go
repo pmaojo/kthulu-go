@@ -1,3 +1,3 @@
 package u
 
-import _ "backend/internal/cli/depanalysis/testdata/valid/internal/repository/r"
+import _ "github.com/kthulu/kthulu-go/backend/internal/cli/depanalysis/testdata/valid/internal/repository/r"

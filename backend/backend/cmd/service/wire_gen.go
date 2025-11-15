@@ -7,13 +7,13 @@
 package main
 
 import (
-	"backend/core"
-	"backend/core/metrics"
-	"backend/internal/modules"
-	"backend/internal/modules/flags"
-	"backend/internal/observability"
 	"database/sql"
 	"github.com/go-chi/chi/v5"
+	"github.com/kthulu/kthulu-go/backend/core"
+	"github.com/kthulu/kthulu-go/backend/core/metrics"
+	"github.com/kthulu/kthulu-go/backend/internal/modules"
+	"github.com/kthulu/kthulu-go/backend/internal/modules/flags"
+	"github.com/kthulu/kthulu-go/backend/internal/observability"
 	"go.uber.org/fx"
 	"net/http"
 )

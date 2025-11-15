@@ -31,16 +31,16 @@ func TestGenerateProducesCompiledAndContracts(t *testing.T) {
 	plan := Plan{
 		Replacements: []Replacement{
 			{
-				Interface:      "backend/internal/cli/builder/testdata/interfaces.Service",
-				Implementation: "backend/internal/cli/builder/testdata/overrides.MockService",
-				Constructor:    "backend/internal/cli/builder/testdata/overrides.NewMockService",
+				Interface:      "github.com/kthulu/kthulu-go/backend/internal/cli/builder/testdata/interfaces.Service",
+				Implementation: "github.com/kthulu/kthulu-go/backend/internal/cli/builder/testdata/overrides.MockService",
+				Constructor:    "github.com/kthulu/kthulu-go/backend/internal/cli/builder/testdata/overrides.NewMockService",
 			},
 		},
 		Decorations: []string{
-			"backend/internal/cli/builder/testdata/decorator.DecorateService",
+			"github.com/kthulu/kthulu-go/backend/internal/cli/builder/testdata/decorator.DecorateService",
 		},
 		Groups: map[string][]string{
-			"hooks": []string{"backend/internal/cli/builder/testdata/hooks.NewHook"},
+			"hooks": []string{"github.com/kthulu/kthulu-go/backend/internal/cli/builder/testdata/hooks.NewHook"},
 		},
 	}
 	planPath := filepath.Join(outDir, "plan.json")
@@ -79,9 +79,9 @@ func TestGenerateContractFails(t *testing.T) {
 	plan := Plan{
 		Replacements: []Replacement{
 			{
-				Interface:      "backend/internal/cli/builder/testdata/interfaces.Service",
-				Implementation: "backend/internal/cli/builder/testdata/badoverride.BadService",
-				Constructor:    "backend/internal/cli/builder/testdata/badoverride.NewBadService",
+				Interface:      "github.com/kthulu/kthulu-go/backend/internal/cli/builder/testdata/interfaces.Service",
+				Implementation: "github.com/kthulu/kthulu-go/backend/internal/cli/builder/testdata/badoverride.BadService",
+				Constructor:    "github.com/kthulu/kthulu-go/backend/internal/cli/builder/testdata/badoverride.NewBadService",
 			},
 		},
 	}

@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	flagcfg "backend/internal/modules/flags"
+	flagcfg "github.com/kthulu/kthulu-go/backend/internal/modules/flags"
 )
 
 func TestFlagsMiddleware(t *testing.T) {

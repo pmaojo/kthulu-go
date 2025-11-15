@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strings"
 
-	"backend/core"
-	"backend/internal/domain"
-	auth "backend/internal/modules/auth"
+	"github.com/kthulu/kthulu-go/backend/core"
+	"github.com/kthulu/kthulu-go/backend/internal/domain"
+	auth "github.com/kthulu/kthulu-go/backend/internal/modules/auth"
 )
 
 // UserIDKey is the context key for user ID

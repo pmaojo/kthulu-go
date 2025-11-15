@@ -4,9 +4,9 @@ package modules
 import (
 	"go.uber.org/fx"
 
-	adapterhttp "backend/internal/adapters/http"
-	"backend/internal/infrastructure/db"
-	"backend/internal/usecase"
+	adapterhttp "github.com/kthulu/kthulu-go/backend/internal/adapters/http"
+	"github.com/kthulu/kthulu-go/backend/internal/infrastructure/db"
+	"github.com/kthulu/kthulu-go/backend/internal/usecase"
 )
 
 // ProjectsModule provides project management functionality.

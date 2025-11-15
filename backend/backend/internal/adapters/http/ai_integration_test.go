@@ -13,8 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	"backend/internal/ai"
-	"backend/internal/usecase"
+	"github.com/kthulu/kthulu-go/backend/internal/ai"
+	"github.com/kthulu/kthulu-go/backend/internal/usecase"
 )
 
 // TestAIEndpoints_Integration tests all AI endpoints working together

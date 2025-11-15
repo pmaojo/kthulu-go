@@ -4,7 +4,7 @@ package modules
 import (
 	"go.uber.org/fx"
 
-	adapterhttp "backend/internal/adapters/http"
+	adapterhttp "github.com/kthulu/kthulu-go/backend/internal/adapters/http"
 )
 
 // StaticModule provides static file serving functionality for the frontend.

@@ -6,8 +6,8 @@ import (
 	"errors"
 	"time"
 
-	"backend/internal/domain"
-	"backend/internal/repository"
+	"github.com/kthulu/kthulu-go/backend/internal/domain"
+	"github.com/kthulu/kthulu-go/backend/internal/repository"
 
 	"gorm.io/gorm"
 )

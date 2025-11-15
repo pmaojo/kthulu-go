@@ -6,10 +6,10 @@ import (
 
 	"go.uber.org/fx"
 
-	"backend/core"
-	adapterhttp "backend/internal/adapters/http"
-	db "backend/internal/infrastructure/db"
-	vf "backend/internal/modules/verifactu"
+	"github.com/kthulu/kthulu-go/backend/core"
+	adapterhttp "github.com/kthulu/kthulu-go/backend/internal/adapters/http"
+	db "github.com/kthulu/kthulu-go/backend/internal/infrastructure/db"
+	vf "github.com/kthulu/kthulu-go/backend/internal/modules/verifactu"
 )
 
 // VerifactuModule wires VeriFactu dependencies and routes.

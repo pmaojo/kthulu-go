@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"backend/internal/domain"
+	"github.com/kthulu/kthulu-go/backend/internal/domain"
 )
 
 func TestNewAuthService_InitializesAuthUseCase(t *testing.T) {

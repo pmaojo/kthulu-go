@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"strings"
 
-	oauthusecase "backend/internal/modules/oauthsso/usecase"
+	oauthusecase "github.com/kthulu/kthulu-go/backend/internal/modules/oauthsso/usecase"
 	"github.com/ory/fosite"
 )
 

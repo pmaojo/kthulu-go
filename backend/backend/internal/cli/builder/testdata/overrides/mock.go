@@ -1,6 +1,6 @@
 package overrides
 
-import "backend/internal/cli/builder/testdata/interfaces"
+import "github.com/kthulu/kthulu-go/backend/internal/cli/builder/testdata/interfaces"
 
 type MockService struct{}
 

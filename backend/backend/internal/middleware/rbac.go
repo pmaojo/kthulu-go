@@ -1,3 +1,6 @@
+//go:build enterprise
+// +build enterprise
+
 package middleware
 
 import (
@@ -5,7 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"backend/cmd/kthulu-cli/internal/security"
+	"github.com/kthulu/kthulu-go/backend/cmd/kthulu-cli/internal/security"
 )
 
 // RBACMiddleware provides enterprise role-based access control
@@ -14,7 +17,7 @@ func RBACMiddleware(rbacEngine *security.RBACEngine) gin.HandlerFunc {
 		// Extract user information from context/headers
 		userID := extractUserID(c)
 		userRoles := extractUserRoles(c)
-		
+
 		if userID == "" {
 			c.JSON(401, gin.H{"error": "Authentication required"})
 			c.Abort()
@@ -51,10 +54,10 @@ func RBACMiddleware(rbacEngine *security.RBACEngine) gin.HandlerFunc {
 
 		if !result.Allowed {
 			c.JSON(403, gin.H{
-				"error":           "Access denied",
-				"reason":          result.Reason,
+				"error":            "Access denied",
+				"reason":           result.Reason,
 				"applied_policies": result.AppliedPolicies,
-				"request_id":      request.RequestID,
+				"request_id":       request.RequestID,
 			})
 			c.Abort()
 			return
@@ -65,7 +68,7 @@ func RBACMiddleware(rbacEngine *security.RBACEngine) gin.HandlerFunc {
 		c.Set("user_id", userID)
 		c.Set("user_roles", userRoles)
 		c.Set("request_id", request.RequestID)
-		
+
 		c.Next()
 	})
 }
@@ -87,9 +90,9 @@ func SecurityHeadersMiddleware() gin.HandlerFunc {
 func AuditMiddleware() gin.HandlerFunc {
 	return gin.HandlerFunc(func(c *gin.Context) {
 		start := time.Now()
-		
+
 		c.Next()
-		
+
 		// Log security-relevant events
 		if c.Writer.Status() == 403 || c.Writer.Status() == 401 {
 			logSecurityEvent(c, start)
@@ -140,13 +143,13 @@ func generateRequestID() string {
 func logSecurityEvent(c *gin.Context, start time.Time) {
 	// Implement security event logging
 	log.WithFields(log.Fields{
-		"method":      c.Request.Method,
-		"path":        c.Request.URL.Path,
-		"status":      c.Writer.Status(),
-		"ip":          c.ClientIP(),
-		"user_agent":  c.Request.UserAgent(),
-		"duration":    time.Since(start),
-		"user_id":     c.GetString("user_id"),
-		"request_id":  c.GetString("request_id"),
+		"method":     c.Request.Method,
+		"path":       c.Request.URL.Path,
+		"status":     c.Writer.Status(),
+		"ip":         c.ClientIP(),
+		"user_agent": c.Request.UserAgent(),
+		"duration":   time.Since(start),
+		"user_id":    c.GetString("user_id"),
+		"request_id": c.GetString("request_id"),
 	}).Warn("Security event")
 }

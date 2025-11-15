@@ -1,8 +1,8 @@
 package observability
 
 import (
-	"backend/core"
-	"backend/core/metrics"
+	"github.com/kthulu/kthulu-go/backend/core"
+	"github.com/kthulu/kthulu-go/backend/core/metrics"
 	"go.opentelemetry.io/otel/metric"
 )
 

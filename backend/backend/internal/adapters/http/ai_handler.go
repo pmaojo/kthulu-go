@@ -9,7 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 
-	"backend/internal/usecase"
+	"github.com/kthulu/kthulu-go/backend/internal/usecase"
 )
 
 // AIHandler exposes AI endpoints

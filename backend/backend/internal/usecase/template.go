@@ -8,9 +8,9 @@ import (
 	"fmt"
 	texttemplate "text/template"
 
-	"backend/core"
-	"backend/internal/domain"
-	"backend/internal/repository"
+	"github.com/kthulu/kthulu-go/backend/core"
+	"github.com/kthulu/kthulu-go/backend/internal/domain"
+	"github.com/kthulu/kthulu-go/backend/internal/repository"
 )
 
 // TemplateUseCase orchestrates template management workflows.

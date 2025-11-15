@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"backend/core"
-	"backend/internal/domain"
-	"backend/internal/repository"
+	"github.com/kthulu/kthulu-go/backend/core"
+	"github.com/kthulu/kthulu-go/backend/internal/domain"
+	"github.com/kthulu/kthulu-go/backend/internal/repository"
 )
 
 // mockOrganizationUserRepository implements OrganizationUserRepository for testing

@@ -4,7 +4,7 @@ package queue
 import (
 	"go.uber.org/fx"
 
-	"backend/internal/infrastructure/queues"
+	"github.com/kthulu/kthulu-go/backend/internal/infrastructure/queues"
 )
 
 // Module provides fx.Options for queue (async processing) module.

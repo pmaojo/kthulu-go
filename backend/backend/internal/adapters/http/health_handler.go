@@ -11,7 +11,7 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 
-	"backend/core"
+	"github.com/kthulu/kthulu-go/backend/core"
 )
 
 // HealthHandler provides health check endpoints

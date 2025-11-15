@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
 
-	"backend/internal/observability"
+	"github.com/kthulu/kthulu-go/backend/internal/observability"
 )
 
 func TestGenerateRequestIDRandReadError(t *testing.T) {

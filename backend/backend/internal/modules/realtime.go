@@ -4,10 +4,10 @@ package modules
 import (
 	"go.uber.org/fx"
 
-	adapterhttp "backend/internal/adapters/http"
-	adapterrealtime "backend/internal/adapters/realtime"
-	"backend/internal/repository"
-	usecasert "backend/internal/usecase/realtime"
+	adapterhttp "github.com/kthulu/kthulu-go/backend/internal/adapters/http"
+	adapterrealtime "github.com/kthulu/kthulu-go/backend/internal/adapters/realtime"
+	"github.com/kthulu/kthulu-go/backend/internal/repository"
+	usecasert "github.com/kthulu/kthulu-go/backend/internal/usecase/realtime"
 )
 
 // RealtimeModule wires realtime capabilities.

@@ -8,8 +8,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"backend/internal/ai"
-	"backend/internal/usecase"
+	"github.com/kthulu/kthulu-go/backend/internal/ai"
+	"github.com/kthulu/kthulu-go/backend/internal/usecase"
 )
 
 var aiCmd = &cobra.Command{

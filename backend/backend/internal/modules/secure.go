@@ -3,7 +3,7 @@ package modules
 import (
 	"go.uber.org/fx"
 
-	"backend/internal/secure"
+	"github.com/kthulu/kthulu-go/backend/internal/secure"
 )
 
 // SecureModule exposes security utilities via HTTP.

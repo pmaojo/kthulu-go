@@ -3,8 +3,8 @@ package main
 import (
 	"log"
 
-	"backend/core"
-	db "backend/internal/infrastructure/db"
+	"github.com/kthulu/kthulu-go/backend/core"
+	db "github.com/kthulu/kthulu-go/backend/internal/infrastructure/db"
 
 	gormigrate "github.com/go-gormigrate/gormigrate/v2"
 	"gorm.io/gorm"

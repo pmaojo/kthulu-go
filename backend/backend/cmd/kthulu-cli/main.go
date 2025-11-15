@@ -1,6 +1,6 @@
 package main
 
-import "backend/cmd/kthulu-cli/cmd"
+import "github.com/kthulu/kthulu-go/backend/cmd/kthulu-cli/cmd"
 
 func main() {
 	cmd.Execute()

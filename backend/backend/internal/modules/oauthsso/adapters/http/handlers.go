@@ -7,7 +7,7 @@ import (
 
 	"github.com/ory/fosite"
 
-	"backend/internal/modules/oauthsso/usecase"
+	"github.com/kthulu/kthulu-go/backend/internal/modules/oauthsso/usecase"
 )
 
 // Handlers groups OAuth2 HTTP handlers.

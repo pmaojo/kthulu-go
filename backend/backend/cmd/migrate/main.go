@@ -8,7 +8,7 @@ import (
 	"os"
 	"strconv"
 
-	"backend/core"
+	"github.com/kthulu/kthulu-go/backend/core"
 )
 
 func main() {

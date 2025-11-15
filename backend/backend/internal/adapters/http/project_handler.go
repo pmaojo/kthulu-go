@@ -9,8 +9,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 
-	"backend/internal/domain"
-	"backend/internal/usecase"
+	"github.com/kthulu/kthulu-go/backend/internal/domain"
+	"github.com/kthulu/kthulu-go/backend/internal/usecase"
 )
 
 // ProjectHandler exposes project management endpoints.

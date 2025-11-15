@@ -60,14 +60,14 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/time/rate"
 
-	"backend/core"
-	"backend/core/metrics"
-	"backend/internal/adapters/http/middleware"
-	db "backend/internal/infrastructure/db"
-	"backend/internal/modules"
-	flagcfg "backend/internal/modules/flags"
-	vf "backend/internal/modules/verifactu"
-	"backend/internal/observability"
+	"github.com/kthulu/kthulu-go/backend/core"
+	"github.com/kthulu/kthulu-go/backend/core/metrics"
+	"github.com/kthulu/kthulu-go/backend/internal/adapters/http/middleware"
+	db "github.com/kthulu/kthulu-go/backend/internal/infrastructure/db"
+	"github.com/kthulu/kthulu-go/backend/internal/modules"
+	flagcfg "github.com/kthulu/kthulu-go/backend/internal/modules/flags"
+	vf "github.com/kthulu/kthulu-go/backend/internal/modules/verifactu"
+	"github.com/kthulu/kthulu-go/backend/internal/observability"
 )
 
 // newRouter constructs the application's HTTP router with middleware.

@@ -8,8 +8,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"backend/internal/domain"
-	"backend/internal/repository"
+	"github.com/kthulu/kthulu-go/backend/internal/domain"
+	"github.com/kthulu/kthulu-go/backend/internal/repository"
 )
 
 // InventoryUseCase handles inventory management business logic
