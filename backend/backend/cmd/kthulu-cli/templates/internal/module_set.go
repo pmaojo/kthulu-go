@@ -51,11 +51,15 @@ func (ms *ModuleSet) GetRegisteredModules() []string {
 // Build constructs fx.Options for the selected modules.
 // If active is empty, all registered modules are included.
 func (ms *ModuleSet) Build(active []string) fx.Option {
-	// Always include shared infrastructure
+	// Always include the route registry
 	opts := []fx.Option{
 		fx.Provide(NewRouteRegistry),
-		// Centralized repository providers to avoid duplication
-		SharedRepositoryProviders(),
+	}
+
+	for _, key := range ms.requiredProviderKeys(active) {
+		if factory, ok := providerFactories[key]; ok {
+			opts = append(opts, factory())
+		}
 	}
 
 	if len(active) == 0 {
@@ -148,4 +152,35 @@ func DefaultModuleSet(registry *Registry) *ModuleSet {
 func BuildModules(active []string, registry *Registry) fx.Option {
 	moduleSet := DefaultModuleSet(registry)
 	return moduleSet.Build(active)
+}
+
+// requiredProviderKeys determines which provider options need to be added
+// for the given active module selection.
+func (ms *ModuleSet) requiredProviderKeys(active []string) []string {
+	selected := ms.selectedModules(active)
+	return collectProviderKeys(selected)
+}
+
+func (ms *ModuleSet) selectedModules(active []string) []string {
+	if len(active) == 0 {
+		modules := ms.registry.GetAllModules()
+		selected := make([]string, 0, len(modules))
+		for name := range modules {
+			selected = append(selected, name)
+		}
+		return selected
+	}
+
+	seen := make(map[string]struct{})
+	selected := make([]string, 0, len(active))
+	for _, name := range active {
+		if _, ok := seen[name]; ok {
+			continue
+		}
+		if _, exists := ms.registry.GetModule(name); exists {
+			seen[name] = struct{}{}
+			selected = append(selected, name)
+		}
+	}
+	return selected
 }

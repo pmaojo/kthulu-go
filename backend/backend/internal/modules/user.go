@@ -9,7 +9,7 @@ import (
 )
 
 // UserModule provides user profile functionality.
-// Repositories are provided by SharedRepositoryProviders to avoid duplication.
+// Repositories are injected via the ModuleSet provider map to avoid duplication.
 var UserModule = fx.Options(
 	// Use cases
 	fx.Provide(

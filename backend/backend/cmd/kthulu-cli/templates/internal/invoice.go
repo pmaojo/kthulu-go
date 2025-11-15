@@ -9,7 +9,7 @@ import (
 )
 
 // InvoiceModule provides invoice functionality.
-// Repositories are provided by SharedRepositoryProviders to avoid duplication.
+// Repositories are injected via the ModuleSet provider map to avoid duplication.
 var InvoiceModule = fx.Options(
 	// Use cases
 	fx.Provide(
