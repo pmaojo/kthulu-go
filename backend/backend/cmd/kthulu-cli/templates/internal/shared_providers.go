@@ -4,11 +4,11 @@ package modules
 import (
 	"go.uber.org/fx"
 
-	"github.com/kthulu/kthulu-go/backend/internal/infrastructure/db"
-	"github.com/kthulu/kthulu-go/backend/internal/infrastructure/notifier"
-	"github.com/kthulu/kthulu-go/backend/internal/infrastructure/queues"
-	"github.com/kthulu/kthulu-go/backend/internal/infrastructure/storage"
-	"github.com/kthulu/kthulu-go/backend/internal/repository"
+	"github.com/pmaojo/kthulu-go/backend/internal/infrastructure/db"
+	"github.com/pmaojo/kthulu-go/backend/internal/infrastructure/notifier"
+	"github.com/pmaojo/kthulu-go/backend/internal/infrastructure/queues"
+	"github.com/pmaojo/kthulu-go/backend/internal/infrastructure/storage"
+	"github.com/pmaojo/kthulu-go/backend/internal/repository"
 )
 
 // SharedRepositoryProviders returns fx.Options for all shared repository implementations.

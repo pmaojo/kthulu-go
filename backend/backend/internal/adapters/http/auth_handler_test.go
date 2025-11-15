@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kthulu/kthulu-go/backend/internal/domain"
-	"github.com/kthulu/kthulu-go/backend/internal/usecase"
+	"github.com/pmaojo/kthulu-go/backend/internal/domain"
+	"github.com/pmaojo/kthulu-go/backend/internal/usecase"
 	"go.uber.org/zap"
 )
 

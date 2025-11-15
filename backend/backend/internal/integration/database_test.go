@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kthulu/kthulu-go/backend/internal/testutils"
+	"github.com/pmaojo/kthulu-go/backend/internal/testutils"
 )
 
 // TestDatabaseIntegration tests database operations across modules

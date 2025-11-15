@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
-	"github.com/kthulu/kthulu-go/backend/internal/domain"
+	"github.com/pmaojo/kthulu-go/backend/internal/domain"
 )
 
 // Tests for InventoryUseCase

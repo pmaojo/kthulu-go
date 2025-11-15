@@ -2,7 +2,7 @@ package generator
 
 import (
 	"fmt"
-	"github.com/kthulu/kthulu-go/backend/cmd/kthulu-cli/internal/resolver"
+	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/resolver"
 )
 
 // Generate clean template functions
@@ -57,7 +57,7 @@ package repository
 
 import (
 	"gorm.io/gorm"
-	"github.com/kthulu/kthulu-go/backend/internal/modules/%s/domain"
+	"github.com/pmaojo/kthulu-go/backend/internal/modules/%s/domain"
 )
 
 type %sRepository struct {
@@ -106,7 +106,7 @@ func (g *TemplateGenerator) generateServiceFileFixed(name string, info *resolver
 package service
 
 import (
-	"github.com/kthulu/kthulu-go/backend/internal/modules/%s/domain"
+	"github.com/pmaojo/kthulu-go/backend/internal/modules/%s/domain"
 )
 
 type %sService struct {

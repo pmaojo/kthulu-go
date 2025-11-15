@@ -7,10 +7,10 @@ import (
 
 	"go.uber.org/fx"
 
-	adapterhttp "github.com/kthulu/kthulu-go/backend/internal/adapters/http"
-	"github.com/kthulu/kthulu-go/backend/internal/ai"
-	"github.com/kthulu/kthulu-go/backend/internal/config"
-	"github.com/kthulu/kthulu-go/backend/internal/usecase"
+	adapterhttp "github.com/pmaojo/kthulu-go/backend/internal/adapters/http"
+	"github.com/pmaojo/kthulu-go/backend/internal/ai"
+	"github.com/pmaojo/kthulu-go/backend/internal/config"
+	"github.com/pmaojo/kthulu-go/backend/internal/usecase"
 )
 
 var AIModule = fx.Options(

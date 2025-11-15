@@ -47,4 +47,4 @@ Once the Release workflow completes:
 - Verify the checksum (and signature when available).
 - Extract the `kthulu-cli` binary and place it on your `PATH`.
 
-You can still distribute via `go install github.com/kthulu/kthulu-go/backend/cmd/kthulu-cli@<tag>` if you prefer building from source, but Release artifacts remain the canonical distribution for the generator CLI.
+You can still distribute via `go install github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli@<tag>` if you prefer building from source, but Release artifacts remain the canonical distribution for the generator CLI.

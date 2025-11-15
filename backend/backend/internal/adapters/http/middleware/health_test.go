@@ -9,7 +9,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"go.uber.org/zap"
 
-	"github.com/kthulu/kthulu-go/backend/internal/observability"
+	"github.com/pmaojo/kthulu-go/backend/internal/observability"
 )
 
 type failingResponseWriter struct {

@@ -4,8 +4,8 @@ package modules
 import (
 	"go.uber.org/fx"
 
-	adapterhttp "github.com/kthulu/kthulu-go/backend/internal/adapters/http"
-	"github.com/kthulu/kthulu-go/backend/internal/usecase"
+	adapterhttp "github.com/pmaojo/kthulu-go/backend/internal/adapters/http"
+	"github.com/pmaojo/kthulu-go/backend/internal/usecase"
 )
 
 // InventoryModule provides inventory management functionality

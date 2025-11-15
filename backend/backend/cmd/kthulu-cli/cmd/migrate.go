@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 
-	"github.com/kthulu/kthulu-go/backend/core"
+	"github.com/pmaojo/kthulu-go/backend/core"
 )
 
 // migrateCmd represents the migrate command group

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Node } from "@xyflow/react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { KthuluSidebar } from "@/components/KthuluSidebar";
 import { ServiceCanvas } from "@/components/ServiceCanvas";
@@ -13,16 +14,18 @@ import { TemplateManager } from "@/components/TemplateManager";
 import { AuditWorkbench } from "@/components/AuditWorkbench";
 import { AIAssistant } from "@/components/AIAssistant";
 import { AIChat } from "@/components/AIChat";
-import { Terminal as TerminalIcon, Layers, Code2, BarChart3, Eye, Zap, WifiOff, Wifi } from "lucide-react";
+import { Terminal as TerminalIcon, Layers, Code2, BarChart3, Eye, Zap, WifiOff, Wifi, Command } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useKthuluConnection } from "@/hooks/useKthuluConnection";
-import { ElementProperties } from "@/types/properties";
+import { ElementProperties, ElementType } from "@/types/properties";
+import CommandPalette from "@/components/CommandPalette";
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState("services");
   const [showProperties, setShowProperties] = useState(false);
   const [showGenerator, setShowGenerator] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [selectedElement, setSelectedElement] = useState<ElementProperties | null>({
     id: "service-1",
     type: "service",
@@ -41,12 +44,27 @@ const Index = () => {
     setShowProperties(false);
   };
 
+  const handleNodeSelect = (node: Node) => {
+    const element: ElementProperties = {
+      id: node.id,
+      type: node.type as ElementType,
+      name: node.data.label || node.data.name || '',
+      description: node.data.description || '',
+      fields: node.data.fields,
+      actor: node.data.actor,
+      action: node.data.action,
+      status: node.data.status,
+    };
+    setSelectedElement(element);
+    setShowProperties(true);
+  };
+
   const renderMainContent = () => {
     switch (activeSection) {
       case "services":
       case "entities":
       case "architecture":
-        return <ServiceCanvas className="flex-1" />;
+        return <ServiceCanvas className="flex-1" onNodeSelect={handleNodeSelect} />;
       
       case "terminal":
         return <Terminal />;
@@ -91,7 +109,7 @@ const Index = () => {
         );
       
       default:
-        return <ServiceCanvas className="flex-1" />;
+        return <ServiceCanvas className="flex-1" onNodeSelect={handleNodeSelect} />;
     }
   };
 
@@ -134,6 +152,17 @@ const Index = () => {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => setCommandPaletteOpen(true)}
+              className="bg-kthulu-surface1 border-secondary/30 hover:bg-secondary/10 hover:border-secondary font-mono flex items-center gap-2"
+            >
+              <Command className="w-4 h-4" />
+              Paleta
+              <span className="text-[10px] font-mono text-muted-foreground">⌘K</span>
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setShowProperties(!showProperties)}
               className="bg-kthulu-surface1 border-primary/30 hover:bg-primary/10 hover:border-primary font-mono"
             >
@@ -152,6 +181,15 @@ const Index = () => {
             </Button>
           </div>
         </header>
+
+        <CommandPalette
+          open={commandPaletteOpen}
+          onOpenChange={setCommandPaletteOpen}
+          activeSection={activeSection}
+          onNavigate={setActiveSection}
+          onToggleProperties={() => setShowProperties((current) => !current)}
+          onOpenGenerator={() => setShowGenerator(true)}
+        />
 
         {/* Main Layout */}
         <div className="flex h-[calc(100vh-3.5rem)] w-full">

@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/kthulu/kthulu-go/backend/internal/domain"
-	"github.com/kthulu/kthulu-go/backend/internal/repository"
+	"github.com/pmaojo/kthulu-go/backend/internal/domain"
+	"github.com/pmaojo/kthulu-go/backend/internal/repository"
 )
 
 // mockRoleRepository implements repository.RoleRepository for testing.

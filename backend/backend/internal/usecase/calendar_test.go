@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
-	"github.com/kthulu/kthulu-go/backend/internal/domain"
+	"github.com/pmaojo/kthulu-go/backend/internal/domain"
 )
 
 func TestCalendarUseCase_CreateCalendar(t *testing.T) {

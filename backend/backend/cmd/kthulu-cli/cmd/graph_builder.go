@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kthulu/kthulu-go/backend/core"
-	"github.com/kthulu/kthulu-go/backend/internal/graph"
+	"github.com/pmaojo/kthulu-go/backend/core"
+	"github.com/pmaojo/kthulu-go/backend/internal/graph"
 )
 
 // BuildValidationGraph scans use cases and adapters to construct a graph
@@ -24,7 +24,7 @@ func BuildValidationGraph(config *core.Config) (*graph.Graph, error) {
 	// Map of usecase name -> module for quick lookup when processing adapters
 	usecaseModules := make(map[string]string)
 
-	usecaseDir := "github.com/kthulu/kthulu-go/backend/internal/usecase"
+	usecaseDir := "github.com/pmaojo/kthulu-go/backend/internal/usecase"
 
 	// First, add module and usecase nodes
 	for _, module := range config.Modules {
@@ -70,7 +70,7 @@ func BuildValidationGraph(config *core.Config) (*graph.Graph, error) {
 		usecaseNames = append(usecaseNames, name)
 	}
 
-	adaptersDir := "github.com/kthulu/kthulu-go/backend/internal/adapters"
+	adaptersDir := "github.com/pmaojo/kthulu-go/backend/internal/adapters"
 
 	// Now scan adapters and build edges
 	for _, module := range config.Modules {

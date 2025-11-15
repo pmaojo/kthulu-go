@@ -139,6 +139,6 @@ Para una guía más extensa con ejemplos de las plantillas consulte [docs/cli/ma
 ### Instalación del CLI
 
 ```sh
-go install github.com/kthulu/kthulu-go/backend/cmd/kthulu-cli@latest
+go install github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli@latest
 ```
 

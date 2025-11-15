@@ -10,11 +10,11 @@ import (
 	"github.com/google/wire"
 	"go.uber.org/fx"
 
-	"github.com/kthulu/kthulu-go/backend/core"
-	"github.com/kthulu/kthulu-go/backend/core/metrics"
-	"github.com/kthulu/kthulu-go/backend/internal/modules"
-	flagcfg "github.com/kthulu/kthulu-go/backend/internal/modules/flags"
-	"github.com/kthulu/kthulu-go/backend/internal/observability"
+	"github.com/pmaojo/kthulu-go/backend/core"
+	"github.com/pmaojo/kthulu-go/backend/core/metrics"
+	"github.com/pmaojo/kthulu-go/backend/internal/modules"
+	flagcfg "github.com/pmaojo/kthulu-go/backend/internal/modules/flags"
+	"github.com/pmaojo/kthulu-go/backend/internal/observability"
 )
 
 type routerProviderType = func(p struct {

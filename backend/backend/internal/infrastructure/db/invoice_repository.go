@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kthulu/kthulu-go/backend/core"
-	"github.com/kthulu/kthulu-go/backend/internal/domain"
-	"github.com/kthulu/kthulu-go/backend/internal/repository"
+	"github.com/pmaojo/kthulu-go/backend/core"
+	"github.com/pmaojo/kthulu-go/backend/internal/domain"
+	"github.com/pmaojo/kthulu-go/backend/internal/repository"
 )
 
 const invoiceColumns = "id, organization_id, contact_id, invoice_number, type, status, currency, exchange_rate, subtotal, tax_amount, discount_amount, total_amount, paid_amount, balance_due, issue_date, due_date, payment_terms, notes, terms_conditions, created_by, created_at, updated_at"

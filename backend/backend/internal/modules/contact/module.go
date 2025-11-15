@@ -4,8 +4,8 @@ package contact
 import (
 	"go.uber.org/fx"
 
-	"github.com/kthulu/kthulu-go/backend/internal/infrastructure/db"
-	"github.com/kthulu/kthulu-go/backend/internal/repository"
+	"github.com/pmaojo/kthulu-go/backend/internal/infrastructure/db"
+	"github.com/pmaojo/kthulu-go/backend/internal/repository"
 )
 
 // Module provides fx.Options for contact (CRM) module.

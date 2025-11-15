@@ -9,8 +9,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/kthulu/kthulu-go/backend/internal/ai"
-	"github.com/kthulu/kthulu-go/backend/internal/usecase"
+	"github.com/pmaojo/kthulu-go/backend/internal/ai"
+	"github.com/pmaojo/kthulu-go/backend/internal/usecase"
 )
 
 func TestAIHandler_SuggestEndpoint_SuccessfulRequest(t *testing.T) {

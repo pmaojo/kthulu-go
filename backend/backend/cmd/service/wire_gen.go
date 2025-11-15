@@ -8,14 +8,15 @@ package main
 
 import (
 	"database/sql"
-	"github.com/go-chi/chi/v5"
-	"github.com/kthulu/kthulu-go/backend/core"
-	"github.com/kthulu/kthulu-go/backend/core/metrics"
-	"github.com/kthulu/kthulu-go/backend/internal/modules"
-	"github.com/kthulu/kthulu-go/backend/internal/modules/flags"
-	"github.com/kthulu/kthulu-go/backend/internal/observability"
-	"go.uber.org/fx"
 	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/pmaojo/kthulu-go/backend/core"
+	"github.com/pmaojo/kthulu-go/backend/core/metrics"
+	"github.com/pmaojo/kthulu-go/backend/internal/modules"
+	"github.com/pmaojo/kthulu-go/backend/internal/modules/flags"
+	"github.com/pmaojo/kthulu-go/backend/internal/observability"
+	"go.uber.org/fx"
 )
 
 // Injectors from wire.go:

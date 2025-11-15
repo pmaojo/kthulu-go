@@ -6,8 +6,8 @@ import (
 	"net/url"
 	"strings"
 
-	oauthusecase "github.com/kthulu/kthulu-go/backend/internal/modules/oauthsso/usecase"
 	"github.com/ory/fosite"
+	oauthusecase "github.com/pmaojo/kthulu-go/backend/internal/modules/oauthsso/usecase"
 )
 
 // SSOLogin orchestrates an OAuth SSO login flow using the provided use case.

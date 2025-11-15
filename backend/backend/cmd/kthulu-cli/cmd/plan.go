@@ -7,11 +7,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/kthulu/kthulu-go/backend/core"
-	"github.com/kthulu/kthulu-go/backend/internal/cli/depanalysis"
-	planpkg "github.com/kthulu/kthulu-go/backend/internal/cli/plan"
-	"github.com/kthulu/kthulu-go/backend/internal/cli/scanner"
-	graphpkg "github.com/kthulu/kthulu-go/backend/internal/graph"
+	"github.com/pmaojo/kthulu-go/backend/core"
+	"github.com/pmaojo/kthulu-go/backend/internal/cli/depanalysis"
+	planpkg "github.com/pmaojo/kthulu-go/backend/internal/cli/plan"
+	"github.com/pmaojo/kthulu-go/backend/internal/cli/scanner"
+	graphpkg "github.com/pmaojo/kthulu-go/backend/internal/graph"
 	"gopkg.in/yaml.v3"
 )
 

@@ -5,7 +5,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/kthulu/kthulu-go/backend/internal/modules/oauthsso/usecase"
+	"github.com/pmaojo/kthulu-go/backend/internal/modules/oauthsso/usecase"
 )
 
 // Handler exposes OAuth SSO endpoints.

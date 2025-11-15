@@ -4,7 +4,7 @@ package modules
 import (
 	"go.uber.org/fx"
 
-	"github.com/kthulu/kthulu-go/backend/internal/infrastructure/notifier"
+	"github.com/pmaojo/kthulu-go/backend/internal/infrastructure/notifier"
 )
 
 // NotifierModule provides notification functionality

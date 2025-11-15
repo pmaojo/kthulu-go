@@ -55,19 +55,19 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.opentelemetry.io/otel/trace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"golang.org/x/time/rate"
 
-	"github.com/kthulu/kthulu-go/backend/core"
-	"github.com/kthulu/kthulu-go/backend/core/metrics"
-	"github.com/kthulu/kthulu-go/backend/internal/adapters/http/middleware"
-	db "github.com/kthulu/kthulu-go/backend/internal/infrastructure/db"
-	"github.com/kthulu/kthulu-go/backend/internal/modules"
-	flagcfg "github.com/kthulu/kthulu-go/backend/internal/modules/flags"
-	vf "github.com/kthulu/kthulu-go/backend/internal/modules/verifactu"
-	"github.com/kthulu/kthulu-go/backend/internal/observability"
+	"github.com/pmaojo/kthulu-go/backend/core"
+	"github.com/pmaojo/kthulu-go/backend/core/metrics"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/http/middleware"
+	db "github.com/pmaojo/kthulu-go/backend/internal/infrastructure/db"
+	"github.com/pmaojo/kthulu-go/backend/internal/modules"
+	flagcfg "github.com/pmaojo/kthulu-go/backend/internal/modules/flags"
+	vf "github.com/pmaojo/kthulu-go/backend/internal/modules/verifactu"
+	"github.com/pmaojo/kthulu-go/backend/internal/observability"
 )
 
 // newRouter constructs the application's HTTP router with middleware.
@@ -83,7 +83,39 @@ func newRouter(p struct {
 }) chi.Router {
 	r := chi.NewRouter()
 
+	allowedOrigins := []string{
+		"http://localhost:5173",
+		"http://127.0.0.1:5173",
+	}
+	if p.Config.Env != "production" {
+		allowedOrigins = append(allowedOrigins, "http://localhost:4173", "http://127.0.0.1:4173")
+	}
+	allowedOriginsMap := make(map[string]struct{}, len(allowedOrigins))
+	for _, origin := range allowedOrigins {
+		allowedOriginsMap[origin] = struct{}{}
+	}
+
 	// Add middleware stack
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			origin := req.Header.Get("Origin")
+			if origin != "" {
+				if _, ok := allowedOriginsMap[origin]; ok {
+					w.Header().Set("Access-Control-Allow-Origin", origin)
+					w.Header().Set("Vary", "Origin")
+					w.Header().Set("Access-Control-Allow-Credentials", "true")
+					w.Header().Set("Access-Control-Allow-Headers", "Accept, Authorization, Content-Type, X-CSRF-Token")
+					w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+
+					if req.Method == http.MethodOptions {
+						w.WriteHeader(http.StatusNoContent)
+						return
+					}
+				}
+			}
+			next.ServeHTTP(w, req)
+		})
+	})
 	r.Use(otelhttp.NewMiddleware("kthulu-service"))
 	r.Use(middleware.TraceIDMiddleware)
 	r.Use(middleware.JWTTraceMiddleware(p.TokenManager))
@@ -237,9 +269,8 @@ func run() error {
 	registry := modules.NewRegistry()
 	modules.RegisterBuiltinModules(registry)
 
-	// Only load the core generation modules for now
-	// Skip the full ERP platform to focus on code generation
-	coreModules := []string{"projects", "templates", "static", "health"}
+	// Only load the modules needed for the current web UI experience
+	coreModules := []string{"projects", "templates", "modules", "static", "health"}
 
 	builder := modules.NewModuleSetBuilder(registry)
 	for _, moduleName := range coreModules {
@@ -258,6 +289,7 @@ func run() error {
 
 		core.Module,
 		observability.Module,
+		modules.FlagsModule,
 
 		moduleSet.Build([]string{}),
 		modules.SharedServiceProviders(),
@@ -269,11 +301,18 @@ func run() error {
 
 		fx.Invoke(validateStartup),
 		fx.Invoke(registerHooks),
-		fx.Invoke(func(tp trace.TracerProvider, m *metrics.PrometheusMetrics) {}),
-		fx.Invoke(func(lc fx.Lifecycle, repo vf.Repository, cfg *core.Config) {
+		fx.Invoke(func(tp *sdktrace.TracerProvider, m *metrics.PrometheusMetrics) {}),
+		fx.Invoke(func(lc fx.Lifecycle, params struct {
+			fx.In
+			Repo   vf.Repository `optional:"true"`
+			Config *core.Config
+		}) {
+			if params.Repo == nil {
+				return
+			}
 			lc.Append(fx.Hook{OnStart: func(ctx context.Context) error {
-				if cfg.VerifactuMode == "real-time" {
-					return repo.SetLiveMode(ctx, time.Now().Year(), true)
+				if params.Config.VerifactuMode == "real-time" {
+					return params.Repo.SetLiveMode(ctx, time.Now().Year(), true)
 				}
 				return nil
 			}})

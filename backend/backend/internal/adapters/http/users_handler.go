@@ -8,7 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 
-	"github.com/kthulu/kthulu-go/backend/internal/modules/users"
+	"github.com/pmaojo/kthulu-go/backend/internal/modules/users"
 )
 
 // UsersHandler exposes registration and login endpoints.

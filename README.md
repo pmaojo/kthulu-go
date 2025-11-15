@@ -206,7 +206,7 @@ go build -o bin/kthulu ./cmd/kthulu-cli
 export PATH="$(pwd)/bin:$PATH"   # or copy the binary somewhere on your PATH
 
 # Install globally from the module path
-go install github.com/kthulu/kthulu-go/backend/cmd/kthulu-cli@latest
+go install github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli@latest
 ```
 
 ### Core commands

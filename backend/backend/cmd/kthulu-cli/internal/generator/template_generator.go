@@ -7,7 +7,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/kthulu/kthulu-go/backend/cmd/kthulu-cli/internal/resolver"
+	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/resolver"
 )
 
 // TemplateGenerator generates code templates based on dependency analysis
@@ -260,7 +260,7 @@ import (
 
 	"go.uber.org/fx"
 
-	"github.com/kthulu/kthulu-go/backend/internal/core"
+	"github.com/pmaojo/kthulu-go/backend/internal/core"
 %s
 )
 
@@ -419,7 +419,7 @@ func (g *TemplateGenerator) generateModuleImports() string {
 	// Use resolved dependencies, not just initial features
 	plan, _ := g.resolver.ResolveDependencies(g.config.Features)
 	for _, module := range plan.RequiredModules {
-		imports = append(imports, fmt.Sprintf(`	"github.com/kthulu/kthulu-go/backend/internal/modules/%s"`, module))
+		imports = append(imports, fmt.Sprintf(`	"github.com/pmaojo/kthulu-go/backend/internal/modules/%s"`, module))
 	}
 	return strings.Join(imports, "\n")
 }
@@ -543,7 +543,7 @@ package repository
 
 import (
 	"gorm.io/gorm"
-	"github.com/kthulu/kthulu-go/backend/internal/modules/%s/domain"
+	"github.com/pmaojo/kthulu-go/backend/internal/modules/%s/domain"
 )
 
 type %sRepository struct {
@@ -590,7 +590,7 @@ func (g *TemplateGenerator) generateServiceFile(name string, info *resolver.Modu
 package service
 
 import (
-	"github.com/kthulu/kthulu-go/backend/internal/modules/%s/domain"
+	"github.com/pmaojo/kthulu-go/backend/internal/modules/%s/domain"
 )
 
 type %sService struct {
@@ -641,7 +641,7 @@ import (
 	"strconv"
 	
 	"github.com/gorilla/mux"
-	"github.com/kthulu/kthulu-go/backend/internal/modules/%s/domain"
+	"github.com/pmaojo/kthulu-go/backend/internal/modules/%s/domain"
 )
 
 type %sHandler struct {

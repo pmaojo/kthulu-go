@@ -8,9 +8,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 
-	"github.com/kthulu/kthulu-go/backend/internal/adapters/http/middleware"
-	"github.com/kthulu/kthulu-go/backend/internal/domain"
-	"github.com/kthulu/kthulu-go/backend/internal/usecase"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/http/middleware"
+	"github.com/pmaojo/kthulu-go/backend/internal/domain"
+	"github.com/pmaojo/kthulu-go/backend/internal/usecase"
 )
 
 // AuthHandler exposes authentication endpoints.

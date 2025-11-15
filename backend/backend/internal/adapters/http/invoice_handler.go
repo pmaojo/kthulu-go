@@ -10,9 +10,9 @@ import (
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
 
-	"github.com/kthulu/kthulu-go/backend/internal/domain"
-	"github.com/kthulu/kthulu-go/backend/internal/repository"
-	"github.com/kthulu/kthulu-go/backend/internal/usecase"
+	"github.com/pmaojo/kthulu-go/backend/internal/domain"
+	"github.com/pmaojo/kthulu-go/backend/internal/repository"
+	"github.com/pmaojo/kthulu-go/backend/internal/usecase"
 )
 
 // InvoiceHandler handles HTTP requests for invoice operations

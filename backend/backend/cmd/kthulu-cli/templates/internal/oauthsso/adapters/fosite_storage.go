@@ -6,7 +6,7 @@ import (
 
 	"github.com/ory/fosite"
 
-	"github.com/kthulu/kthulu-go/backend/internal/modules/oauthsso/repository"
+	"github.com/pmaojo/kthulu-go/backend/internal/modules/oauthsso/repository"
 )
 
 // FositeStorage adapts repositories to satisfy fosite.Storage.

@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/kthulu/kthulu-go/backend/internal/infrastructure/queues"
+	"github.com/pmaojo/kthulu-go/backend/internal/infrastructure/queues"
 )
 
 var queueCmd = &cobra.Command{

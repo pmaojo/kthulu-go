@@ -6,7 +6,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/kthulu/kthulu-go/backend/internal/modules/verifactu"
+	"github.com/pmaojo/kthulu-go/backend/internal/modules/verifactu"
 )
 
 // VerifactuRepository implements verifactu.Repository using database/sql.

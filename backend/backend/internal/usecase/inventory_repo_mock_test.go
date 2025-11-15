@@ -6,8 +6,9 @@ package usecase
 
 import (
 	context "context"
-	domain "github.com/kthulu/kthulu-go/backend/internal/domain"
 	reflect "reflect"
+
+	domain "github.com/pmaojo/kthulu-go/backend/internal/domain"
 
 	gomock "github.com/golang/mock/gomock"
 )

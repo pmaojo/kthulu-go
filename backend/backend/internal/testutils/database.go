@@ -14,7 +14,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"github.com/kthulu/kthulu-go/backend/core"
+	"github.com/pmaojo/kthulu-go/backend/core"
 )
 
 // SetupTestDB creates a test database connection

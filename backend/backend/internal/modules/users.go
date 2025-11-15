@@ -4,8 +4,8 @@ package modules
 import (
 	"go.uber.org/fx"
 
-	adapterhttp "github.com/kthulu/kthulu-go/backend/internal/adapters/http"
-	users "github.com/kthulu/kthulu-go/backend/internal/modules/users"
+	adapterhttp "github.com/pmaojo/kthulu-go/backend/internal/adapters/http"
+	users "github.com/pmaojo/kthulu-go/backend/internal/modules/users"
 )
 
 // UsersModule wires user auth components and HTTP handlers.

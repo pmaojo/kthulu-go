@@ -9,7 +9,7 @@ import (
 	"github.com/ory/fosite"
 	"gorm.io/gorm"
 
-	"github.com/kthulu/kthulu-go/backend/internal/modules/oauthsso/repository"
+	"github.com/pmaojo/kthulu-go/backend/internal/modules/oauthsso/repository"
 )
 
 const (

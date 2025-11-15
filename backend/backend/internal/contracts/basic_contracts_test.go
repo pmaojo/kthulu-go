@@ -6,9 +6,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/kthulu/kthulu-go/backend/internal/infrastructure/db"
-	"github.com/kthulu/kthulu-go/backend/internal/repository"
-	"github.com/kthulu/kthulu-go/backend/internal/testutils"
+	"github.com/pmaojo/kthulu-go/backend/internal/infrastructure/db"
+	"github.com/pmaojo/kthulu-go/backend/internal/repository"
+	"github.com/pmaojo/kthulu-go/backend/internal/testutils"
 )
 
 // TestBasicRepositoryContracts verifies that all repository implementations satisfy their interfaces

@@ -4,8 +4,8 @@ package oauthsso
 import (
 	"go.uber.org/fx"
 
-	oauthdb "github.com/kthulu/kthulu-go/backend/internal/modules/oauthsso/infrastructure/db"
-	oauthrepo "github.com/kthulu/kthulu-go/backend/internal/modules/oauthsso/repository"
+	oauthdb "github.com/pmaojo/kthulu-go/backend/internal/modules/oauthsso/infrastructure/db"
+	oauthrepo "github.com/pmaojo/kthulu-go/backend/internal/modules/oauthsso/repository"
 )
 
 // Module provides fx.Options for OAuth SSO (external authentication) module.

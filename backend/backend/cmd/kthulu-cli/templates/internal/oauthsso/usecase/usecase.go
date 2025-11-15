@@ -1,7 +1,7 @@
 package usecase
 
 import (
-	"github.com/kthulu/kthulu-go/backend/internal/modules/oauthsso/domain"
+	"github.com/pmaojo/kthulu-go/backend/internal/modules/oauthsso/domain"
 
 	"github.com/ory/fosite"
 )

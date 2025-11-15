@@ -5,7 +5,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/kthulu/kthulu-go/backend/internal/domain"
+	"github.com/pmaojo/kthulu-go/backend/internal/domain"
 )
 
 // ProductRepository defines the interface for product data operations

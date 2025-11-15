@@ -14,7 +14,7 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 
-	"github.com/kthulu/kthulu-go/backend/internal/testutils"
+	"github.com/pmaojo/kthulu-go/backend/internal/testutils"
 )
 
 // TestServer represents a test server instance

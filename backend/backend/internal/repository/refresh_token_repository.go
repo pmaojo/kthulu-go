@@ -5,7 +5,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/kthulu/kthulu-go/backend/internal/domain"
+	"github.com/pmaojo/kthulu-go/backend/internal/domain"
 )
 
 // RefreshTokenRepository defines behavior for refresh token persistence.

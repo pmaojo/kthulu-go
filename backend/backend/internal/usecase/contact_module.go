@@ -2,7 +2,7 @@
 package usecase
 
 import (
-	"github.com/kthulu/kthulu-go/backend/internal/repository"
+	"github.com/pmaojo/kthulu-go/backend/internal/repository"
 
 	"go.uber.org/fx"
 	"go.uber.org/zap"

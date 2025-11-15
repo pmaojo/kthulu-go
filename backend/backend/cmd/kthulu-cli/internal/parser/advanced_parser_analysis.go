@@ -312,12 +312,12 @@ func (p *AdvancedTagParser) isProjectImport(importPath, projectPath string) bool
 	// This is a simplified check - could be enhanced
 	return strings.Contains(importPath, "/internal/") ||
 		strings.Contains(importPath, "/cmd/") ||
-		strings.HasPrefix(importPath, "github.com/kthulu/kthulu-go/backend/")
+		strings.HasPrefix(importPath, "github.com/pmaojo/kthulu-go/backend/")
 }
 
 // extractModuleFromImport extracts module name from import path
 func (p *AdvancedTagParser) extractModuleFromImport(importPath string) string {
-	// Extract module name from path like "github.com/kthulu/kthulu-go/backend/internal/modules/user"
+	// Extract module name from path like "github.com/pmaojo/kthulu-go/backend/internal/modules/user"
 	parts := strings.Split(importPath, "/")
 	if len(parts) >= 4 && parts[len(parts)-2] == "modules" {
 		return parts[len(parts)-1]

@@ -4,7 +4,7 @@ package queues
 import (
 	"context"
 
-	"github.com/kthulu/kthulu-go/backend/core"
+	"github.com/pmaojo/kthulu-go/backend/core"
 	"go.uber.org/fx"
 )
 

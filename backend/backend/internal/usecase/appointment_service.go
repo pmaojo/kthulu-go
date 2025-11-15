@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kthulu/kthulu-go/backend/internal/domain"
+	"github.com/pmaojo/kthulu-go/backend/internal/domain"
 )
 
 // AppointmentService provides appointment scheduling functionality

@@ -2,17 +2,17 @@ import { useCallback, useEffect } from 'react';
 import {
   ReactFlow,
   addEdge,
-  MiniMap,
-  Controls,
-  Background,
   useNodesState,
   useEdgesState,
   Connection,
-  Edge,
-  Node,
-  BackgroundVariant,
   ReactFlowProvider,
   useReactFlow,
+  Controls,
+  MiniMap,
+  Background,
+  BackgroundVariant,
+  type Node,
+  type Edge,
 } from '@xyflow/react';
 
 import '@xyflow/react/dist/style.css';
@@ -141,9 +141,10 @@ const initialEdges: Edge[] = [
 
 interface ServiceCanvasProps {
   className?: string;
+  onNodeSelect?: (node: Node) => void;
 }
 
-function ServiceCanvasContent({ className }: ServiceCanvasProps) {
+function ServiceCanvasContent({ className, onNodeSelect }: ServiceCanvasProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const { toast } = useToast();
@@ -214,6 +215,12 @@ function ServiceCanvasContent({ className }: ServiceCanvasProps) {
     fitViewport({ padding: 0.2 });
   }, [fitViewport]);
 
+  const handleNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
+    if (onNodeSelect) {
+      onNodeSelect(node);
+    }
+  }, [onNodeSelect]);
+
   return (
     <div className={`w-full h-full relative ${className}`}>
       <CanvasToolbar
@@ -229,10 +236,11 @@ function ServiceCanvasContent({ className }: ServiceCanvasProps) {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onNodeClick={handleNodeClick}
         nodeTypes={nodeTypes}
         fitView
         className="bg-kthulu-surface1"
-        style={{ 
+        style={{
           backgroundColor: 'hsl(var(--kthulu-surface-1))',
         }}
       >

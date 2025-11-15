@@ -4,9 +4,9 @@ package modules
 import (
 	"go.uber.org/fx"
 
-	"github.com/kthulu/kthulu-go/backend/internal/infrastructure/db"
-	"github.com/kthulu/kthulu-go/backend/internal/infrastructure/storage"
-	"github.com/kthulu/kthulu-go/backend/internal/repository"
+	"github.com/pmaojo/kthulu-go/backend/internal/infrastructure/db"
+	"github.com/pmaojo/kthulu-go/backend/internal/infrastructure/storage"
+	"github.com/pmaojo/kthulu-go/backend/internal/repository"
 )
 
 // CoreRepositoryProviders returns fx.Options for CORE essential repositories.

@@ -4,9 +4,9 @@ package modules
 import (
 	"go.uber.org/fx"
 
-	adapterhttp "github.com/kthulu/kthulu-go/backend/internal/adapters/http"
-	"github.com/kthulu/kthulu-go/backend/internal/infrastructure/db"
-	"github.com/kthulu/kthulu-go/backend/internal/usecase"
+	adapterhttp "github.com/pmaojo/kthulu-go/backend/internal/adapters/http"
+	"github.com/pmaojo/kthulu-go/backend/internal/infrastructure/db"
+	"github.com/pmaojo/kthulu-go/backend/internal/usecase"
 )
 
 // ModulesModule provides module catalog functionality.

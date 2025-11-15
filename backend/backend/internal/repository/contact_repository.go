@@ -4,7 +4,7 @@ package repository
 import (
 	"context"
 
-	"github.com/kthulu/kthulu-go/backend/internal/domain"
+	"github.com/pmaojo/kthulu-go/backend/internal/domain"
 )
 
 // ContactRepository defines the interface for contact data operations

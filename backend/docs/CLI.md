@@ -18,7 +18,7 @@ kthulu-cli make:module user
 Instale el CLI desde el módulo Go oficial:
 
 ```sh
-go install github.com/kthulu/kthulu-go/backend/cmd/kthulu-cli@latest
+go install github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli@latest
 ```
 
 Otros generadores disponibles:

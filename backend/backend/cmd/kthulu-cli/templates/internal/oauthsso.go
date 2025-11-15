@@ -2,11 +2,11 @@
 package modules
 
 import (
-	modulesoauth "github.com/kthulu/kthulu-go/backend/internal/modules/oauthsso"
-	oauthadapters "github.com/kthulu/kthulu-go/backend/internal/modules/oauthsso/adapters"
-	"github.com/kthulu/kthulu-go/backend/internal/modules/oauthsso/domain"
-	"github.com/kthulu/kthulu-go/backend/internal/modules/oauthsso/repository"
-	"github.com/kthulu/kthulu-go/backend/internal/modules/oauthsso/usecase"
+	modulesoauth "github.com/pmaojo/kthulu-go/backend/internal/modules/oauthsso"
+	oauthadapters "github.com/pmaojo/kthulu-go/backend/internal/modules/oauthsso/adapters"
+	"github.com/pmaojo/kthulu-go/backend/internal/modules/oauthsso/domain"
+	"github.com/pmaojo/kthulu-go/backend/internal/modules/oauthsso/repository"
+	"github.com/pmaojo/kthulu-go/backend/internal/modules/oauthsso/usecase"
 
 	"github.com/ory/fosite"
 	"go.uber.org/fx"

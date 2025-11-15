@@ -10,9 +10,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 
-	adapterhttp "github.com/kthulu/kthulu-go/backend/internal/adapters/http"
-	"github.com/kthulu/kthulu-go/backend/internal/ai"
-	"github.com/kthulu/kthulu-go/backend/internal/usecase"
+	adapterhttp "github.com/pmaojo/kthulu-go/backend/internal/adapters/http"
+	"github.com/pmaojo/kthulu-go/backend/internal/ai"
+	"github.com/pmaojo/kthulu-go/backend/internal/usecase"
 )
 
 func TestAIHandler_RegisterRoutes(t *testing.T) {

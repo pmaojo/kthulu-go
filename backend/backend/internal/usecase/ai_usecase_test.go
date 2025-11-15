@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kthulu/kthulu-go/backend/internal/ai"
+	"github.com/pmaojo/kthulu-go/backend/internal/ai"
 )
 
 func TestAIUseCase_Suggest_WithMock(t *testing.T) {
