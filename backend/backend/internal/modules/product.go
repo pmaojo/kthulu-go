@@ -9,7 +9,7 @@ import (
 )
 
 // ProductModule provides product functionality.
-// Repositories are provided by SharedRepositoryProviders to avoid duplication.
+// Repositories are injected via the ModuleSet provider map to avoid duplication.
 var ProductModule = fx.Options(
 	// Use cases
 	fx.Provide(

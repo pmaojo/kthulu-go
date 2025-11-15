@@ -115,3 +115,38 @@ func TestDefaultModuleSet(t *testing.T) {
 		}
 	}
 }
+
+func TestModuleSetProviderSelection(t *testing.T) {
+	registry := NewRegistry()
+	RegisterBuiltinModules(registry)
+	moduleSet := NewModuleSet(registry)
+
+	t.Run("product module only", func(t *testing.T) {
+		providers := moduleSet.requiredProviderKeys([]string{"product"})
+		if !containsProvider(providers, providerProductRepo) {
+			t.Fatalf("expected product provider, got %v", providers)
+		}
+		if containsProvider(providers, providerContactRepo) {
+			t.Fatalf("unexpected contact provider for product module: %v", providers)
+		}
+	})
+
+	t.Run("inventory module pulls dependent product repo", func(t *testing.T) {
+		providers := moduleSet.requiredProviderKeys([]string{"inventory"})
+		if !containsProvider(providers, providerInventoryRepo) {
+			t.Fatalf("expected inventory provider, got %v", providers)
+		}
+		if !containsProvider(providers, providerProductRepo) {
+			t.Fatalf("expected product provider for inventory module, got %v", providers)
+		}
+	})
+}
+
+func containsProvider(providers []string, target string) bool {
+	for _, provider := range providers {
+		if provider == target {
+			return true
+		}
+	}
+	return false
+}

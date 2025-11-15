@@ -9,7 +9,7 @@ import (
 )
 
 // AuthModule provides authentication functionality.
-// Repositories are provided by SharedRepositoryProviders to avoid duplication.
+// Repositories are injected via the ModuleSet provider map to avoid duplication.
 var AuthModule = fx.Options(
 	// Use cases
 	fx.Provide(
