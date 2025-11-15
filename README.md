@@ -14,17 +14,6 @@ Kthulu Forge serves multidisciplinary software delivery teams that need reliable
 - **AI-assisted delivery teams** experimenting with generative workflows that must stay grounded in typed contracts, hexagonal boundaries, and SOLID-aligned modules.
 - **Consultancies and agencies** packaging industry-specific accelerators that demand repeatable scaffolds, seeded datasets, and rapid iteration loops.
 
-## Landing Page Messaging Guide
-
-When designing a marketing landing page, highlight the outcomes and credibility signals that matter most to the audiences above:
-
-1. **Hero statement** — Position Kthulu Forge as an AI-assisted foundry that fuses Web UI orchestration with CLI automation to deliver production-ready service blueprints.
-2. **Core value pillars** — Emphasize generative modeling, policy-aware scaffolding, and real-time collaboration across the UI and terminal.
-3. **Architecture assurances** — Call out hexagonal boundaries, SOLID module design, contract-first APIs, and quality gates (tests, linting, migrations) wired into every template.
-4. **Interface spotlight** — Showcase screenshots or animations of the service canvas, terminal automation, and module catalog working together end-to-end.
-5. **Proof & trust** — Include case studies, integration badges (GitHub, Kubernetes, OpenAI), and testimonials from platform or architecture leads.
-6. **Call-to-action** — Offer a guided Web UI tour, CLI quickstart script, and contact form for enterprise enablement.
-
 Teams can move from whiteboard to working service skeletons while preserving governance.
 
 ## Project Structure
