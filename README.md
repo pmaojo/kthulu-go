@@ -25,7 +25,7 @@ When designing a marketing landing page, highlight the outcomes and credibility 
 5. **Proof & trust** — Include case studies, integration badges (GitHub, Kubernetes, OpenAI), and testimonials from platform or architecture leads.
 6. **Call-to-action** — Offer a guided Web UI tour, CLI quickstart script, and contact form for enterprise enablement.
 
-Use concise copy supported by animated demos to convey that teams can move from whiteboard to working service skeletons while preserving governance.
+Teams can move from whiteboard to working service skeletons while preserving governance.
 
 ## Project Structure
 
