@@ -1,6 +1,9 @@
-# Kthulu Forge — Full-Stack ERP Platform
+# Kthulu Forge — AI-assisted Software Foundry
 
-A monolithic full-stack application combining a **Go backend** and **React frontend** with a **Bun-powered** build toolchain.
+Kthulu Forge packages an AI-ready **Go backend** with a **React/Bun frontend** to help teams plan, model, and generate modular software projects. The platform exposes two primary interfaces:
+
+- **Web UI** — a service canvas, scaffolding dashboards, and live tooling for orchestrating project blueprints.
+- **CLI** — a template-driven generator and operations companion for managing services, modules, and automation pipelines.
 
 ## Project Structure
 
