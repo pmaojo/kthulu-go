@@ -582,7 +582,6 @@ func (g *TemplateGenerator) generateCoreProviders() string {
 		"\"os\"",
 		"\"go.uber.org/fx\"",
 		"\"gorm.io/gorm\"",
-		"\"gorm.io/driver/sqlite\"",
 	}
 
 	var connectionBuilder strings.Builder
@@ -1128,14 +1127,14 @@ cancel()
 select {
 case err := <-errCh:
 if err != nil {
-t.Fatalf("runApplication returned error: %%v", err)
+t.Fatalf("runApplication returned error: %v", err)
 }
 case <-time.After(time.Second):
 t.Fatal("timeout waiting for application shutdown")
 }
 
 if !srv.started || !srv.shutdown {
-t.Fatalf("server lifecycle not executed: started=%%v shutdown=%%v", srv.started, srv.shutdown)
+t.Fatalf("server lifecycle not executed: started=%v shutdown=%v", srv.started, srv.shutdown)
 }
 }
 
@@ -1175,7 +1174,7 @@ func TestNewDatabaseTestMode(t *testing.T) {
 t.Setenv("KTHULU_TEST_MODE", "1")
 db, err := NewDatabase()
 if err != nil {
-t.Fatalf("expected sqlite database, got error: %%v", err)
+t.Fatalf("expected sqlite database, got error: %v", err)
 }
 if db == nil {
 t.Fatal("expected database instance")
