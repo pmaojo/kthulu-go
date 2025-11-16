@@ -1,8 +1,9 @@
-package mcpserver
+package mcp
 
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -14,8 +15,46 @@ import (
 )
 
 // CommandArguments captures the arguments passed to a CLI-backed MCP tool.
+//
+// The schema follows the MCP server restrictions that only string fields are allowed.
+// Callers can either populate the explicit argN fields, provide a space-separated
+// argsText value, or include argsJSON containing a JSON array of strings.
 type CommandArguments struct {
-	Args []string `json:"args" jsonschema:"description=Arguments passed to the CLI command after the command name"`
+	Arg1     string `json:"arg1,omitempty" jsonschema:"description=First positional argument"`
+	Arg2     string `json:"arg2,omitempty" jsonschema:"description=Second positional argument"`
+	Arg3     string `json:"arg3,omitempty" jsonschema:"description=Third positional argument"`
+	Arg4     string `json:"arg4,omitempty" jsonschema:"description=Fourth positional argument"`
+	Arg5     string `json:"arg5,omitempty" jsonschema:"description=Fifth positional argument"`
+	Arg6     string `json:"arg6,omitempty" jsonschema:"description=Sixth positional argument"`
+	Arg7     string `json:"arg7,omitempty" jsonschema:"description=Seventh positional argument"`
+	Arg8     string `json:"arg8,omitempty" jsonschema:"description=Eighth positional argument"`
+	Arg9     string `json:"arg9,omitempty" jsonschema:"description=Ninth positional argument"`
+	Arg10    string `json:"arg10,omitempty" jsonschema:"description=Tenth positional argument"`
+	ArgsText string `json:"args_text,omitempty" jsonschema:"description=Optional whitespace-delimited argument list when more than ten values are required"`
+	ArgsJSON string `json:"args_json,omitempty" jsonschema:"description=Optional JSON array of arguments for full fidelity"`
+}
+
+// ResolveArgs converts the provided command arguments into the final slice.
+func (a CommandArguments) ResolveArgs() ([]string, error) {
+	values := []string{a.Arg1, a.Arg2, a.Arg3, a.Arg4, a.Arg5, a.Arg6, a.Arg7, a.Arg8, a.Arg9, a.Arg10}
+	var args []string
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed != "" {
+			args = append(args, trimmed)
+		}
+	}
+	if extra := strings.TrimSpace(a.ArgsText); extra != "" {
+		args = append(args, strings.Fields(extra)...)
+	}
+	if rawJSON := strings.TrimSpace(a.ArgsJSON); rawJSON != "" {
+		var decoded []string
+		if err := json.Unmarshal([]byte(rawJSON), &decoded); err != nil {
+			return nil, fmt.Errorf("parse args_json: %w", err)
+		}
+		args = append(args, decoded...)
+	}
+	return args, nil
 }
 
 // CommandResult contains the captured output of a CLI execution.
@@ -70,7 +109,11 @@ type RegisteredTool struct {
 func NewCommandTool(name string, description string, baseArgs []string, workingDir string, executor CommandExecutor) RegisteredTool {
 	handler := func(ctx context.Context, arguments CommandArguments) (*mcp_golang.ToolResponse, error) {
 		resolvedArgs := append([]string{}, baseArgs...)
-		resolvedArgs = append(resolvedArgs, arguments.Args...)
+		dynamicArgs, err := arguments.ResolveArgs()
+		if err != nil {
+			return nil, err
+		}
+		resolvedArgs = append(resolvedArgs, dynamicArgs...)
 
 		result, err := executor.Run(ctx, workingDir, resolvedArgs)
 		commandLabel := strings.Join(append([]string{"kthulu"}, resolvedArgs...), " ")

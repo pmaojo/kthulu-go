@@ -1,4 +1,4 @@
-package mcpserver
+package mcp
 
 import (
 	"github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/parser"
