@@ -364,17 +364,19 @@ func exportVerifactu(orgID int) error {
 	if err != nil {
 		return err
 	}
-	logger, err := core.NewZapLogger(cfg)
+	logger, err := observability.NewLogger(cfg)
 	if err != nil {
 		return err
 	}
 	defer logger.Sync()
 
-	dbConn, err := core.NewDB(cfg, logger)
+	zapLogger := observability.GetZapLogger(logger)
+
+	dbConn, err := core.NewDB(cfg, zapLogger)
 	if err != nil {
 		return err
 	}
-	defer core.CloseDB(dbConn, logger)
+	defer core.CloseDB(dbConn, zapLogger)
 
 	repo := db.NewVerifactuRepository(dbConn)
 	signer := vf.NewHMACSigner([]byte(os.Getenv("VERIFACTU_SIGN_KEY")))
