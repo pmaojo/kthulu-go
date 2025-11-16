@@ -56,39 +56,6 @@ var addComponentCmd = &cobra.Command{
 	},
 }
 
-var generateCmd = &cobra.Command{
-	Use:   "generate [type] [name]",
-	Short: "🏗️ Generate enterprise-ready code components",
-	Long: `Generate production-ready code with best practices, security, and observability built-in.
-
-Component Types:
-  handler    - HTTP REST handler with OpenAPI docs
-  usecase    - Business logic use case with metrics
-  entity     - Domain entity with validations
-  repository - Data access layer with contracts
-  service    - Domain service with DI
-  migration  - Database schema migration
-  test       - Comprehensive test suite
-
-Examples:
-  kthulu generate handler UserHandler --crud --auth
-  kthulu generate usecase PaymentProcessor --with-metrics
-  kthulu generate entity Product --with-validation
-  kthulu generate migration AddUserRoles`,
-	Args: cobra.ExactArgs(2),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		componentType := args[0]
-		name := args[1]
-		crud, _ := cmd.Flags().GetBool("crud")
-		auth, _ := cmd.Flags().GetBool("auth")
-		metrics, _ := cmd.Flags().GetBool("with-metrics")
-		validation, _ := cmd.Flags().GetBool("with-validation")
-		tests, _ := cmd.Flags().GetBool("with-tests")
-
-		return runGenerateComponent(componentType, name, crud, auth, metrics, validation, tests)
-	},
-}
-
 func init() {
 	// Add module flags
 	addModuleCmd.Flags().StringSlice("with", []string{}, "Integration packages (stripe, oauth, etc)")
@@ -99,13 +66,6 @@ func init() {
 	addComponentCmd.Flags().Bool("with-tests", true, "Generate tests")
 	addComponentCmd.Flags().Bool("with-migration", false, "Generate database migration")
 	addComponentCmd.Flags().String("module", "", "Target module (auto-detected if empty)")
-
-	// Generate component flags
-	generateCmd.Flags().Bool("crud", false, "Generate full CRUD operations")
-	generateCmd.Flags().Bool("auth", false, "Add authentication middleware")
-	generateCmd.Flags().Bool("with-metrics", true, "Add observability metrics")
-	generateCmd.Flags().Bool("with-validation", true, "Add input validation")
-	generateCmd.Flags().Bool("with-tests", true, "Generate comprehensive tests")
 
 	// Add subcommands
 	addCmd.AddCommand(addModuleCmd)
@@ -243,63 +203,7 @@ func runAddModule(module string, integrations []string, compliance string, force
 }
 
 func runAddComponent(componentType, name, module string, withTests, withMigration bool) error {
-	return runGenerateComponent(componentType, name, false, false, true, true, withTests)
-}
-
-func runGenerateComponent(componentType, name string, crud, auth, metrics, validation, tests bool) error {
-	fmt.Printf("🏗️  Generating %s: %s\n", componentType, name)
-
-	validTypes := []string{"handler", "usecase", "entity", "repository", "service", "migration", "test"}
-	if !contains(validTypes, componentType) {
-		return fmt.Errorf("invalid component type. Valid types: %s", strings.Join(validTypes, ", "))
-	}
-
-	// Detect target module
-	fmt.Println("🔍 Detecting target module...")
-
-	// Generate enterprise-ready code
-	fmt.Printf("⚡ Generating enterprise %s...\n", componentType)
-
-	if crud {
-		fmt.Println("  📝 Adding CRUD operations...")
-	}
-
-	if auth {
-		fmt.Println("  🔒 Adding authentication middleware...")
-	}
-
-	if metrics {
-		fmt.Println("  📊 Adding observability metrics...")
-	}
-
-	if validation {
-		fmt.Println("  ✅ Adding input validation...")
-	}
-
-	if tests {
-		fmt.Println("  🧪 Generating comprehensive tests...")
-	}
-
-	// TODO:
-	// 1. Load component template
-	// 2. Apply enterprise patterns
-	// 3. Generate with AI assistance
-	// 4. Add observability tags
-	// 5. Generate OpenAPI docs
-	// 6. Create tests
-	// 7. Update module registry
-
-	fmt.Println("✅ Component generated successfully!")
 	return fmt.Errorf("enterprise component generation not yet implemented - coming in FASE 1.1")
-}
-
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
 }
 
 // Helper functions for intelligent module addition
