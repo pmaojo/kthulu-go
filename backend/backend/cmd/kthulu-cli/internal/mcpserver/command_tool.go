@@ -86,11 +86,14 @@ func NewCommandTool(name string, description string, baseArgs []string, workingD
 }
 
 // BuildCommandTools converts the runnable Cobra commands into MCP tools.
-func BuildCommandTools(root *cobra.Command, executor CommandExecutor, workingDir string) []RegisteredTool {
+func BuildCommandTools(root *cobra.Command, executor CommandExecutor, workingDir string, filter CommandFilter) []RegisteredTool {
 	var tools []RegisteredTool
 	for _, cmd := range collectRunnableCommands(root) {
 		segments := commandSegments(cmd)
 		if len(segments) == 0 {
+			continue
+		}
+		if filter != nil && !filter(segments) {
 			continue
 		}
 		name := strings.Join(segments, "_")
