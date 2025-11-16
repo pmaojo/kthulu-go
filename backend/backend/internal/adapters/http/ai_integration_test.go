@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	"github.com/pmaojo/kthulu-go/backend/internal/ai"
+	"github.com/pmaojo/kthulu-go/backend/internal/infrastructure/ai"
 	"github.com/pmaojo/kthulu-go/backend/internal/usecase"
 )
 

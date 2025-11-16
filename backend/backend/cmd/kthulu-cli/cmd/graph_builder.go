@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/pmaojo/kthulu-go/backend/core"
-	"github.com/pmaojo/kthulu-go/backend/internal/graph"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/graph"
 )
 
 // BuildValidationGraph scans use cases and adapters to construct a graph

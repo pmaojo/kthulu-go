@@ -57,7 +57,7 @@ package repository
 
 import (
 	"gorm.io/gorm"
-	"github.com/pmaojo/kthulu-go/backend/internal/modules/%s/domain"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules/%s/domain"
 )
 
 type %sRepository struct {
@@ -106,7 +106,7 @@ func (g *TemplateGenerator) generateServiceFileFixed(name string, info *resolver
 package service
 
 import (
-	"github.com/pmaojo/kthulu-go/backend/internal/modules/%s/domain"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules/%s/domain"
 )
 
 type %sService struct {

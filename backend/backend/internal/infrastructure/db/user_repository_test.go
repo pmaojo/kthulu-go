@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/pmaojo/kthulu-go/backend/internal/domain"
-	"github.com/pmaojo/kthulu-go/backend/internal/repository"
-	"github.com/pmaojo/kthulu-go/backend/internal/testutils"
+	"github.com/pmaojo/kthulu-go/backend/internal/domain/repository"
+	"github.com/pmaojo/kthulu-go/backend/internal/infrastructure/testutils"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

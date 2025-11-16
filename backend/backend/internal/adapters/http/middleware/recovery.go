@@ -9,7 +9,7 @@ import (
 	"github.com/getsentry/sentry-go"
 	"go.uber.org/zap"
 
-	"github.com/pmaojo/kthulu-go/backend/internal/observability"
+	"github.com/pmaojo/kthulu-go/backend/internal/infrastructure/observability"
 )
 
 // RecoveryMiddleware creates a middleware that recovers from panics and logs them

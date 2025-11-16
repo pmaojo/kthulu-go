@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/pmaojo/kthulu-go/backend/internal/modules/verifactu"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules/verifactu"
 )
 
 // VerifactuHandler exposes VeriFactu HTTP endpoints.

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/pmaojo/kthulu-go/backend/internal/domain"
-	"github.com/pmaojo/kthulu-go/backend/internal/repository"
+	"github.com/pmaojo/kthulu-go/backend/internal/domain/repository"
 )
 
 // RoleKey is the context key for user role

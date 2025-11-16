@@ -13,14 +13,19 @@
 │   │   └── service/           # main wiring (Router + ModuleSet) – binario final
 │   │       └── main.go        # arranca fx, carga config y monta los módulos dinámicos
 │   ├── internal/
-│   │   ├── modules/           # módulos auto‑registrables (auth, user, etc.)
 │   │   ├── adapters/
-│   │   │   └── http/          # controllers / handlers REST → DTO ↔ use‑case
+│   │   │   ├── http/          # controllers REST, middlewares y módulos Fx
+│   │   │   │   └── modules/   # módulos auto‑registrables (auth, user, etc.)
+│   │   │   ├── cli/           # tooling del generador y validaciones
+│   │   │   └── mcp/           # server MCP para exponer comandos
 │   │   ├── domain/            # entidades y value objects puros DDD
-│   │   ├── usecase/           # casos de uso (adder, lookup, deleter, etc.)
-│   │   ├── repository/        # puertos (interfaces) consumidos por usecase
+│   │   │   ├── common/        # utilidades puras de dominio (constantes, fechas)
+│   │   │   └── repository/    # puertos (interfaces) consumidos por usecase
+│   │   ├── usecase/           # casos de uso (coordinan puertos)
 │   │   └── infrastructure/
-│   │       └── db/            # impl repos (postgres/gorm). No lógica dominio
+│   │       ├── db/            # adaptadores gorm ↔ postgres/sqlite
+│   │       ├── observability/ # logging, tracing, métricas compartidas
+│   │       └── config/        # lectura/normalización de config
 │   ├── core/                  # config, logger, jwt util, shared errors
 │   └── migrations/            # goose / sql‑migrate
 ├── frontend/
@@ -45,7 +50,7 @@
 | **notifier** | Producer de eventos email → consola (mock SMTP)                                                           |
 | **core**     | JWT, configuración, migraciones automáticas, logger                                                       |
 
-> Los módulos viven en `internal/modules` y se empaquetan como `fx.Option`. Cada uno registra sus rutas mediante un `RouteRegistry` con `fx.Invoke` y puede habilitarse o deshabilitarse mediante la variable `MODULES`.
+> Los módulos HTTP viven en `internal/adapters/http/modules` y se empaquetan como `fx.Option`. Cada uno registra sus rutas mediante un `RouteRegistry` con `fx.Invoke` y puede habilitarse o deshabilitarse mediante la variable `MODULES`.
 
 ---
 
@@ -81,7 +86,7 @@ Estos módulos se activarán con `kthulu add module <nombre>` y se copiarán des
 
 ### Sistema de módulos dinámicos con Fx
 
-El contenedor de dependencias es `go.uber.org/fx`. Los módulos residen en `internal/modules` y se definen como `fx.Option`. En `cmd/service/main.go` se construye un `Registry` con todos los módulos disponibles y un `ModuleSetBuilder` compone la lista final según la variable de entorno `MODULES` (vacía = todos). `ModuleSet.Build` genera las opciones de Fx que inyectan casos de uso, adaptadores y registran rutas en un `RouteRegistry`, permitiendo habilitar o deshabilitar funcionalidades sin recurrir a globals ni recompilar.
+El contenedor de dependencias es `go.uber.org/fx`. Los módulos HTTP residen en `internal/adapters/http/modules` y se definen como `fx.Option`. En `cmd/service/main.go` se construye un `Registry` con todos los módulos disponibles y un `ModuleSetBuilder` compone la lista final según la variable de entorno `MODULES` (vacía = todos). `ModuleSet.Build` genera las opciones de Fx que inyectan casos de uso, adaptadores y registran rutas en un `RouteRegistry`, permitiendo habilitar o deshabilitar funcionalidades sin recurrir a globals ni recompilar.
 
 ### Esquema DB MVP
 
@@ -112,7 +117,7 @@ El contenedor de dependencias es `go.uber.org/fx`. Los módulos residen en `inte
 ```bash
 # generar openapi a partir de rutas + structs
 go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest \
-     --generate types,chi-server -o internal/handlers/auto_gen.go api/openapi.yaml
+     --generate types,chi-server -o internal/adapters/http/auto_gen.go api/openapi.yaml
 
 # generar TS
 npx oapi-codegen --config oapi-ts.config.yaml api/openapi.yaml
@@ -286,9 +291,11 @@ volumes:
 | Capa / carpeta               | Responsabilidad única                                            | Reglas                                                        |
 | ---------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------- |
 | `internal/domain`            | Entidades ricas, Value Objects, invariantes en constructores     | Sin dependencias externas; sólo stdlib y paquetes de dominio. |
+| `internal/domain/repository` | Puertos (interfaces) invocados por los casos de uso               | Definir contratos; jamás tocar Gorm aquí.                     |
 | `internal/usecase`           | Coordinadores de aplicación. Orquestan repos, services, policies | Un use case = archivo. Nada de lógica de infraestructura.     |
-| `internal/repository`        | Puertos (interfaces). Implementaciones viven en `infrastructure` | Nunca llamar Gorm directo aquí.                               |
-| `internal/infrastructure/db` | Adaptador Gorm ↔ PostgreSQL. Mapping DTO ↔ Entidad               | Cero lógica de dominio.                                       |
+| `internal/adapters/http`     | REST handlers, middlewares, módulos Fx                           | Sólo transformar DTO ↔ dominio; inyectar usecases/repos.      |
+| `internal/adapters/cli|mcp`  | CLI tooling, analizador de dependencias, servidor MCP            | Nada de acceso directo a DB; sólo casos de uso/core.          |
+| `internal/infrastructure/*`  | Adaptadores externos (db, observability, storage, queues, config) | Dependen de dominio/repos. Nunca importar adapters.           |
 | Validación                   | `validator/v10` en constructores de entidades                    | Errores `domain.ErrInvalidX`.                                 |
 | DI / Fx                      | Módulos proporcionan sólo dependencias necesarias                | No variables globales.                                        |
 
@@ -347,7 +354,7 @@ Notas:
 | Concepto Symfony           | Cómo lo adoptamos en Go / Kthulu                                | Beneficio                                                 |
 | -------------------------- | --------------------------------------------------------------- | --------------------------------------------------------- |
 | **Service Container**      | `fx` modules → providers declarativos, scopes, lifecycle hooks  | DI explícita sin singletons; fácil test‑mock              |
-| **Bundles (Modularidad)**  | `internal/modules/<name>` → cada uno auto‑registrable           | Aislamos dominio + infra; se puede distribuir como plugin |
+| **Bundles (Modularidad)**  | `internal/adapters/http/modules/<name>` → cada uno auto‑registrable | Aislamos dominio + infra; se puede distribuir como plugin |
 | **Event Dispatcher**       | `core/events` (mini bus + pub/sub via channels)                 | Desacopla side‑effects (ej. enviar mail, logging)         |
 | **Messenger / Bus**        | `usecase` + goroutines workers / Asynq                          | Comandos asíncronos, retries, backoff                     |
 | **Console Commands**       | `cmd/kthulu-cli` (cobra)                                        | Tareas de mantenimiento, migrations, cron                 |

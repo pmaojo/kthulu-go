@@ -12,8 +12,8 @@ import (
 	"github.com/metoro-io/mcp-golang/transport/stdio"
 	"github.com/spf13/cobra"
 
-	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/mcpserver"
-	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/parser"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/mcp/mcpserver"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/parser"
 )
 
 var (

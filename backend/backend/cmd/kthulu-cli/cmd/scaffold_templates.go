@@ -83,7 +83,7 @@ package repository
 import (
         "gorm.io/gorm"
 
-        "github.com/pmaojo/kthulu-go/backend/internal/modules/{{.Name}}/domain"
+        "github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules/{{.Name}}/domain"
 )
 
 type {{.Title}}Repository struct {
@@ -123,7 +123,7 @@ func (r *{{.Title}}Repository) List() ([]*domain.{{.Title}}, error) {
 package service
 
 import (
-        "github.com/pmaojo/kthulu-go/backend/internal/modules/{{.Name}}/domain"
+        "github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules/{{.Name}}/domain"
 )
 
 type {{.Title}}Service struct {
@@ -167,7 +167,7 @@ import (
         "strconv"
 
         "github.com/gorilla/mux"
-        "github.com/pmaojo/kthulu-go/backend/internal/modules/{{.Name}}/domain"
+        "github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules/{{.Name}}/domain"
 )
 
 type {{.Title}}Handler struct {

@@ -7,7 +7,7 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/pmaojo/kthulu-go/backend/core"
-	"github.com/pmaojo/kthulu-go/backend/internal/repository"
+	"github.com/pmaojo/kthulu-go/backend/internal/domain/repository"
 )
 
 // NotifierModule provides notification services for Fx.

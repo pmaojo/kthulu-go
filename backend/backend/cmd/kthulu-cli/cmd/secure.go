@@ -8,9 +8,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/parser"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/parser"
 	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/security"
-	"github.com/pmaojo/kthulu-go/backend/internal/secure"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/http/secure"
 )
 
 var secureCmd = &cobra.Command{

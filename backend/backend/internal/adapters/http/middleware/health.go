@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/pmaojo/kthulu-go/backend/core"
-	"github.com/pmaojo/kthulu-go/backend/internal/observability"
+	"github.com/pmaojo/kthulu-go/backend/internal/infrastructure/observability"
 )
 
 // HealthStatus represents the health status of a component

@@ -9,7 +9,7 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 
-	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/parser"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/parser"
 )
 
 // Cache manages SQLite cache for tag analysis results

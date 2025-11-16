@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pmaojo/kthulu-go/backend/internal/repository"
+	"github.com/pmaojo/kthulu-go/backend/internal/domain/repository"
 )
 
 // tokenEntry represents a stored token with metadata

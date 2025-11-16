@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/pmaojo/kthulu-go/backend/internal/domain"
-	"github.com/pmaojo/kthulu-go/backend/internal/repository"
+	"github.com/pmaojo/kthulu-go/backend/internal/domain/repository"
 )
 
 // calendarRepository implements the CalendarRepository interface using GORM

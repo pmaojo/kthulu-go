@@ -41,9 +41,9 @@ show_progress "Misspellings fixed"
 echo "📝 Creating constants for repeated strings..."
 
 # Crear archivo de constantes comunes si no existe
-if [ ! -f "internal/common/constants.go" ]; then
-    mkdir -p internal/common
-    cat > internal/common/constants.go << 'EOF'
+if [ ! -f "internal/domain/common/constants.go" ]; then
+    mkdir -p internal/domain/common
+    cat > internal/domain/common/constants.go << 'EOF'
 // @kthulu:core
 package common
 

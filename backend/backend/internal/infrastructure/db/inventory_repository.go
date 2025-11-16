@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/pmaojo/kthulu-go/backend/internal/domain"
-	"github.com/pmaojo/kthulu-go/backend/internal/repository"
+	"github.com/pmaojo/kthulu-go/backend/internal/domain/repository"
 )
 
 // inventoryRepository implements the InventoryRepository interface using GORM

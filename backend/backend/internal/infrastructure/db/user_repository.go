@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/pmaojo/kthulu-go/backend/internal/domain"
-	"github.com/pmaojo/kthulu-go/backend/internal/repository"
+	"github.com/pmaojo/kthulu-go/backend/internal/domain/repository"
 
 	"gorm.io/gorm"
 )
