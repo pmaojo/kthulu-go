@@ -23,3 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 .env
+kthulu-cli
+kthulu-server
+kthulu-app
+backend/backend/kthulu-app
+backend/backend/kthulu-cli

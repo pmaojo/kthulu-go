@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=localhost
+      - DB_PORT=0
+      - DB_NAME=test-project
+      - DB_USER=admin
+      - DB_PASSWORD=password
+    networks:
+      - test-project-network
+
+
+volumes:
+  test-project-data:
+
+networks:
+  test-project-network:
+    driver: bridge

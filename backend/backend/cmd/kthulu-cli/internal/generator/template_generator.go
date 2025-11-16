@@ -3,6 +3,7 @@ package generator
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -28,6 +29,42 @@ type GeneratorConfig struct {
 	Enterprise    bool              `json:"enterprise"`    // enterprise features
 	Observability bool              `json:"observability"` // monitoring
 	CustomValues  map[string]string `json:"custom_values"` // custom template values
+}
+
+// modulePath returns the module import path for the generated project.
+func (g *TemplateGenerator) modulePath() string {
+	if g.config == nil {
+		return ""
+	}
+
+	if g.config.CustomValues != nil {
+		if modulePath := strings.TrimSpace(g.config.CustomValues["module_path"]); modulePath != "" {
+			return modulePath
+		}
+	}
+
+	return strings.TrimSpace(g.config.ProjectName)
+}
+
+// moduleImportPath builds an import path anchored at the module path.
+func (g *TemplateGenerator) moduleImportPath(parts ...string) string {
+	base := strings.Trim(g.modulePath(), "/")
+	segments := make([]string, 0, len(parts)+1)
+	if base != "" {
+		segments = append(segments, base)
+	}
+
+	for _, part := range parts {
+		if trimmed := strings.Trim(part, "/"); trimmed != "" {
+			segments = append(segments, trimmed)
+		}
+	}
+
+	if len(segments) == 0 {
+		return ""
+	}
+
+	return path.Join(segments...)
 }
 
 // ProjectStructure represents the generated project structure
@@ -180,6 +217,12 @@ func (g *TemplateGenerator) generateBaseStructure(structure *ProjectStructure) e
 	}
 	structure.Files = append(structure.Files, readmeFile)
 
+	coreProviders := GeneratedFile{
+		Path:    "internal/core/providers.go",
+		Content: g.generateCoreProviders(),
+	}
+	structure.Files = append(structure.Files, coreProviders)
+
 	return nil
 }
 
@@ -246,24 +289,24 @@ func (g *TemplateGenerator) generateModuleFiles(moduleName string, structure *Pr
 
 // generateMainFile generates the main.go file
 func (g *TemplateGenerator) generateMainFile() string {
+	coreImport := g.moduleImportPath("internal/core")
 	return fmt.Sprintf(`// @kthulu:project:%s
 // @kthulu:generated:true
 // @kthulu:features:%s
 package main
 
 import (
-	"context"
-	"fmt"
-	"log"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
+"context"
+"log"
+"net/http"
+"os"
+"os/signal"
+"syscall"
 
+	"github.com/gorilla/mux"
 	"go.uber.org/fx"
 
-	"github.com/pmaojo/kthulu-go/backend/internal/core"
+"%s"
 %s
 )
 
@@ -278,10 +321,11 @@ func main() {
 %s
 		
 		// HTTP server
-		fx.Invoke(func(lc fx.Lifecycle) {
+		fx.Invoke(func(lc fx.Lifecycle, %s) {
+			router := setupRoutes(%s)
 			server := &http.Server{
 				Addr:    ":8080",
-				Handler: setupRoutes(),
+				Handler: router,
 			}
 			
 			lc.Append(fx.Hook{
@@ -318,41 +362,55 @@ func main() {
 	log.Println("Server stopped")
 }
 
-func setupRoutes() http.Handler {
-	mux := http.NewServeMux()
+func setupRoutes(%s) http.Handler {
+	router := mux.NewRouter()
 	
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})
+
+	apiRouter := router.PathPrefix("/api/v1").Subrouter()
 	
 	// Add module routes here
 %s
 	
-	return mux
+	return router
 }
 `, g.config.ProjectName,
 		strings.Join(g.config.Features, ","),
+		coreImport,
 		g.generateModuleImports(),
 		g.generateModuleProviders(),
+		g.generateInvokeParams(),
+		g.generateInvokeArgs(),
+		g.generateInvokeParams(),
 		g.generateModuleRoutes())
 }
 
 // generateGoMod generates the go.mod file
 func (g *TemplateGenerator) generateGoMod() string {
+	modulePath := g.modulePath()
+	deps := []string{
+		"\tgo.uber.org/fx v1.20.0",
+		"\tgithub.com/gorilla/mux v1.8.0",
+		"\tgorm.io/gorm v1.25.5",
+		fmt.Sprintf("\tgorm.io/driver/%s v1.5.4", g.config.Database),
+		"\tgithub.com/golang-jwt/jwt/v5 v5.2.0",
+	}
+
+	if extra := strings.TrimSpace(g.generateDependencies()); extra != "" {
+		deps = append(deps, extra)
+	}
+
 	return fmt.Sprintf(`module %s
 
 go 1.21
 
 require (
-	go.uber.org/fx v1.20.0
-	github.com/gorilla/mux v1.8.0
-	gorm.io/gorm v1.25.5
-	gorm.io/driver/%s v1.5.4
-	github.com/golang-jwt/jwt/v5 v5.2.0
 %s
 )
-`, g.config.ProjectName, g.config.Database, g.generateDependencies())
+`, modulePath, strings.Join(deps, "\n"))
 }
 
 // generateReadme generates the README.md file
@@ -416,13 +474,104 @@ Dependencies resolved: %s
 	return readme
 }
 
+func (g *TemplateGenerator) generateCoreProviders() string {
+	dbDriver := strings.ToLower(strings.TrimSpace(g.config.Database))
+	if dbDriver == "" {
+		dbDriver = "sqlite"
+	}
+
+	dbName := strings.TrimSpace(g.config.ProjectName)
+	if dbName == "" {
+		dbName = "app"
+	}
+
+	imports := []string{
+		"\"fmt\"",
+		"\"log\"",
+		"\"os\"",
+		"\"go.uber.org/fx\"",
+		"\"gorm.io/gorm\"",
+	}
+
+	var connectionBuilder strings.Builder
+	var driverImport string
+	switch dbDriver {
+	case "postgres":
+		driverImport = "\"gorm.io/driver/postgres\""
+		connectionBuilder.WriteString("\t\tdsn := fmt.Sprintf(\"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable\",\n")
+		connectionBuilder.WriteString("\t\t\tgetEnv(\"DB_HOST\", \"localhost\"),\n")
+		connectionBuilder.WriteString("\t\t\tgetEnv(\"DB_PORT\", \"5432\"),\n")
+		connectionBuilder.WriteString("\t\t\tgetEnv(\"DB_USER\", \"postgres\"),\n")
+		connectionBuilder.WriteString("\t\t\tgetEnv(\"DB_PASSWORD\", \"postgres\"),\n")
+		connectionBuilder.WriteString(fmt.Sprintf("\t\t\tgetEnv(\"DB_NAME\", \"%s\"),\n", dbName))
+		connectionBuilder.WriteString("\t\t)\n")
+		connectionBuilder.WriteString(fmt.Sprintf("\t\tlog.Printf(\"Connecting to PostgreSQL at %%s:%%s/%%s\", getEnv(\"DB_HOST\", \"localhost\"), getEnv(\"DB_PORT\", \"5432\"), getEnv(\"DB_NAME\", \"%s\"))\n", dbName))
+		connectionBuilder.WriteString("\t\treturn gorm.Open(postgres.Open(dsn), &gorm.Config{})\n")
+	case "mysql":
+		driverImport = "\"gorm.io/driver/mysql\""
+		connectionBuilder.WriteString("\t\tdsn := fmt.Sprintf(\"%s:%s@tcp(%s:%s)/%s?parseTime=true\",\n")
+		connectionBuilder.WriteString("\t\t\tgetEnv(\"DB_USER\", \"root\"),\n")
+		connectionBuilder.WriteString("\t\t\tgetEnv(\"DB_PASSWORD\", \"password\"),\n")
+		connectionBuilder.WriteString("\t\t\tgetEnv(\"DB_HOST\", \"localhost\"),\n")
+		connectionBuilder.WriteString("\t\t\tgetEnv(\"DB_PORT\", \"3306\"),\n")
+		connectionBuilder.WriteString(fmt.Sprintf("\t\t\tgetEnv(\"DB_NAME\", \"%s\"),\n", dbName))
+		connectionBuilder.WriteString("\t\t)\n")
+		connectionBuilder.WriteString(fmt.Sprintf("\t\tlog.Printf(\"Connecting to MySQL at %%s:%%s/%%s\", getEnv(\"DB_HOST\", \"localhost\"), getEnv(\"DB_PORT\", \"3306\"), getEnv(\"DB_NAME\", \"%s\"))\n", dbName))
+		connectionBuilder.WriteString("\t\treturn gorm.Open(mysql.Open(dsn), &gorm.Config{})\n")
+	default:
+		driverImport = "\"gorm.io/driver/sqlite\""
+		imports = append(imports, "\"path/filepath\"")
+		connectionBuilder.WriteString(fmt.Sprintf("\t\tdbPath := fmt.Sprintf(\"%%s\", getEnv(\"SQLITE_PATH\", \"data/%s.db\"))\n", dbName))
+		connectionBuilder.WriteString("\t\tif err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {\n")
+		connectionBuilder.WriteString("\t\t\treturn nil, err\n")
+		connectionBuilder.WriteString("\t\t}\n")
+		connectionBuilder.WriteString("\t\tlog.Printf(\"Using SQLite database at %s\", dbPath)\n")
+		connectionBuilder.WriteString("\t\treturn gorm.Open(sqlite.Open(dbPath), &gorm.Config{})\n")
+	}
+	imports = append(imports, driverImport)
+
+	var importLines []string
+	for _, imp := range imports {
+		importLines = append(importLines, "\t"+imp)
+	}
+
+	return fmt.Sprintf(`package core
+
+import (
+%s
+)
+
+func CoreRepositoryProviders() fx.Option {
+        return fx.Options(
+                fx.Provide(NewDatabase),
+        )
+}
+
+func NewDatabase() (*gorm.DB, error) {
+%s
+}
+
+func getEnv(key, fallback string) string {
+        if value := os.Getenv(key); value != "" {
+                return value
+        }
+        return fallback
+}
+`, strings.Join(importLines, "\n"), connectionBuilder.String())
+}
+
 // Helper methods for code generation
 func (g *TemplateGenerator) generateModuleImports() string {
 	var imports []string
 	// Use resolved dependencies, not just initial features
 	plan, _ := g.resolver.ResolveDependencies(g.config.Features)
 	for _, module := range plan.RequiredModules {
-		imports = append(imports, fmt.Sprintf(`	"github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules/%s"`, module))
+		moduleBase := g.moduleImportPath("internal/adapters/http/modules", module)
+		domainImport := g.moduleImportPath("internal/adapters/http/modules", module, "domain")
+		handlersImport := g.moduleImportPath("internal/adapters/http/modules", module, "handlers")
+		imports = append(imports, fmt.Sprintf(` "%s"`, moduleBase))
+		imports = append(imports, fmt.Sprintf(` %sDomain "%s"`, module, domainImport))
+		imports = append(imports, fmt.Sprintf(` %sHandlers "%s"`, module, handlersImport))
 	}
 	return strings.Join(imports, "\n")
 }
@@ -440,12 +589,29 @@ func (g *TemplateGenerator) generateModuleRoutes() string {
 	var routes []string
 	plan, _ := g.resolver.ResolveDependencies(g.config.Features)
 	for _, module := range plan.RequiredModules {
-		capModule := Capitalize(module)
 		routes = append(routes, fmt.Sprintf(`	// %s routes`, module))
-		routes = append(routes, fmt.Sprintf(`	%sHandler := %s.New%sHandler(%sService)`, module, module, capModule, module))
-		routes = append(routes, fmt.Sprintf(`	%sHandler.RegisterRoutes(mux.PathPrefix("/api/v1").Subrouter())`, module))
+		routes = append(routes, fmt.Sprintf(`	%sHandler := %sHandlers.New%sHandler(%sService)`, module, module, Capitalize(module), module))
+		routes = append(routes, fmt.Sprintf(`	%sHandler.RegisterRoutes(apiRouter)`, module))
 	}
 	return strings.Join(routes, "\n")
+}
+
+func (g *TemplateGenerator) generateInvokeParams() string {
+	var params []string
+	plan, _ := g.resolver.ResolveDependencies(g.config.Features)
+	for _, module := range plan.RequiredModules {
+		params = append(params, fmt.Sprintf(`%sService %sDomain.%sService`, module, module, Capitalize(module)))
+	}
+	return strings.Join(params, ", ")
+}
+
+func (g *TemplateGenerator) generateInvokeArgs() string {
+	var args []string
+	plan, _ := g.resolver.ResolveDependencies(g.config.Features)
+	for _, module := range plan.RequiredModules {
+		args = append(args, fmt.Sprintf(`%sService`, module))
+	}
+	return strings.Join(args, ", ")
 }
 
 func (g *TemplateGenerator) generateDependencies() string {
@@ -453,13 +619,13 @@ func (g *TemplateGenerator) generateDependencies() string {
 
 	if g.config.Enterprise {
 		deps = append(deps,
-			"	github.com/prometheus/client_golang v1.17.0",
-			"	go.opentelemetry.io/otel v1.21.0",
+			"\tgithub.com/prometheus/client_golang v1.17.0",
+			"\tgo.opentelemetry.io/otel v1.21.0",
 		)
 	}
 
 	if g.config.Frontend == "react" {
-		deps = append(deps, "	github.com/gorilla/websocket v1.5.0")
+		deps = append(deps, "\tgithub.com/gorilla/websocket v1.5.0")
 	}
 
 	return strings.Join(deps, "\n")
@@ -479,24 +645,41 @@ func (g *TemplateGenerator) generateFeatureList() string {
 
 // Additional generation methods (simplified for brevity)
 func (g *TemplateGenerator) generateModuleFile(name string, info *resolver.ModuleInfo) string {
+	capName := Capitalize(name)
+	repositoryImport := g.moduleImportPath("internal/adapters/http/modules", name, "repository")
+	serviceImport := g.moduleImportPath("internal/adapters/http/modules", name, "service")
+	handlersImport := g.moduleImportPath("internal/adapters/http/modules", name, "handlers")
+
 	return fmt.Sprintf(`// @kthulu:module:%s
 // @kthulu:category:%s
 package %s
 
-import "go.uber.org/fx"
+import (
+"go.uber.org/fx"
+
+"%s"
+"%s"
+"%s"
+)
 
 // Providers returns the Fx providers for the %s module
 func Providers() fx.Option {
-	return fx.Options(
-		fx.Provide(
-			New%sRepository,
-			New%sService,
-			New%sHandler,
-		),
-	)
+return fx.Options(
+fx.Provide(
+repository.New%sRepository,
+service.New%sService,
+handlers.New%sHandler,
+),
+)
 }
-`, name, info.Category, name, name,
-		Capitalize(name), Capitalize(name), Capitalize(name))
+`, name, info.Category, name,
+		repositoryImport,
+		serviceImport,
+		handlersImport,
+		name,
+		capName,
+		capName,
+		capName)
 }
 
 func (g *TemplateGenerator) generateDomainFile(name string, info *resolver.ModuleInfo) string {
@@ -546,7 +729,7 @@ package repository
 
 import (
 	"gorm.io/gorm"
-	"github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules/%s/domain"
+	"%s"
 )
 
 type %sRepository struct {
@@ -580,7 +763,7 @@ func (r *%sRepository) List() ([]*domain.%s, error) {
 	err := r.db.Find(&entities).Error
 	return entities, err
 }
-`, name, name, capName, capName, capName,
+`, name, g.moduleImportPath("internal/adapters/http/modules", name, "domain"), capName, capName, capName,
 		capName, capName, capName, capName, capName, capName,
 		capName, capName, capName, capName, capName, capName,
 		capName)
@@ -593,7 +776,7 @@ func (g *TemplateGenerator) generateServiceFile(name string, info *resolver.Modu
 package service
 
 import (
-	"github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules/%s/domain"
+	"%s"
 )
 
 type %sService struct {
@@ -626,7 +809,7 @@ func (s *%sService) Delete%s(id uint) error {
 func (s *%sService) List%s() ([]*domain.%s, error) {
 	return s.repo.List()
 }
-`, name, name, capName, capName, capName,
+`, name, g.moduleImportPath("internal/adapters/http/modules", name, "domain"), capName, capName, capName,
 		capName, capName, capName, capName, capName, capName,
 		capName, capName, capName, capName, capName, capName,
 		capName, capName, capName, pluralName, capName)
@@ -644,7 +827,7 @@ import (
 	"strconv"
 	
 	"github.com/gorilla/mux"
-	"github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules/%s/domain"
+	"%s"
 )
 
 type %sHandler struct {
@@ -749,7 +932,7 @@ func (h *%sHandler) List(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(entities)
 }
-`, name, name, capName, capName, capName,
+`, name, g.moduleImportPath("internal/adapters/http/modules", name, "domain"), capName, capName, capName,
 		capName, capName, capName, name, capName, name,
 		capName, capName, capName, capName, capName,
 		capName, capName, capName, capName, capName, capName, pluralName)

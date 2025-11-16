@@ -3,14 +3,15 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/generator"
-	"github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/parser"
 	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/resolver"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/parser"
 )
 
 // Template definitions
@@ -121,6 +122,7 @@ var (
 	newDatabase      string
 	newFrontend      string
 	newAuth          string
+	newModulePath    string
 	newEnterprise    bool
 	newObservability bool
 	newOutputPath    string
@@ -134,6 +136,7 @@ func init() {
 	newCmd.Flags().StringVarP(&newDatabase, "database", "d", "", "Database type (sqlite, postgres, mysql)")
 	newCmd.Flags().StringVar(&newFrontend, "frontend", "", "Frontend type (react, templ, fyne, none)")
 	newCmd.Flags().StringVar(&newAuth, "auth", "", "Auth type (jwt, oauth, both)")
+	newCmd.Flags().StringVar(&newModulePath, "module-path", "", "Go module path (default: project name)")
 	newCmd.Flags().BoolVar(&newEnterprise, "enterprise", false, "Enable enterprise features")
 	newCmd.Flags().BoolVar(&newObservability, "observability", false, "Enable observability stack")
 	newCmd.Flags().StringVarP(&newOutputPath, "output", "o", "", "Output directory (default: current directory)")
@@ -200,8 +203,23 @@ func runNewProjectIntelligent(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// Step 8: Display success message and next steps
+	// Step 8: Run go mod tidy
+	if err := runGoModTidy(structure.RootPath); err != nil {
+		fmt.Printf("❌ Error running go mod tidy: %v\n", err)
+		// Decide if you want to exit here or just warn the user
+	}
+
+	// Step 9: Display success message and next steps
 	displaySuccessMessage(projectName, config, structure)
+}
+
+func runGoModTidy(projectPath string) error {
+	fmt.Println("\n🧹 Running go mod tidy...")
+	cmd := exec.Command("go", "mod", "tidy")
+	cmd.Dir = projectPath
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 func buildProjectConfig(projectName string) (*generator.GeneratorConfig, error) {
@@ -221,6 +239,10 @@ func buildProjectConfig(projectName string) (*generator.GeneratorConfig, error) 
 		Enterprise:    template.Enterprise,
 		Observability: false,
 		CustomValues:  make(map[string]string),
+	}
+
+	if newModulePath != "" {
+		config.CustomValues["module_path"] = newModulePath
 	}
 
 	// Override with command flags
@@ -310,7 +332,6 @@ func displaySuccessMessage(projectName string, config *generator.GeneratorConfig
 
 	fmt.Printf("\n🚀 Next steps:\n")
 	fmt.Printf("   cd %s\n", projectName)
-	fmt.Printf("   go mod download          # Install dependencies\n")
 
 	if config.Database != "sqlite" {
 		fmt.Printf("   # Configure %s connection in configs/app.yaml\n", config.Database)

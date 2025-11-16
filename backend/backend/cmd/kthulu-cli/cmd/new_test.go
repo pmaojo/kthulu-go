@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package cmd
 
 import (
@@ -89,13 +92,20 @@ func TestScaffoldProjectSkipExisting(t *testing.T) {
 }
 
 func TestCopyDirFSCopiesFiles(t *testing.T) {
-	fsys := fstest.MapFS{
-		"file.txt":       {Data: []byte("hi"), Mode: 0o600},
-		"sub/nested.txt": {Data: []byte("nested"), Mode: 0o640},
+	src := t.TempDir()
+	if err := os.WriteFile(filepath.Join(src, "file.txt"), []byte("hi"), 0600); err != nil {
+		t.Fatal(err)
 	}
+	if err := os.MkdirAll(filepath.Join(src, "sub"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(src, "sub", "nested.txt"), []byte("nested"), 0640); err != nil {
+		t.Fatal(err)
+	}
+
 	tmp := t.TempDir()
 	dst := filepath.Join(tmp, "out")
-	if err := copyDirFS(fsys, ".", dst, false); err != nil {
+	if err := copyDirFS(os.DirFS(src), ".", dst, false); err != nil {
 		t.Fatalf("copyDirFS: %v", err)
 	}
 	if b, err := os.ReadFile(filepath.Join(dst, "file.txt")); err != nil || string(b) != "hi" {
