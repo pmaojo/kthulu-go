@@ -9,8 +9,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/generator"
-	"github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/parser"
 	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/resolver"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/parser"
 )
 
 // Template definitions
@@ -121,6 +121,7 @@ var (
 	newDatabase      string
 	newFrontend      string
 	newAuth          string
+	newModulePath    string
 	newEnterprise    bool
 	newObservability bool
 	newOutputPath    string
@@ -134,6 +135,7 @@ func init() {
 	newCmd.Flags().StringVarP(&newDatabase, "database", "d", "", "Database type (sqlite, postgres, mysql)")
 	newCmd.Flags().StringVar(&newFrontend, "frontend", "", "Frontend type (react, templ, fyne, none)")
 	newCmd.Flags().StringVar(&newAuth, "auth", "", "Auth type (jwt, oauth, both)")
+	newCmd.Flags().StringVar(&newModulePath, "module-path", "", "Go module path (default: project name)")
 	newCmd.Flags().BoolVar(&newEnterprise, "enterprise", false, "Enable enterprise features")
 	newCmd.Flags().BoolVar(&newObservability, "observability", false, "Enable observability stack")
 	newCmd.Flags().StringVarP(&newOutputPath, "output", "o", "", "Output directory (default: current directory)")
@@ -221,6 +223,10 @@ func buildProjectConfig(projectName string) (*generator.GeneratorConfig, error) 
 		Enterprise:    template.Enterprise,
 		Observability: false,
 		CustomValues:  make(map[string]string),
+	}
+
+	if newModulePath != "" {
+		config.CustomValues["module_path"] = newModulePath
 	}
 
 	// Override with command flags
