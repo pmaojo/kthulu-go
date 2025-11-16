@@ -3,6 +3,7 @@ package generator
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -28,6 +29,42 @@ type GeneratorConfig struct {
 	Enterprise    bool              `json:"enterprise"`    // enterprise features
 	Observability bool              `json:"observability"` // monitoring
 	CustomValues  map[string]string `json:"custom_values"` // custom template values
+}
+
+// modulePath returns the module import path for the generated project.
+func (g *TemplateGenerator) modulePath() string {
+	if g.config == nil {
+		return ""
+	}
+
+	if g.config.CustomValues != nil {
+		if modulePath := strings.TrimSpace(g.config.CustomValues["module_path"]); modulePath != "" {
+			return modulePath
+		}
+	}
+
+	return strings.TrimSpace(g.config.ProjectName)
+}
+
+// moduleImportPath builds an import path anchored at the module path.
+func (g *TemplateGenerator) moduleImportPath(parts ...string) string {
+	base := strings.Trim(g.modulePath(), "/")
+	segments := make([]string, 0, len(parts)+1)
+	if base != "" {
+		segments = append(segments, base)
+	}
+
+	for _, part := range parts {
+		if trimmed := strings.Trim(part, "/"); trimmed != "" {
+			segments = append(segments, trimmed)
+		}
+	}
+
+	if len(segments) == 0 {
+		return ""
+	}
+
+	return path.Join(segments...)
 }
 
 // ProjectStructure represents the generated project structure
@@ -348,6 +385,7 @@ func setupRoutes(%s) http.Handler {
 
 // generateGoMod generates the go.mod file
 func (g *TemplateGenerator) generateGoMod() string {
+	modulePath := g.modulePath()
 	return fmt.Sprintf(`module %s
 
 go 1.21
@@ -362,7 +400,7 @@ require (
 )
 
 replace %s => ./
-`, g.config.ProjectName, g.config.Database, g.generateDependencies(), g.config.ProjectName)
+`, modulePath, g.config.Database, g.generateDependencies(), modulePath)
 }
 
 // generateReadme generates the README.md file
@@ -432,9 +470,12 @@ func (g *TemplateGenerator) generateModuleImports() string {
 	// Use resolved dependencies, not just initial features
 	plan, _ := g.resolver.ResolveDependencies(g.config.Features)
 	for _, module := range plan.RequiredModules {
-		imports = append(imports, fmt.Sprintf(`	"%s/internal/adapters/http/modules/%s"`, g.config.ProjectName, module))
-		imports = append(imports, fmt.Sprintf(`	%sDomain "%s/internal/adapters/http/modules/%s/domain"`, module, g.config.ProjectName, module))
-		imports = append(imports, fmt.Sprintf(`	%sHandlers "%s/internal/adapters/http/modules/%s/handlers"`, module, g.config.ProjectName, module))
+		moduleBase := g.moduleImportPath("internal/adapters/http/modules", module)
+		domainImport := g.moduleImportPath("internal/adapters/http/modules", module, "domain")
+		handlersImport := g.moduleImportPath("internal/adapters/http/modules", module, "handlers")
+		imports = append(imports, fmt.Sprintf(` "%s"`, moduleBase))
+		imports = append(imports, fmt.Sprintf(` %sDomain "%s"`, module, domainImport))
+		imports = append(imports, fmt.Sprintf(` %sHandlers "%s"`, module, handlersImport))
 	}
 	return strings.Join(imports, "\n")
 }
@@ -575,7 +616,7 @@ package repository
 
 import (
 	"gorm.io/gorm"
-	"%s/internal/adapters/http/modules/%s/domain"
+	"%s"
 )
 
 type %sRepository struct {
@@ -609,7 +650,7 @@ func (r *%sRepository) List() ([]*domain.%s, error) {
 	err := r.db.Find(&entities).Error
 	return entities, err
 }
-`, name, name, capName, capName, capName,
+`, name, g.moduleImportPath("internal/adapters/http/modules", name, "domain"), capName, capName, capName,
 		capName, capName, capName, capName, capName, capName,
 		capName, capName, capName, capName, capName, capName,
 		capName)
@@ -622,7 +663,7 @@ func (g *TemplateGenerator) generateServiceFile(name string, info *resolver.Modu
 package service
 
 import (
-	"%s/internal/adapters/http/modules/%s/domain"
+	"%s"
 )
 
 type %sService struct {
@@ -655,7 +696,7 @@ func (s *%sService) Delete%s(id uint) error {
 func (s *%sService) List%s() ([]*domain.%s, error) {
 	return s.repo.List()
 }
-`, g.config.ProjectName, name, capName, capName, capName,
+`, name, g.moduleImportPath("internal/adapters/http/modules", name, "domain"), capName, capName, capName,
 		capName, capName, capName, capName, capName, capName,
 		capName, capName, capName, capName, capName, capName,
 		capName, capName, capName, pluralName, capName)
@@ -673,7 +714,7 @@ import (
 	"strconv"
 	
 	"github.com/gorilla/mux"
-	"%s/internal/adapters/http/modules/%s/domain"
+	"%s"
 )
 
 type %sHandler struct {
@@ -778,7 +819,7 @@ func (h *%sHandler) List(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(entities)
 }
-`, g.config.ProjectName, name, capName, capName, capName,
+`, name, g.moduleImportPath("internal/adapters/http/modules", name, "domain"), capName, capName, capName,
 		capName, capName, capName, name, capName, name,
 		capName, capName, capName, capName, capName,
 		capName, capName, capName, capName, capName, capName, pluralName)
