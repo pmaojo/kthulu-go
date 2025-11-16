@@ -41,48 +41,47 @@ func NewCache(projectRoot string) (*Cache, error) {
 
 // initialize creates the cache tables
 func (c *Cache) initialize() error {
-	schema := `
-	CREATE TABLE IF NOT EXISTS file_hashes (
-		file_path TEXT PRIMARY KEY,
-		hash TEXT NOT NULL,
-		last_modified INTEGER NOT NULL,
-		created_at INTEGER NOT NULL
-	);
-	
-	CREATE TABLE IF NOT EXISTS parsed_tags (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		file_path TEXT NOT NULL,
-		tag_type TEXT NOT NULL,
-		tag_value TEXT,
-		tag_params TEXT, -- JSON
-		package_name TEXT,
-		context TEXT,
-		line_number INTEGER,
-		created_at INTEGER NOT NULL
-	);
-	
-	CREATE TABLE IF NOT EXISTS modules (
-		name TEXT PRIMARY KEY,
-		package_name TEXT NOT NULL,
-		dependencies TEXT, -- JSON array
-		files TEXT, -- JSON array
-		metadata TEXT, -- JSON
-		last_updated INTEGER NOT NULL
-	);
-	
-	CREATE TABLE IF NOT EXISTS dependencies (
-		from_module TEXT NOT NULL,
-		to_module TEXT NOT NULL,
-		dependency_type TEXT NOT NULL,
-		strength INTEGER NOT NULL,
-		created_at INTEGER NOT NULL,
-		PRIMARY KEY (from_module, to_module)
-	);
-	
-	CREATE INDEX IF NOT EXISTS idx_tags_file_path ON parsed_tags(file_path);
-	CREATE INDEX IF NOT EXISTS idx_tags_type ON parsed_tags(tag_type);
-	CREATE INDEX IF NOT EXISTS idx_modules_package ON modules(package_name);
-	`
+schema := `
+CREATE TABLE IF NOT EXISTS file_hashes (
+file_path TEXT PRIMARY KEY,
+hash TEXT NOT NULL,
+last_modified INTEGER NOT NULL,
+created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS parsed_tags (
+id INTEGER PRIMARY KEY AUTOINCREMENT,
+file_path TEXT NOT NULL,
+tag_type TEXT NOT NULL,
+tag_value TEXT,
+tag_content TEXT,
+tag_attributes TEXT,
+line_number INTEGER,
+created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS modules (
+name TEXT PRIMARY KEY,
+package_name TEXT NOT NULL,
+dependencies TEXT, -- JSON array
+files TEXT, -- JSON array
+tags TEXT, -- JSON array
+last_updated INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS dependencies (
+from_module TEXT NOT NULL,
+to_module TEXT NOT NULL,
+dependency_type TEXT NOT NULL,
+line_number INTEGER,
+created_at INTEGER NOT NULL,
+PRIMARY KEY (from_module, to_module)
+);
+
+CREATE INDEX IF NOT EXISTS idx_tags_file_path ON parsed_tags(file_path);
+CREATE INDEX IF NOT EXISTS idx_tags_type ON parsed_tags(tag_type);
+CREATE INDEX IF NOT EXISTS idx_modules_package ON modules(package_name);
+`
 
 	_, err := c.db.Exec(schema)
 	return err
@@ -135,13 +134,13 @@ func (c *Cache) CacheFileTags(filePath, fileHash string, tags []parser.Tag) erro
 
 	// Insert new tags
 	for _, tag := range tags {
-		paramsJSON, _ := json.Marshal(tag.Params)
+		attributesJSON, _ := json.Marshal(tag.Attributes)
 
 		_, err = tx.Exec(`
-			INSERT INTO parsed_tags 
-			(file_path, tag_type, tag_value, tag_params, package_name, context, line_number, created_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-		`, filePath, string(tag.Type), tag.Value, string(paramsJSON), tag.Package, tag.Context, tag.Line, now)
+INSERT INTO parsed_tags
+(file_path, tag_type, tag_value, tag_content, tag_attributes, line_number, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+`, filePath, string(tag.Type), tag.Value, tag.Content, string(attributesJSON), tag.Line, now)
 		if err != nil {
 			return err
 		}
@@ -153,9 +152,9 @@ func (c *Cache) CacheFileTags(filePath, fileHash string, tags []parser.Tag) erro
 // GetCachedTags retrieves cached tags for a file
 func (c *Cache) GetCachedTags(filePath string) ([]parser.Tag, error) {
 	rows, err := c.db.Query(`
-		SELECT tag_type, tag_value, tag_params, package_name, context, line_number
-		FROM parsed_tags WHERE file_path = ?
-	`, filePath)
+SELECT tag_type, tag_value, tag_content, tag_attributes, line_number
+FROM parsed_tags WHERE file_path = ?
+`, filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -165,20 +164,19 @@ func (c *Cache) GetCachedTags(filePath string) ([]parser.Tag, error) {
 
 	for rows.Next() {
 		var tag parser.Tag
-		var paramsJSON string
+		var attrsJSON string
 
 		err := rows.Scan(
-			&tag.Type, &tag.Value, &paramsJSON,
-			&tag.Package, &tag.Context, &tag.Line,
+			&tag.Type, &tag.Value, &tag.Content,
+			&attrsJSON, &tag.Line,
 		)
 		if err != nil {
 			return nil, err
 		}
 
-		tag.File = filePath
-		tag.Params = make(map[string]string)
-		if paramsJSON != "" {
-			json.Unmarshal([]byte(paramsJSON), &tag.Params)
+		tag.Attributes = make(map[string]string)
+		if attrsJSON != "" {
+			json.Unmarshal([]byte(attrsJSON), &tag.Attributes)
 		}
 
 		tags = append(tags, tag)
@@ -212,12 +210,12 @@ func (c *Cache) CacheProjectAnalysis(analysis *parser.ProjectAnalysis) error {
 	for _, module := range analysis.Modules {
 		depsJSON, _ := json.Marshal(module.Dependencies)
 		filesJSON, _ := json.Marshal(module.Files)
-		metadataJSON, _ := json.Marshal(module.Metadata)
+		tagsJSON, _ := json.Marshal(module.Tags)
 
 		_, err = tx.Exec(`
-			INSERT INTO modules (name, package_name, dependencies, files, metadata, last_updated)
-			VALUES (?, ?, ?, ?, ?, ?)
-		`, module.Name, module.Package, string(depsJSON), string(filesJSON), string(metadataJSON), now)
+INSERT INTO modules (name, package_name, dependencies, files, tags, last_updated)
+VALUES (?, ?, ?, ?, ?, ?)
+`, module.Name, module.Package, string(depsJSON), string(filesJSON), string(tagsJSON), now)
 		if err != nil {
 			return err
 		}
@@ -226,9 +224,9 @@ func (c *Cache) CacheProjectAnalysis(analysis *parser.ProjectAnalysis) error {
 	// Cache dependencies
 	for _, dep := range analysis.Dependencies {
 		_, err = tx.Exec(`
-			INSERT INTO dependencies (from_module, to_module, dependency_type, strength, created_at)
-			VALUES (?, ?, ?, ?, ?)
-		`, dep.From, dep.To, dep.Type, dep.Strength, now)
+INSERT INTO dependencies (from_module, to_module, dependency_type, line_number, created_at)
+VALUES (?, ?, ?, ?, ?)
+`, dep.From, dep.To, dep.Type, dep.Line, now)
 		if err != nil {
 			return err
 		}
@@ -240,9 +238,9 @@ func (c *Cache) CacheProjectAnalysis(analysis *parser.ProjectAnalysis) error {
 // GetCachedModules retrieves all cached modules
 func (c *Cache) GetCachedModules() (map[string]*parser.Module, error) {
 	rows, err := c.db.Query(`
-		SELECT name, package_name, dependencies, files, metadata
-		FROM modules
-	`)
+SELECT name, package_name, dependencies, files, tags
+FROM modules
+`)
 	if err != nil {
 		return nil, err
 	}
@@ -252,11 +250,11 @@ func (c *Cache) GetCachedModules() (map[string]*parser.Module, error) {
 
 	for rows.Next() {
 		var module parser.Module
-		var depsJSON, filesJSON, metadataJSON string
+		var depsJSON, filesJSON, tagsJSON string
 
 		err := rows.Scan(
 			&module.Name, &module.Package,
-			&depsJSON, &filesJSON, &metadataJSON,
+			&depsJSON, &filesJSON, &tagsJSON,
 		)
 		if err != nil {
 			return nil, err
@@ -264,7 +262,7 @@ func (c *Cache) GetCachedModules() (map[string]*parser.Module, error) {
 
 		json.Unmarshal([]byte(depsJSON), &module.Dependencies)
 		json.Unmarshal([]byte(filesJSON), &module.Files)
-		json.Unmarshal([]byte(metadataJSON), &module.Metadata)
+		json.Unmarshal([]byte(tagsJSON), &module.Tags)
 
 		modules[module.Name] = &module
 	}
@@ -275,9 +273,9 @@ func (c *Cache) GetCachedModules() (map[string]*parser.Module, error) {
 // GetCachedDependencies retrieves all cached dependencies
 func (c *Cache) GetCachedDependencies() ([]parser.Dependency, error) {
 	rows, err := c.db.Query(`
-		SELECT from_module, to_module, dependency_type, strength
-		FROM dependencies
-	`)
+SELECT from_module, to_module, dependency_type, line_number
+FROM dependencies
+`)
 	if err != nil {
 		return nil, err
 	}
@@ -288,7 +286,7 @@ func (c *Cache) GetCachedDependencies() ([]parser.Dependency, error) {
 	for rows.Next() {
 		var dep parser.Dependency
 
-		err := rows.Scan(&dep.From, &dep.To, &dep.Type, &dep.Strength)
+		err := rows.Scan(&dep.From, &dep.To, &dep.Type, &dep.Line)
 		if err != nil {
 			return nil, err
 		}
