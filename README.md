@@ -120,6 +120,19 @@ make db-ping         # Test connection
 - **Kustomize** — Kubernetes configs
 - **Playwright** — E2E testing
 
+## Model Context Protocol (MCP) and AI Integration
+
+Kthulu Go leverages the **Model Context Protocol (MCP)**, an open standard for AI models to interact with external tools and services. MCP provides a structured, bidirectional communication layer that allows the AI to discover available tools, execute them with typed inputs, and consume their outputs in a predictable format.
+
+Our backend exposes all `kthulu-cli` functionalities as MCP tools. This means an AI agent can:
+
+- **Discover** available commands (`kthulu create`, `kthulu add module`, etc.).
+- **Understand** their parameters, flags, and options.
+- **Execute** scaffolding, code generation, or audit operations.
+- **Receive** structured output, including success messages, errors, and generated file paths.
+
+This architecture turns Kthulu Forge into a powerful, AI-native software foundry where agents can autonomously manage project lifecycles. For more details, see the official [MCP Specification](https://mcp.dev).
+
 ## Frontend Experience
 
 The main UI (see `frontend/src/pages/Index.tsx`) organizes functionality into dedicated panels that can be opened from the sidebar:
