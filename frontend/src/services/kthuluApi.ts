@@ -18,6 +18,7 @@ import type {
   AISuggestionResponse,
   HealthResponse,
   SecurityConfig,
+  CliCommandResult,
 } from '@/types/kthulu';
 
 const API_BASE_URL = 'http://localhost:8080';
@@ -94,16 +95,6 @@ export const kthuluApi = {
       body: JSON.stringify({ modules }),
     });
     return handleResponse<ModuleInjectionPlan>(response);
-  },
-
-  // Components
-  async generateComponent(request: ComponentRequest) {
-    const response = await fetch(`${API_BASE_URL}/api/v1/components`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
-    });
-    return handleResponse<{ status: string }>(response);
   },
 
   // Templates
@@ -282,6 +273,56 @@ export const kthuluApi = {
       body: JSON.stringify(config),
     });
     return handleResponse<SecurityConfig>(response);
+  },
+
+  // CLI/Terminal helpers
+  async runCliCommand(command: string, payload: Record<string, unknown> = {}) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/cli/${command}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      return handleResponse<CliCommandResult>(response);
+    } catch (error) {
+      console.warn('[kthuluApi] Falling back to mock CLI response for', command, error);
+      return {
+        command,
+        status: 'mocked',
+        output: [
+          `Simulated execution for '${command}'`,
+          `Payload: ${JSON.stringify(payload)}`,
+          'El backend CLI no respondió. Resultado mockeado.',
+        ],
+        warnings: ['Resultado simulado porque el servicio CLI no está disponible.'],
+        duration: '0s',
+        metadata: { mocked: true },
+      } satisfies CliCommandResult;
+    }
+  },
+
+  async runGenerateCommand(options: Record<string, unknown> = {}) {
+    return this.runCliCommand('generate', options);
+  },
+
+  async runMigrateCommand(options: Record<string, unknown> = {}) {
+    return this.runCliCommand('migrate', options);
+  },
+
+  async runBuildCommand(options: Record<string, unknown> = {}) {
+    return this.runCliCommand('build', options);
+  },
+
+  async runDeployCommand(options: Record<string, unknown> = {}) {
+    return this.runCliCommand('deploy', options);
+  },
+
+  async runTestCommand(options: Record<string, unknown> = {}) {
+    return this.runCliCommand('test', options);
+  },
+
+  async runValidateCommand(options: Record<string, unknown> = {}) {
+    return this.runCliCommand('validate', options);
   },
 };
 

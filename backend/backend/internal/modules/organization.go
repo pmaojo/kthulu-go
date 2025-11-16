@@ -9,7 +9,7 @@ import (
 )
 
 // OrganizationModule provides organization functionality.
-// Repositories are provided by SharedRepositoryProviders to avoid duplication.
+// Repositories are injected via the ModuleSet provider map to avoid duplication.
 var OrganizationModule = fx.Options(
 	// Use cases
 	fx.Provide(

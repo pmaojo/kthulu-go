@@ -32,7 +32,8 @@ var UserModule = fx.Options(
 
 ## `make:handler`
 
-Crea un handler HTTP en `backend/internal/handlers`.
+Crea un adaptador HTTP hexagonal en `backend/internal/handlers` con constructor para Fx,
+registro explícito de rutas y DTOs independientes del dominio.
 
 **Uso**
 
@@ -47,16 +48,49 @@ No acepta flags adicionales.
 ```go
 package handlers
 
-import "net/http"
+import (
+        "encoding/json"
+        "errors"
+        "net/http"
 
-// Health handles HTTP requests.
-func Health(w http.ResponseWriter, r *http.Request) {
+        "github.com/go-chi/chi/v5"
+)
+
+type HealthHandler struct {
+        svc HealthPort
+}
+
+func NewHealth(svc HealthPort) *HealthHandler {
+        return &HealthHandler{svc: svc}
+}
+
+func (h *HealthHandler) RegisterRoutes(router chi.Router) {
+        router.Method(http.MethodPost, "/health", http.HandlerFunc(h.Handle))
+}
+
+type HealthRequest struct {
+        Payload string `json:"payload"`
+}
+
+type HealthResponse struct {
+        Result string `json:"result"`
+}
+
+func (h *HealthHandler) Handle(w http.ResponseWriter, r *http.Request) {
+        req, _ := decodeHealthRequest(r)
+        resp, _ := h.svc.HandleHealth(r.Context(), req)
+        encodeHealthResponse(w, resp)
 }
 ```
 
+La plantilla incluye `decodeHealthRequest`/`encodeHealthResponse` para encapsular JSON y
+un archivo `_handler_test.go` que usa `httptest` con un mock para comprobar que el handler
+delegue en el puerto inyectado.
+
 **Salida**
 
-`backend/internal/handlers/health.go`
+- `backend/internal/handlers/health.go`
+- `backend/internal/handlers/health_handler_test.go`
 
 ## `make:service-test`
 

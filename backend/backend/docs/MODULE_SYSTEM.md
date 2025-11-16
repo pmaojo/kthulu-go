@@ -32,17 +32,20 @@ app := fx.New(
 )
 ```
 
-### Shared Repository Providers
+### Targeted Repository Providers
 
-All repositories are provided centrally to avoid duplication:
+Repositories are grouped into granular provider functions and resolved only for the modules that need them:
 
 ```go
-// Before (duplicated across modules):
-fx.Provide(db.NewUserRepository) // In AuthModule
-fx.Provide(db.NewUserRepository) // In UserModule - DUPLICATE!
+var moduleProviderMap = map[string][]string{
+    "product":   {providerProductRepo},
+    "inventory": {providerInventoryRepo, providerProductRepo},
+}
 
-// After (centralized):
-SharedRepositoryProviders() // Provides all repositories with names
+moduleSet := modules.DefaultModuleSet(registry)
+
+// Only the inventory + product repositories are injected.
+fx.New(moduleSet.Build([]string{"inventory"}))
 ```
 
 ### Named Dependencies
