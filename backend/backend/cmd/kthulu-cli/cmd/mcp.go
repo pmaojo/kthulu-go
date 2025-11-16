@@ -44,8 +44,17 @@ func runMCPServer(cmd *cobra.Command, _ []string) error {
 	executor := mcpserver.NewBinaryCommandExecutor(execPath)
 	tools := mcpserver.BuildCommandTools(rootCmd, executor, workingDir)
 
-	guideTool := mcpserver.NewGuideTaggingService(parser.NewTagParser(nil)).Tool(workingDir)
+	tagParser := parser.NewTagParser(nil)
+	guideTool := mcpserver.NewGuideTaggingService(tagParser).Tool(workingDir)
 	tools = append(tools, guideTool)
+
+	insights := mcpserver.NewProjectInsightsService(tagParser)
+	tools = append(tools,
+		insights.OverviewTool(workingDir),
+		insights.ModulesTool(workingDir),
+		insights.TagsTool(workingDir),
+		insights.DependenciesTool(workingDir),
+	)
 
 	transport := stdio.NewStdioServerTransport()
 	instructions := "Expose kthulu CLI commands safely. Always respect the working directory and never run destructive shell commands outside of the provided tools."
