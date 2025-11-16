@@ -1,8 +1,141 @@
 package {{.Package}}
 
-import "testing"
+import (
+    "context"
+    "errors"
+    "testing"
+)
 
-// Test{{.ServiceName}} exercises the {{.ServiceName}} service.
-func Test{{.ServiceName}}(t *testing.T) {
+var err{{.ServiceName}}PortFailure = errors.New("{{.ServiceName}} port failure")
+
+// testDeps bundles fake implementations for each dependency/port that the
+// {{.ServiceName}} service collaborates with. Duplicate the fake pattern for
+// every real adapter (repositories, HTTP clients, queues, etc.).
+type testDeps struct {
+    primaryPort *fakePrimaryPort
 }
 
+// fakePrimaryPort is a table-friendly fake implementation that lets us assert
+// on inputs and configure deterministic outputs.
+type fakePrimaryPort struct {
+    t         *testing.T
+    wantInput any
+    result    any
+    err       error
+}
+
+func newFakePrimaryPort(t *testing.T) *fakePrimaryPort {
+    t.Helper()
+    return &fakePrimaryPort{t: t}
+}
+
+func (f *fakePrimaryPort) Execute(ctx context.Context, input any) (any, error) {
+    f.t.Helper()
+    if f.wantInput != nil && input != f.wantInput {
+        f.t.Fatalf("fakePrimaryPort.Execute unexpected input: want %v, got %v", f.wantInput, input)
+    }
+    if f.result == nil && f.err == nil {
+        f.t.Fatalf("fakePrimaryPort.Execute must be configured before use")
+    }
+    return f.result, f.err
+}
+
+// {{.ServiceName}}Subject models the callable surface of the service under
+// test. Feel free to replace it with the concrete service type once you wire
+// everything up.
+type {{.ServiceName}}Subject func(ctx context.Context, input any) (any, error)
+
+func Test{{.ServiceName}}(t *testing.T) {
+    t.Helper()
+    t.Parallel()
+
+    type args struct {
+        ctx   context.Context
+        input any
+    }
+
+    tests := []struct {
+        name    string
+        deps    func(t *testing.T) testDeps
+        args    args
+        want    any
+        wantErr error
+    }{
+        {
+            name: "happy path returns the expected value",
+            deps: func(t *testing.T) testDeps {
+                fake := newFakePrimaryPort(t)
+                fake.wantInput = "payload"
+                fake.result = "expected response"
+                return testDeps{primaryPort: fake}
+            },
+            args: args{
+                ctx:   context.Background(),
+                input: "payload",
+            },
+            want: "expected response",
+        },
+        {
+            name: "dependency error is surfaced to the caller",
+            deps: func(t *testing.T) testDeps {
+                fake := newFakePrimaryPort(t)
+                fake.err = err{{.ServiceName}}PortFailure
+                return testDeps{primaryPort: fake}
+            },
+            args: args{
+                ctx:   context.Background(),
+                input: "payload",
+            },
+            wantErr: err{{.ServiceName}}PortFailure,
+        },
+    }
+
+    for _, tt := range tests {
+        tt := tt
+        t.Run(tt.name, func(t *testing.T) {
+            t.Helper()
+
+            deps := tt.deps(t)
+            subject := newTest{{.ServiceName}}(t, deps)
+
+            got, err := subject(tt.args.ctx, tt.args.input)
+
+            assertError(t, tt.wantErr, err)
+            if tt.wantErr != nil {
+                return
+            }
+
+            assertResult(t, tt.want, got)
+        })
+    }
+}
+
+// newTest{{.ServiceName}} wires the real service using the fake dependencies.
+// Swap the panic with the constructor or provider used in your module once the
+// service is implemented.
+func newTest{{.ServiceName}}(t *testing.T, deps testDeps) {{.ServiceName}}Subject {
+    t.Helper()
+    t.Fatalf("wire the {{.ServiceName}} service using deps before running this test")
+    return nil
+}
+
+func assertError(t *testing.T, want, got error) {
+    t.Helper()
+    switch {
+    case want == nil && got == nil:
+        return
+    case want == nil && got != nil:
+        t.Fatalf("unexpected error: %v", got)
+    case want != nil && got == nil:
+        t.Fatalf("expected error %v but got nil", want)
+    case want != nil && !errors.Is(got, want):
+        t.Fatalf("expected error %v but got %v", want, got)
+    }
+}
+
+func assertResult(t *testing.T, want, got any) {
+    t.Helper()
+    if want != got {
+        t.Fatalf("unexpected result: want %v, got %v", want, got)
+    }
+}
