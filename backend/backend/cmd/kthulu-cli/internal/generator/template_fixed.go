@@ -57,7 +57,7 @@ package repository
 
 import (
 	"gorm.io/gorm"
-	"%s/internal/adapters/http/modules/%s/domain"
+	"%s"
 )
 
 type %sRepository struct {
@@ -93,7 +93,7 @@ func (r *%sRepository) List() ([]*domain.%s, error) {
 }
 `
 	return fmt.Sprintf(template,
-		name, g.config.ProjectName, name, capName, capName, capName, capName,
+		name, g.moduleImportPath("internal/adapters/http/modules", name, "domain"), name, capName, capName, capName, capName,
 		capName, capName, capName, capName, capName,
 		capName, capName, capName, capName, capName, capName)
 }
@@ -106,7 +106,7 @@ func (g *TemplateGenerator) generateServiceFileFixed(name string, info *resolver
 package service
 
 import (
-	"%s/internal/adapters/http/modules/%s/domain"
+	"%s"
 )
 
 type %sService struct {
@@ -141,7 +141,7 @@ func (s *%sService) List%s() ([]*domain.%s, error) {
 }
 `
 	return fmt.Sprintf(template,
-		name, g.config.ProjectName, name, capName, capName, capName, capName, capName,
+		name, g.moduleImportPath("internal/adapters/http/modules", name, "domain"), name, capName, capName, capName, capName, capName,
 		capName, capName, capName, capName, capName, capName,
 		capName, capName, capName, capName, capName,
 		capName, pluralName, capName)
