@@ -201,6 +201,13 @@ func (g *TemplateGenerator) generateBaseStructure(structure *ProjectStructure) e
 	}
 	structure.Files = append(structure.Files, mainFile)
 
+	// Generate main_test.go
+	mainTestFile := GeneratedFile{
+		Path:    "cmd/server/main_test.go",
+		Content: g.generateMainTestFile(),
+	}
+	structure.Files = append(structure.Files, mainTestFile)
+
 	// Generate go.mod
 	goModFile := GeneratedFile{
 		Path:     "go.mod",
@@ -222,6 +229,12 @@ func (g *TemplateGenerator) generateBaseStructure(structure *ProjectStructure) e
 		Content: g.generateCoreProviders(),
 	}
 	structure.Files = append(structure.Files, coreProviders)
+
+	coreProvidersTest := GeneratedFile{
+		Path:    "internal/core/providers_test.go",
+		Content: g.generateCoreProvidersTest(),
+	}
+	structure.Files = append(structure.Files, coreProvidersTest)
 
 	return nil
 }
@@ -284,6 +297,28 @@ func (g *TemplateGenerator) generateModuleFiles(moduleName string, structure *Pr
 
 	structure.Files = append(structure.Files, moduleFiles...)
 
+	// Generate module tests
+	testFiles := []GeneratedFile{
+		{
+			Path:    fmt.Sprintf("%s/module_test.go", moduleBase),
+			Content: g.generateModuleProvidersTestFile(moduleName),
+		},
+		{
+			Path:    fmt.Sprintf("%s/repository/%s_repository_test.go", moduleBase, moduleName),
+			Content: g.generateRepositoryTestFile(moduleName),
+		},
+		{
+			Path:    fmt.Sprintf("%s/service/%s_service_test.go", moduleBase, moduleName),
+			Content: g.generateServiceTestFile(moduleName),
+		},
+		{
+			Path:    fmt.Sprintf("%s/handlers/%s_handler_test.go", moduleBase, moduleName),
+			Content: g.generateHandlerTestFile(moduleName),
+		},
+	}
+
+	structure.Files = append(structure.Files, testFiles...)
+
 	return nil
 }
 
@@ -302,80 +337,123 @@ import (
 "os"
 "os/signal"
 "syscall"
+"time"
 
-	"github.com/gorilla/mux"
-	"go.uber.org/fx"
+"github.com/gorilla/mux"
+"go.uber.org/fx"
 
 "%s"
 %s
 )
 
-func main() {
-	ctx := context.Background()
-	
-	app := fx.New(
-		// Core providers
-		core.CoreRepositoryProviders(),
-		
-		// Module providers
-%s
-		
-		// HTTP server
-		fx.Invoke(func(lc fx.Lifecycle, %s) {
-			router := setupRoutes(%s)
-			server := &http.Server{
-				Addr:    ":8080",
-				Handler: router,
-			}
-			
-			lc.Append(fx.Hook{
-				OnStart: func(context.Context) error {
-					log.Println("Starting server on :8080")
-					go server.ListenAndServe()
-					return nil
-				},
-				OnStop: func(ctx context.Context) error {
-					log.Println("Stopping server")
-					return server.Shutdown(ctx)
-				},
-			})
-		}),
-	)
-	
-	// Start application
-	if err := app.Start(ctx); err != nil {
-		log.Fatal("Failed to start application:", err)
-	}
-	
-	// Wait for interrupt signal
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-	
-	log.Println("Shutting down server...")
-	
-	// Stop application
-	if err := app.Stop(ctx); err != nil {
-		log.Fatal("Failed to stop application:", err)
-	}
-	
-	log.Println("Server stopped")
+type httpServer interface {
+Start() error
+Shutdown(context.Context) error
 }
 
-func setupRoutes(%s) http.Handler {
-	router := mux.NewRouter()
-	
-	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
-	})
+type realHTTPServer struct {
+server *http.Server
+}
 
-	apiRouter := router.PathPrefix("/api/v1").Subrouter()
-	
-	// Add module routes here
+func newHTTPServer(handler http.Handler) httpServer {
+return &realHTTPServer{
+server: &http.Server{
+Addr:    ":8080",
+Handler: handler,
+},
+}
+}
+
+func (s *realHTTPServer) Start() error {
+if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+return err
+}
+return nil
+}
+
+func (s *realHTTPServer) Shutdown(ctx context.Context) error {
+return s.server.Shutdown(ctx)
+}
+
+type noopHTTPServer struct{}
+
+func (n *noopHTTPServer) Start() error {
+return nil
+}
+
+func (n *noopHTTPServer) Shutdown(context.Context) error {
+return nil
+}
+
+var serverBuilder = func(handler http.Handler) httpServer {
+if os.Getenv("KTHULU_TEST_MODE") == "1" {
+return &noopHTTPServer{}
+}
+return newHTTPServer(handler)
+}
+
+func main() {
+if err := runApplication(context.Background(), serverBuilder); err != nil {
+log.Fatal("Failed to start application:", err)
+}
+}
+
+func runApplication(ctx context.Context, builder func(http.Handler) httpServer) error {
+ctx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
+defer stop()
+
+app := fx.New(
+// Core providers
+core.CoreRepositoryProviders(),
+
+// Module providers
 %s
-	
-	return router
+
+fx.Invoke(func(lc fx.Lifecycle, %s) {
+router := setupRoutes()
+apiRouter := router.PathPrefix("/api/v1").Subrouter()
+
+%s
+
+server := builder(router)
+
+lc.Append(fx.Hook{
+OnStart: func(context.Context) error {
+go func() {
+if err := server.Start(); err != nil {
+log.Println("server error:", err)
+}
+}()
+return nil
+},
+OnStop: func(ctx context.Context) error {
+return server.Shutdown(ctx)
+},
+})
+}),
+)
+
+if err := app.Start(ctx); err != nil {
+return err
+}
+
+<-ctx.Done()
+
+shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+defer cancel()
+
+return app.Stop(shutdownCtx)
+}
+
+func setupRoutes() *mux.Router {
+router := mux.NewRouter()
+
+router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+w.WriteHeader(http.StatusOK)
+_, _ = w.Write([]byte("OK"))
+})
+
+return router
 }
 `, g.config.ProjectName,
 		strings.Join(g.config.Features, ","),
@@ -383,24 +461,37 @@ func setupRoutes(%s) http.Handler {
 		g.generateModuleImports(),
 		g.generateModuleProviders(),
 		g.generateInvokeParams(),
-		g.generateInvokeArgs(),
-		g.generateInvokeParams(),
 		g.generateModuleRoutes())
 }
 
 // generateGoMod generates the go.mod file
 func (g *TemplateGenerator) generateGoMod() string {
 	modulePath := g.modulePath()
-	deps := []string{
-		"\tgo.uber.org/fx v1.20.0",
-		"\tgithub.com/gorilla/mux v1.8.0",
-		"\tgorm.io/gorm v1.25.5",
-		fmt.Sprintf("\tgorm.io/driver/%s v1.5.4", g.config.Database),
-		"\tgithub.com/golang-jwt/jwt/v5 v5.2.0",
+	depSet := make(map[string]struct{})
+	var deps []string
+	addDep := func(dep string) {
+		dep = strings.TrimSpace(dep)
+		if dep == "" {
+			return
+		}
+		if _, exists := depSet[dep]; exists {
+			return
+		}
+		depSet[dep] = struct{}{}
+		deps = append(deps, "\t"+dep)
 	}
 
-	if extra := strings.TrimSpace(g.generateDependencies()); extra != "" {
-		deps = append(deps, extra)
+	addDep("go.uber.org/fx v1.20.0")
+	addDep("github.com/gorilla/mux v1.8.0")
+	addDep("gorm.io/gorm v1.25.5")
+	addDep(fmt.Sprintf("gorm.io/driver/%s v1.5.4", g.config.Database))
+	addDep("gorm.io/driver/sqlite v1.5.4")
+	addDep("github.com/golang-jwt/jwt/v5 v5.2.0")
+
+	if extra := strings.Split(strings.TrimSpace(g.generateDependencies()), "\n"); len(extra) > 0 {
+		for _, dep := range extra {
+			addDep(strings.TrimSpace(dep))
+		}
 	}
 
 	return fmt.Sprintf(`module %s
@@ -491,6 +582,7 @@ func (g *TemplateGenerator) generateCoreProviders() string {
 		"\"os\"",
 		"\"go.uber.org/fx\"",
 		"\"gorm.io/gorm\"",
+		"\"gorm.io/driver/sqlite\"",
 	}
 
 	var connectionBuilder strings.Builder
@@ -548,6 +640,10 @@ func CoreRepositoryProviders() fx.Option {
 }
 
 func NewDatabase() (*gorm.DB, error) {
+if os.Getenv("KTHULU_TEST_MODE") == "1" {
+log.Println("Using in-memory SQLite database for tests")
+return gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+}
 %s
 }
 
@@ -603,15 +699,6 @@ func (g *TemplateGenerator) generateInvokeParams() string {
 		params = append(params, fmt.Sprintf(`%sService %sDomain.%sService`, module, module, Capitalize(module)))
 	}
 	return strings.Join(params, ", ")
-}
-
-func (g *TemplateGenerator) generateInvokeArgs() string {
-	var args []string
-	plan, _ := g.resolver.ResolveDependencies(g.config.Features)
-	for _, module := range plan.RequiredModules {
-		args = append(args, fmt.Sprintf(`%sService`, module))
-	}
-	return strings.Join(args, ", ")
 }
 
 func (g *TemplateGenerator) generateDependencies() string {
@@ -992,6 +1079,371 @@ func (g *TemplateGenerator) generateBuildScripts(structure *ProjectStructure) er
 	structure.Files = append(structure.Files, buildScript)
 
 	return nil
+}
+
+func (g *TemplateGenerator) generateMainTestFile() string {
+	return `// @kthulu:test:cmd:server
+package main
+
+import (
+"context"
+"net/http"
+"net/http/httptest"
+"testing"
+"time"
+)
+
+type testHTTPServer struct {
+started  bool
+shutdown bool
+}
+
+func (s *testHTTPServer) Start() error {
+s.started = true
+return nil
+}
+
+func (s *testHTTPServer) Shutdown(context.Context) error {
+s.shutdown = true
+return nil
+}
+
+func TestRunApplicationLifecycle(t *testing.T) {
+t.Setenv("KTHULU_TEST_MODE", "1")
+ctx, cancel := context.WithCancel(context.Background())
+defer cancel()
+
+srv := &testHTTPServer{}
+errCh := make(chan error, 1)
+
+go func() {
+errCh <- runApplication(ctx, func(http.Handler) httpServer {
+return srv
+})
+}()
+
+time.Sleep(20 * time.Millisecond)
+cancel()
+
+select {
+case err := <-errCh:
+if err != nil {
+t.Fatalf("runApplication returned error: %%v", err)
+}
+case <-time.After(time.Second):
+t.Fatal("timeout waiting for application shutdown")
+}
+
+if !srv.started || !srv.shutdown {
+t.Fatalf("server lifecycle not executed: started=%%v shutdown=%%v", srv.started, srv.shutdown)
+}
+}
+
+func TestSetupRoutesHealth(t *testing.T) {
+handler := setupRoutes()
+req := httptest.NewRequest(http.MethodGet, "/health", nil)
+rr := httptest.NewRecorder()
+handler.ServeHTTP(rr, req)
+
+if rr.Code != http.StatusOK {
+t.Fatalf("expected status 200 got %d", rr.Code)
+}
+if body := rr.Body.String(); body != "OK" {
+t.Fatalf("expected OK body got %s", body)
+}
+}
+`
+}
+
+func (g *TemplateGenerator) generateCoreProvidersTest() string {
+	return `// @kthulu:test:core
+package core
+
+import "testing"
+
+func TestGetEnv(t *testing.T) {
+t.Setenv("KTHULU_SAMPLE", "value")
+if got := getEnv("KTHULU_SAMPLE", "fallback"); got != "value" {
+t.Fatalf("expected value got %s", got)
+}
+if got := getEnv("MISSING", "fallback"); got != "fallback" {
+t.Fatalf("expected fallback got %s", got)
+}
+}
+
+func TestNewDatabaseTestMode(t *testing.T) {
+t.Setenv("KTHULU_TEST_MODE", "1")
+db, err := NewDatabase()
+if err != nil {
+t.Fatalf("expected sqlite database, got error: %%v", err)
+}
+if db == nil {
+t.Fatal("expected database instance")
+}
+}
+`
+}
+
+func (g *TemplateGenerator) generateModuleProvidersTestFile(name string) string {
+	return fmt.Sprintf(`// @kthulu:test:module:%[1]s
+package %[1]s
+
+import "testing"
+
+func TestProviders(t *testing.T) {
+if Providers() == nil {
+t.Fatal("expected providers option")
+}
+}
+`, name)
+}
+
+func (g *TemplateGenerator) generateRepositoryTestFile(name string) string {
+	capName := Capitalize(name)
+	domainImport := g.moduleImportPath("internal/adapters/http/modules", name, "domain")
+	return fmt.Sprintf(`// @kthulu:test:repository:%[1]s
+package repository
+
+import (
+"testing"
+
+"gorm.io/driver/sqlite"
+"gorm.io/gorm"
+
+"%[2]s"
+)
+
+func Test%[3]sRepositoryCRUD(t *testing.T) {
+db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+if err != nil {
+t.Fatalf("failed to open sqlite: %%v", err)
+}
+if err := db.AutoMigrate(&domain.%[3]s{}); err != nil {
+t.Fatalf("failed to migrate: %%v", err)
+}
+repo := New%[3]sRepository(db)
+entity := &domain.%[3]s{}
+if err := repo.Create(entity); err != nil {
+t.Fatalf("create failed: %%v", err)
+}
+fetched, err := repo.GetByID(entity.ID)
+if err != nil {
+t.Fatalf("get failed: %%v", err)
+}
+if fetched.ID != entity.ID {
+t.Fatalf("expected ID %%d got %%d", entity.ID, fetched.ID)
+}
+if err := repo.Update(entity); err != nil {
+t.Fatalf("update failed: %%v", err)
+}
+items, err := repo.List()
+if err != nil {
+t.Fatalf("list failed: %%v", err)
+}
+if len(items) != 1 {
+t.Fatalf("expected 1 item got %%d", len(items))
+}
+if err := repo.Delete(entity.ID); err != nil {
+t.Fatalf("delete failed: %%v", err)
+}
+}
+`, name, domainImport, capName)
+}
+
+func (g *TemplateGenerator) generateServiceTestFile(name string) string {
+	capName := Capitalize(name)
+	pluralName := Pluralize(capName)
+	domainImport := g.moduleImportPath("internal/adapters/http/modules", name, "domain")
+	return fmt.Sprintf(`// @kthulu:test:service:%[1]s
+package service
+
+import (
+"testing"
+
+"%[2]s"
+)
+
+type fake%[3]sRepository struct {
+store  map[uint]*domain.%[3]s
+nextID uint
+}
+
+func newFake%[3]sRepository() *fake%[3]sRepository {
+return &fake%[3]sRepository{
+store:  make(map[uint]*domain.%[3]s),
+nextID: 1,
+}
+}
+
+func (r *fake%[3]sRepository) Create(entity *domain.%[3]s) error {
+if entity.ID == 0 {
+entity.ID = r.nextID
+r.nextID++
+}
+r.store[entity.ID] = entity
+return nil
+}
+
+func (r *fake%[3]sRepository) GetByID(id uint) (*domain.%[3]s, error) {
+return r.store[id], nil
+}
+
+func (r *fake%[3]sRepository) Update(entity *domain.%[3]s) error {
+r.store[entity.ID] = entity
+return nil
+}
+
+func (r *fake%[3]sRepository) Delete(id uint) error {
+delete(r.store, id)
+return nil
+}
+
+func (r *fake%[3]sRepository) List() ([]*domain.%[3]s, error) {
+items := make([]*domain.%[3]s, 0, len(r.store))
+for _, item := range r.store {
+items = append(items, item)
+}
+return items, nil
+}
+
+func Test%[3]sServiceCRUD(t *testing.T) {
+repo := newFake%[3]sRepository()
+service := New%[3]sService(repo)
+entity := &domain.%[3]s{}
+if err := service.Create%[3]s(entity); err != nil {
+t.Fatalf("create failed: %%v", err)
+}
+if entity.ID == 0 {
+t.Fatal("expected ID to be set")
+}
+if _, err := service.Get%[3]sByID(entity.ID); err != nil {
+t.Fatalf("get failed: %%v", err)
+}
+if err := service.Update%[3]s(entity); err != nil {
+t.Fatalf("update failed: %%v", err)
+}
+items, err := service.List%[4]s()
+if err != nil {
+t.Fatalf("list failed: %%v", err)
+}
+if len(items) != 1 {
+t.Fatalf("expected 1 item got %%d", len(items))
+}
+if err := service.Delete%[3]s(entity.ID); err != nil {
+t.Fatalf("delete failed: %%v", err)
+}
+}
+`, name, domainImport, capName, pluralName)
+}
+
+func (g *TemplateGenerator) generateHandlerTestFile(name string) string {
+	capName := Capitalize(name)
+	pluralName := Pluralize(capName)
+	domainImport := g.moduleImportPath("internal/adapters/http/modules", name, "domain")
+	return fmt.Sprintf(`// @kthulu:test:handlers:%[1]s
+package handlers
+
+import (
+"encoding/json"
+"fmt"
+"net/http"
+"net/http/httptest"
+"strings"
+"testing"
+
+"github.com/gorilla/mux"
+"%[2]s"
+)
+
+type fake%[3]sService struct {
+store  map[uint]*domain.%[3]s
+nextID uint
+}
+
+func newFake%[3]sService() *fake%[3]sService {
+return &fake%[3]sService{store: make(map[uint]*domain.%[3]s), nextID: 1}
+}
+
+func (s *fake%[3]sService) Create%[3]s(entity *domain.%[3]s) error {
+if entity.ID == 0 {
+entity.ID = s.nextID
+s.nextID++
+}
+s.store[entity.ID] = entity
+return nil
+}
+
+func (s *fake%[3]sService) Get%[3]sByID(id uint) (*domain.%[3]s, error) {
+if entity, ok := s.store[id]; ok {
+return entity, nil
+}
+return nil, fmt.Errorf("not found")
+}
+
+func (s *fake%[3]sService) Update%[3]s(entity *domain.%[3]s) error {
+s.store[entity.ID] = entity
+return nil
+}
+
+func (s *fake%[3]sService) Delete%[3]s(id uint) error {
+delete(s.store, id)
+return nil
+}
+
+func (s *fake%[3]sService) List%[4]s() ([]*domain.%[3]s, error) {
+items := make([]*domain.%[3]s, 0, len(s.store))
+for _, entity := range s.store {
+items = append(items, entity)
+}
+return items, nil
+}
+
+func Test%[3]sHandlerCRUD(t *testing.T) {
+service := newFake%[3]sService()
+handler := New%[3]sHandler(service)
+router := mux.NewRouter()
+handler.RegisterRoutes(router)
+
+createReq := httptest.NewRequest(http.MethodPost, "/%[1]s", strings.NewReader(`+"`{}`"+`))
+createRec := httptest.NewRecorder()
+router.ServeHTTP(createRec, createReq)
+if createRec.Code != http.StatusOK {
+t.Fatalf("expected 200 got %%d", createRec.Code)
+}
+var created domain.%[3]s
+if err := json.NewDecoder(createRec.Body).Decode(&created); err != nil {
+t.Fatalf("decode failed: %%v", err)
+}
+
+listReq := httptest.NewRequest(http.MethodGet, "/%[1]s", nil)
+listRec := httptest.NewRecorder()
+router.ServeHTTP(listRec, listReq)
+if listRec.Code != http.StatusOK {
+t.Fatalf("expected 200 got %%d", listRec.Code)
+}
+
+getReq := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/%[1]s/%%d", created.ID), nil)
+getRec := httptest.NewRecorder()
+router.ServeHTTP(getRec, getReq)
+if getRec.Code != http.StatusOK {
+t.Fatalf("expected 200 got %%d", getRec.Code)
+}
+
+updateReq := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/%[1]s/%%d", created.ID), strings.NewReader(`+"`{}`"+`))
+updateRec := httptest.NewRecorder()
+router.ServeHTTP(updateRec, updateReq)
+if updateRec.Code != http.StatusOK {
+t.Fatalf("expected 200 got %%d", updateRec.Code)
+}
+
+deleteReq := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/%[1]s/%%d", created.ID), nil)
+deleteRec := httptest.NewRecorder()
+router.ServeHTTP(deleteRec, deleteReq)
+if deleteRec.Code != http.StatusNoContent {
+t.Fatalf("expected 204 got %%d", deleteRec.Code)
+}
+}
+`, name, domainImport, capName, pluralName)
 }
 
 // WriteProject writes the generated project to disk

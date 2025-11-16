@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -206,10 +208,16 @@ func runNewProjectIntelligent(cmd *cobra.Command, args []string) {
 	// Step 8: Run go mod tidy
 	if err := runGoModTidy(structure.RootPath); err != nil {
 		fmt.Printf("❌ Error running go mod tidy: %v\n", err)
-		// Decide if you want to exit here or just warn the user
+		os.Exit(1)
 	}
 
-	// Step 9: Display success message and next steps
+	// Step 9: Execute tests with coverage requirements
+	if err := runGoTests(structure.RootPath); err != nil {
+		fmt.Printf("❌ Error running go test: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Step 10: Display success message and next steps
 	displaySuccessMessage(projectName, config, structure)
 }
 
@@ -220,6 +228,47 @@ func runGoModTidy(projectPath string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+func runGoTests(projectPath string) error {
+	fmt.Println("\n🧪 Running go test with coverage...")
+	testCmd := exec.Command("go", "test", "./...", "-coverprofile=coverage.out")
+	testCmd.Dir = projectPath
+	testCmd.Stdout = os.Stdout
+	testCmd.Stderr = os.Stderr
+	if err := testCmd.Run(); err != nil {
+		return err
+	}
+
+	coverageCmd := exec.Command("go", "tool", "cover", "-func=coverage.out")
+	coverageCmd.Dir = projectPath
+	var buffer bytes.Buffer
+	coverageCmd.Stdout = &buffer
+	coverageCmd.Stderr = os.Stderr
+	if err := coverageCmd.Run(); err != nil {
+		return err
+	}
+
+	lines := strings.Split(strings.TrimSpace(buffer.String()), "\n")
+	if len(lines) == 0 {
+		return fmt.Errorf("no coverage information produced")
+	}
+	fields := strings.Fields(lines[len(lines)-1])
+	if len(fields) == 0 {
+		return fmt.Errorf("unexpected coverage output: %s", lines[len(lines)-1])
+	}
+	percentage := strings.TrimSuffix(fields[len(fields)-1], "%")
+	coverage, err := strconv.ParseFloat(percentage, 64)
+	if err != nil {
+		return fmt.Errorf("failed to parse coverage: %w", err)
+	}
+	if coverage < 100.0 {
+		return fmt.Errorf("coverage %.1f%% is below required 100%%", coverage)
+	}
+
+	_ = os.Remove(filepath.Join(projectPath, "coverage.out"))
+	fmt.Println("✅ Tests passed with 100% coverage.")
+	return nil
 }
 
 func buildProjectConfig(projectName string) (*generator.GeneratorConfig, error) {
