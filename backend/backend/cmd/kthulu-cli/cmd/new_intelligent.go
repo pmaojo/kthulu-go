@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -202,8 +203,23 @@ func runNewProjectIntelligent(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// Step 8: Display success message and next steps
+	// Step 8: Run go mod tidy
+	if err := runGoModTidy(structure.RootPath); err != nil {
+		fmt.Printf("❌ Error running go mod tidy: %v\n", err)
+		// Decide if you want to exit here or just warn the user
+	}
+
+	// Step 9: Display success message and next steps
 	displaySuccessMessage(projectName, config, structure)
+}
+
+func runGoModTidy(projectPath string) error {
+	fmt.Println("\n🧹 Running go mod tidy...")
+	cmd := exec.Command("go", "mod", "tidy")
+	cmd.Dir = projectPath
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 func buildProjectConfig(projectName string) (*generator.GeneratorConfig, error) {
@@ -316,7 +332,6 @@ func displaySuccessMessage(projectName string, config *generator.GeneratorConfig
 
 	fmt.Printf("\n🚀 Next steps:\n")
 	fmt.Printf("   cd %s\n", projectName)
-	fmt.Printf("   go mod download          # Install dependencies\n")
 
 	if config.Database != "sqlite" {
 		fmt.Printf("   # Configure %s connection in configs/app.yaml\n", config.Database)

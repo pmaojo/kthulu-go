@@ -1,4 +1,4 @@
-// @kthulu:handler:test-project
+// @kthulu:handler:user
 package handlers
 
 import (
@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
-	"user/internal/adapters/http/modules/User/domain"
+	"test-project/internal/adapters/http/modules/user/domain"
 )
 
 type UserHandler struct {
@@ -15,12 +15,12 @@ type UserHandler struct {
 }
 
 func NewUserHandler(service domain.UserService) *UserHandler {
-	return &userHandler{service: service}
+	return &UserHandler{service: service}
 }
 
-// RegisterRoutes registers all routes for User
-func (h *userHandler) RegisterRoutes(router *mux.Router) {
-	sub := router.PathPrefix("/User").Subrouter()
+// RegisterRoutes registers all routes for user
+func (h *UserHandler) RegisterRoutes(router *mux.Router) {
+	sub := router.PathPrefix("/user").Subrouter()
 	sub.HandleFunc("", h.List).Methods("GET")
 	sub.HandleFunc("", h.Create).Methods("POST")
 	sub.HandleFunc("/{id}", h.GetByID).Methods("GET")
@@ -102,8 +102,8 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h *UsersHandler) List(w http.ResponseWriter, r *http.Request) {
-	entities, err := h.service.List%!s(MISSING)()
+func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
+	entities, err := h.service.ListUsers()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

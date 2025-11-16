@@ -14,7 +14,6 @@ func NewUserService(repo domain.UserRepository) domain.UserService {
 }
 
 func (s *UserService) CreateUser(entity *domain.User) error {
-	// Add business logic here
 	return s.repo.Create(entity)
 }
 
@@ -23,15 +22,13 @@ func (s *UserService) GetUserByID(id uint) (*domain.User, error) {
 }
 
 func (s *UserService) UpdateUser(entity *domain.User) error {
-	// Add business logic here
 	return s.repo.Update(entity)
 }
 
 func (s *UserService) DeleteUser(id uint) error {
-	// Add business logic here
 	return s.repo.Delete(id)
 }
 
-func (s *UsersService) ListUser() ([]*domain.%!s(MISSING), error) {
+func (s *UserService) ListUsers() ([]*domain.User, error) {
 	return s.repo.List()
 }

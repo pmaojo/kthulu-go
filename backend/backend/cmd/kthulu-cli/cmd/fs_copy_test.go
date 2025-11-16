@@ -61,13 +61,28 @@ func TestCopyFileFSSymlink(t *testing.T) {
 }
 
 func TestCopyDirFSSkipSpecialDirs(t *testing.T) {
-	fsys := fstest.MapFS{
-		".git/config":               {Data: []byte("cfg"), Mode: 0o644},
-		"node_modules/pkg/index.js": {Data: []byte("pkg"), Mode: 0o644},
-		"dir/file.txt":              {Data: []byte("hi"), Mode: 0o600},
+	src := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(src, ".git"), 0755); err != nil {
+		t.Fatal(err)
 	}
+	if err := os.WriteFile(filepath.Join(src, ".git", "config"), []byte("cfg"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(src, "node_modules", "pkg"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(src, "node_modules", "pkg", "index.js"), []byte("pkg"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(src, "dir"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(src, "dir", "file.txt"), []byte("hi"), 0600); err != nil {
+		t.Fatal(err)
+	}
+
 	dst := t.TempDir()
-	if err := copyDirFS(fsys, ".", dst, false); err != nil {
+	if err := copyDirFS(os.DirFS(src), ".", dst, false); err != nil {
 		t.Fatalf("copyDirFS: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(dst, ".git")); !os.IsNotExist(err) {

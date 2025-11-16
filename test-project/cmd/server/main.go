@@ -1,34 +1,26 @@
 // @kthulu:project:test-project
 // @kthulu:generated:true
-// @kthulu:features:user,product
+// @kthulu:features:user,auth
 package main
 
 import (
-	"context"
-	"fmt"
-	"log"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
+"context"
+"log"
+"net/http"
+"os"
+"os/signal"
+"syscall"
 
 	"github.com/gorilla/mux"
 	"go.uber.org/fx"
 
-	"test-project/internal/core"
-	"test-project/internal/adapters/http/modules/product"
-	productDomain "test-project/internal/adapters/http/modules/product/domain"
-	productHandlers "test-project/internal/adapters/http/modules/product/handlers"
-	"test-project/internal/adapters/http/modules/organization"
-	organizationDomain "test-project/internal/adapters/http/modules/organization/domain"
-	organizationHandlers "test-project/internal/adapters/http/modules/organization/handlers"
-	"test-project/internal/adapters/http/modules/auth"
-	authDomain "test-project/internal/adapters/http/modules/auth/domain"
-	authHandlers "test-project/internal/adapters/http/modules/auth/handlers"
-	"test-project/internal/adapters/http/modules/user"
-	userDomain "test-project/internal/adapters/http/modules/user/domain"
-	userHandlers "test-project/internal/adapters/http/modules/user/handlers"
+"test-project/internal/core"
+ "test-project/internal/adapters/http/modules/user"
+ userDomain "test-project/internal/adapters/http/modules/user/domain"
+ userHandlers "test-project/internal/adapters/http/modules/user/handlers"
+ "test-project/internal/adapters/http/modules/auth"
+ authDomain "test-project/internal/adapters/http/modules/auth/domain"
+ authHandlers "test-project/internal/adapters/http/modules/auth/handlers"
 )
 
 func main() {
@@ -39,14 +31,12 @@ func main() {
 		core.CoreRepositoryProviders(),
 
 		// Module providers
-		organization.Providers(),
-		auth.Providers(),
 		user.Providers(),
-		product.Providers(),
+		auth.Providers(),
 
 		// HTTP server
-		fx.Invoke(func(lc fx.Lifecycle, userService userDomain.UserService, productService productDomain.ProductService, organizationService organizationDomain.OrganizationService, authService authDomain.AuthService) {
-			router := setupRoutes(userService, productService, organizationService, authService)
+		fx.Invoke(func(lc fx.Lifecycle, userService userDomain.UserService, authService authDomain.AuthService) {
+			router := setupRoutes(userService, authService)
 			server := &http.Server{
 				Addr:    ":8080",
 				Handler: router,
@@ -86,7 +76,7 @@ func main() {
 	log.Println("Server stopped")
 }
 
-func setupRoutes(userService userDomain.UserService, productService productDomain.ProductService, organizationService organizationDomain.OrganizationService, authService authDomain.AuthService) http.Handler {
+func setupRoutes(userService userDomain.UserService, authService authDomain.AuthService) http.Handler {
 	router := mux.NewRouter()
 
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -100,12 +90,6 @@ func setupRoutes(userService userDomain.UserService, productService productDomai
 	// user routes
 	userHandler := userHandlers.NewUserHandler(userService)
 	userHandler.RegisterRoutes(apiRouter)
-	// product routes
-	productHandler := productHandlers.NewProductHandler(productService)
-	productHandler.RegisterRoutes(apiRouter)
-	// organization routes
-	organizationHandler := organizationHandlers.NewOrganizationHandler(organizationService)
-	organizationHandler.RegisterRoutes(apiRouter)
 	// auth routes
 	authHandler := authHandlers.NewAuthHandler(authService)
 	authHandler.RegisterRoutes(apiRouter)
