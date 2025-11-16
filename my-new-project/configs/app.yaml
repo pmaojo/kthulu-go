@@ -1,0 +1,24 @@
+# my-new-project Configuration
+
+app:
+  name: my-new-project
+  version: "1.0.0"
+  port: 8080
+  env: development
+
+database:
+  driver: sqlite
+  host: localhost
+  port: 0
+  name: my-new-project
+  user: admin
+  password: password
+  max_connections: 100
+
+auth:
+  jwt_secret: "your-jwt-secret-key"
+  jwt_expiry: "24h"
+
+logging:
+  level: info
+  format: json
