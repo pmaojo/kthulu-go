@@ -331,18 +331,19 @@ func (g *TemplateGenerator) generateMainFile() string {
 package main
 
 import (
-"context"
-"log"
-"net/http"
-"os"
-"os/signal"
-"syscall"
-"time"
+	"context"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-"github.com/gorilla/mux"
-"go.uber.org/fx"
+	"github.com/gorilla/mux"
+	"go.uber.org/fx"
 
-"%s"
+	"%s"
 %s
 )
 
