@@ -33,7 +33,7 @@ func (r *UserRepository) Delete(id uint) error {
 }
 
 func (r *UserRepository) List() ([]*domain.User, error) {
-	var entities []*domain.%!s(MISSING)
+	var entities []*domain.User
 	err := r.db.Find(&entities).Error
 	return entities, err
 }

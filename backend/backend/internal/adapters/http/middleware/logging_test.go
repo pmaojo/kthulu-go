@@ -19,7 +19,7 @@ func TestGenerateRequestIDRandReadError(t *testing.T) {
 	defer func() { randRead = originalRandRead }()
 
 	core, logs := observer.New(zap.ErrorLevel)
-	logger := &observability.ZapLogger{zap.New(core)}
+	logger := observability.NewLoggerFromZap(zap.New(core))
 
 	id := generateRequestID(logger)
 

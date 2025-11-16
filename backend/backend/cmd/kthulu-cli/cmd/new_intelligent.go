@@ -1,16 +1,19 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/generator"
-	"github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/parser"
 	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/resolver"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/parser"
 )
 
 // Template definitions
@@ -121,6 +124,7 @@ var (
 	newDatabase      string
 	newFrontend      string
 	newAuth          string
+	newModulePath    string
 	newEnterprise    bool
 	newObservability bool
 	newOutputPath    string
@@ -134,6 +138,7 @@ func init() {
 	newCmd.Flags().StringVarP(&newDatabase, "database", "d", "", "Database type (sqlite, postgres, mysql)")
 	newCmd.Flags().StringVar(&newFrontend, "frontend", "", "Frontend type (react, templ, fyne, none)")
 	newCmd.Flags().StringVar(&newAuth, "auth", "", "Auth type (jwt, oauth, both)")
+	newCmd.Flags().StringVar(&newModulePath, "module-path", "", "Go module path (default: project name)")
 	newCmd.Flags().BoolVar(&newEnterprise, "enterprise", false, "Enable enterprise features")
 	newCmd.Flags().BoolVar(&newObservability, "observability", false, "Enable observability stack")
 	newCmd.Flags().StringVarP(&newOutputPath, "output", "o", "", "Output directory (default: current directory)")
@@ -200,8 +205,70 @@ func runNewProjectIntelligent(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// Step 8: Display success message and next steps
+	// Step 8: Run go mod tidy
+	if err := runGoModTidy(structure.RootPath); err != nil {
+		fmt.Printf("❌ Error running go mod tidy: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Step 9: Execute tests with coverage requirements
+	if err := runGoTests(structure.RootPath); err != nil {
+		fmt.Printf("❌ Error running go test: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Step 10: Display success message and next steps
 	displaySuccessMessage(projectName, config, structure)
+}
+
+func runGoModTidy(projectPath string) error {
+	fmt.Println("\n🧹 Running go mod tidy...")
+	cmd := exec.Command("go", "mod", "tidy")
+	cmd.Dir = projectPath
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
+func runGoTests(projectPath string) error {
+	fmt.Println("\n🧪 Running go test with coverage...")
+	testCmd := exec.Command("go", "test", "./...", "-coverprofile=coverage.out")
+	testCmd.Dir = projectPath
+	testCmd.Stdout = os.Stdout
+	testCmd.Stderr = os.Stderr
+	if err := testCmd.Run(); err != nil {
+		return err
+	}
+
+	coverageCmd := exec.Command("go", "tool", "cover", "-func=coverage.out")
+	coverageCmd.Dir = projectPath
+	var buffer bytes.Buffer
+	coverageCmd.Stdout = &buffer
+	coverageCmd.Stderr = os.Stderr
+	if err := coverageCmd.Run(); err != nil {
+		return err
+	}
+
+	lines := strings.Split(strings.TrimSpace(buffer.String()), "\n")
+	if len(lines) == 0 {
+		return fmt.Errorf("no coverage information produced")
+	}
+	fields := strings.Fields(lines[len(lines)-1])
+	if len(fields) == 0 {
+		return fmt.Errorf("unexpected coverage output: %s", lines[len(lines)-1])
+	}
+	percentage := strings.TrimSuffix(fields[len(fields)-1], "%")
+	coverage, err := strconv.ParseFloat(percentage, 64)
+	if err != nil {
+		return fmt.Errorf("failed to parse coverage: %w", err)
+	}
+	if coverage < 100.0 {
+		return fmt.Errorf("coverage %.1f%% is below required 100%%", coverage)
+	}
+
+	_ = os.Remove(filepath.Join(projectPath, "coverage.out"))
+	fmt.Println("✅ Tests passed with 100% coverage.")
+	return nil
 }
 
 func buildProjectConfig(projectName string) (*generator.GeneratorConfig, error) {
@@ -221,6 +288,10 @@ func buildProjectConfig(projectName string) (*generator.GeneratorConfig, error) 
 		Enterprise:    template.Enterprise,
 		Observability: false,
 		CustomValues:  make(map[string]string),
+	}
+
+	if newModulePath != "" {
+		config.CustomValues["module_path"] = newModulePath
 	}
 
 	// Override with command flags
@@ -310,7 +381,6 @@ func displaySuccessMessage(projectName string, config *generator.GeneratorConfig
 
 	fmt.Printf("\n🚀 Next steps:\n")
 	fmt.Printf("   cd %s\n", projectName)
-	fmt.Printf("   go mod download          # Install dependencies\n")
 
 	if config.Database != "sqlite" {
 		fmt.Printf("   # Configure %s connection in configs/app.yaml\n", config.Database)
