@@ -51,100 +51,92 @@ type %sService interface {
 
 func (g *TemplateGenerator) generateRepositoryFileFixed(name string, info *resolver.ModuleInfo) string {
 	capName := Capitalize(name)
+	domainImport := g.moduleImportPath("internal/adapters/http/modules", name, "domain")
 
-	template := `// @kthulu:repository:%s
+	template := `// @kthulu:repository:%[3]s
 package repository
 
 import (
 	"gorm.io/gorm"
-	"%s/internal/adapters/http/modules/%s/domain"
+	"%[1]s"
 )
 
-type %sRepository struct {
+type %[2]sRepository struct {
 	db *gorm.DB
 }
 
-func New%sRepository(db *gorm.DB) domain.%sRepository {
-	return &%sRepository{db: db}
+func New%[2]sRepository(db *gorm.DB) domain.%[2]sRepository {
+	return &%[2]sRepository{db: db}
 }
 
-func (r *%sRepository) Create(entity *domain.%s) error {
+func (r *%[2]sRepository) Create(entity *domain.%[2]s) error {
 	return r.db.Create(entity).Error
 }
 
-func (r *%sRepository) GetByID(id uint) (*domain.%s, error) {
-	var entity domain.%s
+func (r *%[2]sRepository) GetByID(id uint) (*domain.%[2]s, error) {
+	var entity domain.%[2]s
 	err := r.db.First(&entity, id).Error
 	return &entity, err
 }
 
-func (r *%sRepository) Update(entity *domain.%s) error {
+func (r *%[2]sRepository) Update(entity *domain.%[2]s) error {
 	return r.db.Save(entity).Error
 }
 
-func (r *%sRepository) Delete(id uint) error {
-	return r.db.Delete(&domain.%s{}, id).Error
+func (r *%[2]sRepository) Delete(id uint) error {
+	return r.db.Delete(&domain.%[2]s{}, id).Error
 }
 
-func (r *%sRepository) List() ([]*domain.%s, error) {
-	var entities []*domain.%s
+func (r *%[2]sRepository) List() ([]*domain.%[2]s, error) {
+	var entities []*domain.%[2]s
 	err := r.db.Find(&entities).Error
 	return entities, err
-}
-`
-	return fmt.Sprintf(template,
-		name, g.config.ProjectName, name, capName, capName, capName, capName,
-		capName, capName, capName, capName, capName,
-		capName, capName, capName, capName, capName, capName)
+}`
+
+	return fmt.Sprintf(template, domainImport, capName, name)
 }
 
 func (g *TemplateGenerator) generateServiceFileFixed(name string, info *resolver.ModuleInfo) string {
 	capName := Capitalize(name)
 	pluralName := Pluralize(capName)
+	domainImport := g.moduleImportPath("internal/adapters/http/modules", name, "domain")
 
-	template := `// @kthulu:service:%s
+	template := `// @kthulu:service:%[3]s
 package service
 
 import (
-	"%s/internal/adapters/http/modules/%s/domain"
+	"%[1]s"
 )
 
-type %sService struct {
-	repo domain.%sRepository
+type %[2]sService struct {
+	repo domain.%[2]sRepository
 }
 
-func New%sService(repo domain.%sRepository) domain.%sService {
-	return &%sService{repo: repo}
+func New%[2]sService(repo domain.%[2]sRepository) domain.%[2]sService {
+	return &%[2]sService{repo: repo}
 }
 
-func (s *%sService) Create%s(entity *domain.%s) error {
-	// Add business logic here
+func (s *%[2]sService) Create%[2]s(entity *domain.%[2]s) error {
 	return s.repo.Create(entity)
 }
 
-func (s *%sService) Get%sByID(id uint) (*domain.%s, error) {
+func (s *%[2]sService) Get%[2]sByID(id uint) (*domain.%[2]s, error) {
 	return s.repo.GetByID(id)
 }
 
-func (s *%sService) Update%s(entity *domain.%s) error {
-	// Add business logic here
+func (s *%[2]sService) Update%[2]s(entity *domain.%[2]s) error {
 	return s.repo.Update(entity)
 }
 
-func (s *%sService) Delete%s(id uint) error {
-	// Add business logic here
+func (s *%[2]sService) Delete%[2]s(id uint) error {
 	return s.repo.Delete(id)
 }
 
-func (s *%sService) List%s() ([]*domain.%s, error) {
+func (s *%[2]sService) List%[4]s() ([]*domain.%[2]s, error) {
 	return s.repo.List()
-}
-`
-	return fmt.Sprintf(template,
-		name, g.config.ProjectName, name, capName, capName, capName, capName, capName,
-		capName, capName, capName, capName, capName, capName,
-		capName, capName, capName, capName, capName,
-		capName, pluralName, capName)
+}`
+
+	return fmt.Sprintf(template, domainImport, capName, name, pluralName)
 }
 
 // Configuration generation functions
