@@ -390,7 +390,7 @@ func generateSpecificModule(config *generator.GeneratorConfig, moduleName string
 	fmt.Printf("   📁 Creating module structure for '%s'\n", moduleName)
 
 	// Create module directory
-	moduleDir := filepath.Join(config.OutputPath, "internal", "modules", moduleName)
+	moduleDir := filepath.Join(config.OutputPath, "internal", "adapters", "http", "modules", moduleName)
 	if err := os.MkdirAll(moduleDir, 0755); err != nil {
 		return fmt.Errorf("failed to create module directory: %w", err)
 	}
