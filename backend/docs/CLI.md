@@ -28,3 +28,5 @@ kthulu-cli make:handler health
 kthulu-cli make:service-test account
 ```
 
+El generador `make:service-test` crea una tabla de casos con dobles de prueba por cada puerto del servicio. Amplíe la cobertura agregando entradas al slice `tests` y configurando los fakes dentro de la función `deps` tal como se explica en [docs/cli/make.md](cli/make.md).
+

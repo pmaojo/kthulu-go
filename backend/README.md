@@ -124,7 +124,7 @@ Subcomandos disponibles:
 
 - `make:module <nombre>` – crea un módulo backend en `backend/internal/modules`.
 - `make:handler <nombre>` – genera un handler HTTP en `backend/internal/handlers`.
-- `make:service-test <nombre>` – produce una prueba básica para un servicio.
+- `make:service-test <nombre>` – genera una prueba con tabla de casos y fakes para cada puerto del servicio.
 
 Ejemplo de uso:
 
@@ -132,7 +132,7 @@ Ejemplo de uso:
 kthulu-cli make:module user
 ```
 
-Las plantillas se encuentran en `backend/cmd/kthulu-cli/templates`. Puede modificarlas o agregar nuevas para extender el generador. Revise y formatee el código generado antes de usarlo.
+Las plantillas se encuentran en `backend/cmd/kthulu-cli/templates`. Puede modificarlas o agregar nuevas para extender el generador. Revise y formatee el código generado antes de usarlo. Para añadir escenarios extra a las pruebas de servicio, edite el slice `tests` del archivo generado y configure los fakes dentro de `deps` siguiendo el patrón descrito en [docs/cli/make.md](docs/cli/make.md).
 
 Para una guía más extensa con ejemplos de las plantillas consulte [docs/cli/make.md](docs/cli/make.md).
 

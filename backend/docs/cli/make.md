@@ -60,7 +60,7 @@ func Health(w http.ResponseWriter, r *http.Request) {
 
 ## `make:service-test`
 
-Genera una prueba básica para un servicio.
+Genera una prueba con tabla de casos y dobles de prueba para cada puerto del servicio.
 
 **Uso**
 
@@ -75,12 +75,48 @@ No acepta flags adicionales.
 ```go
 package inventory
 
-import "testing"
+import (
+    "context"
+    "errors"
+    "testing"
+)
 
-// TestInventory exercises the Inventory service.
+type testDeps struct {
+    primaryPort *fakePrimaryPort
+}
+
 func TestInventory(t *testing.T) {
+    tests := []struct {
+        name    string
+        deps    func(t *testing.T) testDeps
+        args    args
+        want    any
+        wantErr error
+    }{
+        { /* caso exitoso */ },
+        { /* caso de error */ },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            subject := newTestInventory(t, tt.deps(t))
+            got, err := subject(tt.args.ctx, tt.args.input)
+            // assertErr + assertResult helpers
+        })
+    }
 }
 ```
+
+La plantilla completa incluye `fakePrimaryPort` (replíquelo para cada dependencia real), los helpers `assertError`, `assertResult` y `newTest<Service>` que fallan si no se reemplazan por la construcción real del servicio.
+
+**¿Cómo extender la tabla?**
+
+1. Añada una nueva entrada al slice `tests` con un `name` descriptivo.
+2. Configure los fakes dentro de la función `deps` para simular el comportamiento esperado del puerto (por ejemplo, retornos alternativos, errores, validaciones sobre la entrada).
+3. Ajuste `args`, `want` y `wantErr` según el escenario.
+4. Si el servicio utiliza puertos adicionales, duplique el patrón de `fakePrimaryPort` para cada uno y expóngalos desde `testDeps`.
+
+De esta forma puede cubrir casos límite, regresiones y fallos de integraciones externas sin duplicar código de preparación.
 
 **Salida**
 
