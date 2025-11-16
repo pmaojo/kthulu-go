@@ -4,8 +4,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/ory/fosite"
 
-	oauthhttp "github.com/pmaojo/kthulu-go/backend/internal/modules/oauthsso/adapters/http"
-	"github.com/pmaojo/kthulu-go/backend/internal/modules/oauthsso/usecase"
+	oauthhttp "github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules/oauthsso/adapters/http"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules/oauthsso/usecase"
 )
 
 // Router wires OAuth2 handlers under the /oauth prefix.

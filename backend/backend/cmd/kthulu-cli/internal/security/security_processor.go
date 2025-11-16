@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	kthuluParser "github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/parser"
+	kthuluParser "github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/parser"
 )
 
 // SecurityTagProcessor processes @kthulu:security tags and generates RBAC policies

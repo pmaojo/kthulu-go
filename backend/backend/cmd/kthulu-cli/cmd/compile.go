@@ -9,9 +9,9 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/cobra"
 
-	builder "github.com/pmaojo/kthulu-go/backend/internal/cli/builder"
-	planpkg "github.com/pmaojo/kthulu-go/backend/internal/cli/plan"
-	"github.com/pmaojo/kthulu-go/backend/internal/cli/scanner"
+	builder "github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/builder"
+	planpkg "github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/plan"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/scanner"
 )
 
 var compileCmd = &cobra.Command{

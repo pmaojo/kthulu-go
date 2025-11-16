@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pmaojo/kthulu-go/backend/internal/ai"
+	"github.com/pmaojo/kthulu-go/backend/internal/infrastructure/ai"
 )
 
 // AIUseCase provides AI powered features

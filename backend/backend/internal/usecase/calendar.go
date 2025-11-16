@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/pmaojo/kthulu-go/backend/internal/domain"
-	"github.com/pmaojo/kthulu-go/backend/internal/repository"
+	"github.com/pmaojo/kthulu-go/backend/internal/domain/repository"
 )
 
 // PaginatedResponse represents a paginated response

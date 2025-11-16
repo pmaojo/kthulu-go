@@ -9,7 +9,7 @@ Se ha configurado exitosamente golangci-lint para el proyecto Kthulu backend con
 ### 1. Configuración Principal
 - **`.golangci.yml`**: Configuración completa de golangci-lint
 - **`scripts/fix-linting.sh`**: Script para corrección automática de issues comunes
-- **`internal/common/constants.go`**: Constantes para strings repetidos
+- **`internal/domain/common/constants.go`**: Constantes para strings repetidos
 
 ### 2. Actualizaciones de Versión
 - **`go.mod`**: Actualizado de Go 1.24.3 → Go 1.23
@@ -114,7 +114,7 @@ Después de la configuración inicial, quedan aproximadamente 80 issues que requ
 
 1. **Corrección Manual**: Abordar issues críticos de complejidad y error handling
 2. **Refactoring**: Dividir funciones complejas en funciones más pequeñas
-3. **Constants**: Mover strings repetidos a `internal/common/constants.go`
+3. **Constants**: Mover strings repetidos a `internal/domain/common/constants.go`
 4. **CI Integration**: El linting ya está integrado en `make lint`
 
 ## Beneficios Obtenidos

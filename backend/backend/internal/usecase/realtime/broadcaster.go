@@ -6,7 +6,7 @@ import (
 
 	"nhooyr.io/websocket"
 
-	"github.com/pmaojo/kthulu-go/backend/internal/repository"
+	"github.com/pmaojo/kthulu-go/backend/internal/domain/repository"
 )
 
 // DomainEvent represents a generic event to broadcast to clients.

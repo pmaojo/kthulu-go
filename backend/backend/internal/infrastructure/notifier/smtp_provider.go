@@ -7,7 +7,7 @@ import (
 	"net/smtp"
 
 	"github.com/pmaojo/kthulu-go/backend/core"
-	"github.com/pmaojo/kthulu-go/backend/internal/repository"
+	"github.com/pmaojo/kthulu-go/backend/internal/domain/repository"
 )
 
 // SMTPConfig holds SMTP configuration

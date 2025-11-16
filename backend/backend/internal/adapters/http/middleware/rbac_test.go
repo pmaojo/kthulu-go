@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/pmaojo/kthulu-go/backend/internal/domain"
-	"github.com/pmaojo/kthulu-go/backend/internal/repository"
+	"github.com/pmaojo/kthulu-go/backend/internal/domain/repository"
 )
 
 // mockRoleRepository implements repository.RoleRepository for testing.

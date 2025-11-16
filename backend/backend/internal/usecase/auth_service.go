@@ -11,7 +11,7 @@ import (
 
 	"github.com/pmaojo/kthulu-go/backend/core"
 	"github.com/pmaojo/kthulu-go/backend/internal/domain"
-	"github.com/pmaojo/kthulu-go/backend/internal/repository"
+	"github.com/pmaojo/kthulu-go/backend/internal/domain/repository"
 )
 
 // AuthService provides authentication services with improved token management

@@ -8,7 +8,7 @@ import (
 
 	"github.com/pmaojo/kthulu-go/backend/core"
 	"github.com/pmaojo/kthulu-go/backend/internal/domain"
-	auth "github.com/pmaojo/kthulu-go/backend/internal/modules/auth"
+	auth "github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules/auth"
 )
 
 // UserIDKey is the context key for user ID

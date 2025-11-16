@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/pmaojo/kthulu-go/backend/core"
-	"github.com/pmaojo/kthulu-go/backend/internal/repository"
+	"github.com/pmaojo/kthulu-go/backend/internal/domain/repository"
 )
 
 // ConsoleProvider implements NotificationProvider by logging to console

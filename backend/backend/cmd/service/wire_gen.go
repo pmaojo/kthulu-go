@@ -13,9 +13,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/pmaojo/kthulu-go/backend/core"
 	"github.com/pmaojo/kthulu-go/backend/core/metrics"
-	"github.com/pmaojo/kthulu-go/backend/internal/modules"
-	"github.com/pmaojo/kthulu-go/backend/internal/modules/flags"
-	"github.com/pmaojo/kthulu-go/backend/internal/observability"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules/flags"
+	"github.com/pmaojo/kthulu-go/backend/internal/infrastructure/observability"
 	"go.uber.org/fx"
 )
 

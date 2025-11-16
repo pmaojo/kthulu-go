@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	flagcfg "github.com/pmaojo/kthulu-go/backend/internal/modules/flags"
+	flagcfg "github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules/flags"
 )
 
 // FlagsKey is the context key for request flags.

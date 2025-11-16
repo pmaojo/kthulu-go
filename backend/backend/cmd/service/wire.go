@@ -12,9 +12,9 @@ import (
 
 	"github.com/pmaojo/kthulu-go/backend/core"
 	"github.com/pmaojo/kthulu-go/backend/core/metrics"
-	"github.com/pmaojo/kthulu-go/backend/internal/modules"
-	flagcfg "github.com/pmaojo/kthulu-go/backend/internal/modules/flags"
-	"github.com/pmaojo/kthulu-go/backend/internal/observability"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules"
+	flagcfg "github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules/flags"
+	"github.com/pmaojo/kthulu-go/backend/internal/infrastructure/observability"
 )
 
 type routerProviderType = func(p struct {

@@ -64,10 +64,10 @@ import (
 	"github.com/pmaojo/kthulu-go/backend/core/metrics"
 	"github.com/pmaojo/kthulu-go/backend/internal/adapters/http/middleware"
 	db "github.com/pmaojo/kthulu-go/backend/internal/infrastructure/db"
-	"github.com/pmaojo/kthulu-go/backend/internal/modules"
-	flagcfg "github.com/pmaojo/kthulu-go/backend/internal/modules/flags"
-	vf "github.com/pmaojo/kthulu-go/backend/internal/modules/verifactu"
-	"github.com/pmaojo/kthulu-go/backend/internal/observability"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules"
+	flagcfg "github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules/flags"
+	vf "github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules/verifactu"
+	"github.com/pmaojo/kthulu-go/backend/internal/infrastructure/observability"
 )
 
 // newRouter constructs the application's HTTP router with middleware.

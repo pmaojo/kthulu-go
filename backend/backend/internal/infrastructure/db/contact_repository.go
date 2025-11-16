@@ -11,7 +11,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/pmaojo/kthulu-go/backend/internal/domain"
-	"github.com/pmaojo/kthulu-go/backend/internal/repository"
+	"github.com/pmaojo/kthulu-go/backend/internal/domain/repository"
 )
 
 // contactModel represents the database model for contacts

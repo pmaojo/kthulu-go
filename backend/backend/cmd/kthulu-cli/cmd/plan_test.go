@@ -8,8 +8,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	planpkg "github.com/pmaojo/kthulu-go/backend/internal/cli/plan"
-	graphpkg "github.com/pmaojo/kthulu-go/backend/internal/graph"
+	planpkg "github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/plan"
+	graphpkg "github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/graph"
 )
 
 func TestPlanCommand(t *testing.T) {

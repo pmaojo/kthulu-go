@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/parser"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/parser"
 )
 
 // DependencyResolver resolves module dependencies intelligently

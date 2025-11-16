@@ -94,7 +94,7 @@ func (g *SecurityGenerator) GenerateSecurityInfrastructure(projectPath string) (
 	// Generate middleware file
 	if err := g.generateMiddlewareFile(projectPath); err == nil {
 		result.MiddlewareGenerated = true
-		result.GeneratedFiles = append(result.GeneratedFiles, filepath.Join(projectPath, "internal/middleware/rbac.go"))
+		result.GeneratedFiles = append(result.GeneratedFiles, filepath.Join(projectPath, "internal/adapters/http/middleware/rbac.go"))
 	}
 
 	// Generate security configuration
@@ -118,7 +118,7 @@ func (g *SecurityGenerator) GenerateSecurityInfrastructure(projectPath string) (
 
 // generateMiddlewareFile creates RBAC middleware file
 func (g *SecurityGenerator) generateMiddlewareFile(projectPath string) error {
-	middlewareDir := filepath.Join(projectPath, "internal", "middleware")
+	middlewareDir := filepath.Join(projectPath, "internal", "adapters", "http", "middleware")
 	if err := os.MkdirAll(middlewareDir, 0755); err != nil {
 		return err
 	}
