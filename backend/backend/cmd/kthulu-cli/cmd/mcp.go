@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	mcp_golang "github.com/metoro-io/mcp-golang"
+	mcptransport "github.com/metoro-io/mcp-golang/transport"
+	mcphttp "github.com/metoro-io/mcp-golang/transport/http"
 	"github.com/metoro-io/mcp-golang/transport/stdio"
 	"github.com/spf13/cobra"
 
@@ -15,18 +18,28 @@ import (
 
 var (
 	mcpWorkingDir string
+	mcpTransport  string
+	mcpListenAddr string
+	mcpHTTPPath   string
+	mcpAllowList  []string
+	mcpDenyList   []string
 )
 
 var mcpCmd = &cobra.Command{
 	Use:   "mcp",
 	Short: "Expose the Kthulu CLI as a Model Context Protocol server",
-	Long: `Start an MCP stdio server so AI agents can call kthulu commands like create, add, generate, ai, and more.
-Use --working-dir to point the server at an existing project.`,
+	Long: `Start an MCP server so AI agents can call kthulu commands like create, add, generate, ai, and more.
+Use --working-dir to point the server at an existing project and --transport=http for editor or remote integrations.`,
 	RunE: runMCPServer,
 }
 
 func init() {
 	mcpCmd.Flags().StringVar(&mcpWorkingDir, "working-dir", "", "Working directory for executed CLI commands (default: current directory)")
+	mcpCmd.Flags().StringVar(&mcpTransport, "transport", "stdio", "Transport for MCP server: stdio or http")
+	mcpCmd.Flags().StringVar(&mcpListenAddr, "listen", ":8080", "Listen address when using the HTTP transport")
+	mcpCmd.Flags().StringVar(&mcpHTTPPath, "http-path", "/mcp", "HTTP path for MCP requests when transport=http")
+	mcpCmd.Flags().StringSliceVar(&mcpAllowList, "allow", nil, "Whitelist of CLI command paths (e.g. 'migrate up'). When set, only these commands are exposed")
+	mcpCmd.Flags().StringSliceVar(&mcpDenyList, "deny", nil, "Blacklist of CLI command paths (e.g. 'deploy apply'). Denials override allows")
 	rootCmd.AddCommand(mcpCmd)
 }
 
@@ -42,21 +55,15 @@ func runMCPServer(cmd *cobra.Command, _ []string) error {
 	}
 
 	executor := mcpserver.NewBinaryCommandExecutor(execPath)
-	tools := mcpserver.BuildCommandTools(rootCmd, executor, workingDir)
-
 	tagParser := parser.NewTagParser(nil)
-	guideTool := mcpserver.NewGuideTaggingService(tagParser).Tool(workingDir)
-	tools = append(tools, guideTool)
+	factory := mcpserver.NewToolFactory(rootCmd, executor, tagParser)
+	filter := mcpserver.NewAllowDenyFilter(mcpAllowList, mcpDenyList)
+	tools := factory.BuildTools(workingDir, filter)
 
-	insights := mcpserver.NewProjectInsightsService(tagParser)
-	tools = append(tools,
-		insights.OverviewTool(workingDir),
-		insights.ModulesTool(workingDir),
-		insights.TagsTool(workingDir),
-		insights.DependenciesTool(workingDir),
-	)
-
-	transport := stdio.NewStdioServerTransport()
+	transport, endpoint, err := buildMCPTransport(mcpTransport, mcpListenAddr, mcpHTTPPath)
+	if err != nil {
+		return err
+	}
 	instructions := "Expose kthulu CLI commands safely. Always respect the working directory and never run destructive shell commands outside of the provided tools."
 
 	server := mcp_golang.NewServer(
@@ -72,7 +79,7 @@ func runMCPServer(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
-	fmt.Fprintf(cmd.OutOrStdout(), "Started MCP server with %d tools in %s\n", len(tools), workingDir)
+	fmt.Fprintf(cmd.OutOrStdout(), "Started MCP server (%s) with %d tools in %s\n", endpoint, len(tools), workingDir)
 	return server.Serve()
 }
 
@@ -95,4 +102,47 @@ func resolveWorkingDir(flagValue string) (string, error) {
 	}
 
 	return dir, nil
+}
+
+func buildMCPTransport(kind string, listenAddr string, httpPath string) (mcptransport.Transport, string, error) {
+	switch strings.ToLower(strings.TrimSpace(kind)) {
+	case "", "stdio":
+		return stdio.NewStdioServerTransport(), "stdio", nil
+	case "http":
+		path := normalizeHTTPPath(httpPath)
+		transport := mcphttp.NewHTTPTransport(path)
+		addr := strings.TrimSpace(listenAddr)
+		if addr != "" {
+			transport = transport.WithAddr(addr)
+		}
+		displayAddr := renderHTTPAddress(addr)
+		return transport, fmt.Sprintf("%s%s", displayAddr, path), nil
+	default:
+		return nil, "", fmt.Errorf("unsupported MCP transport %s", kind)
+	}
+}
+
+func normalizeHTTPPath(path string) string {
+	trimmed := strings.TrimSpace(path)
+	if trimmed == "" {
+		return "/mcp"
+	}
+	if !strings.HasPrefix(trimmed, "/") {
+		return "/" + trimmed
+	}
+	return trimmed
+}
+
+func renderHTTPAddress(addr string) string {
+	display := strings.TrimSpace(addr)
+	if display == "" {
+		display = ":8080"
+	}
+	if strings.HasPrefix(display, "http://") || strings.HasPrefix(display, "https://") {
+		return display
+	}
+	if strings.HasPrefix(display, ":") {
+		display = "localhost" + display
+	}
+	return "http://" + display
 }

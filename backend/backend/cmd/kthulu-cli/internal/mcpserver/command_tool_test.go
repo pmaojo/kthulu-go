@@ -7,6 +7,7 @@ import (
 
 	mcp_golang "github.com/metoro-io/mcp-golang"
 	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/mcpserver"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 )
 
@@ -69,4 +70,25 @@ func TestCommandToolHandlerErrorIncludesOutput(t *testing.T) {
 	require.Contains(t, err.Error(), "command failed")
 	require.Contains(t, err.Error(), "partial")
 	require.Contains(t, err.Error(), "boom")
+}
+
+func TestBuildCommandToolsHonorsFilter(t *testing.T) {
+	executor := &stubExecutor{}
+	root := &cobra.Command{Use: "kthulu"}
+
+	statusCmd := &cobra.Command{Use: "status", Run: func(cmd *cobra.Command, args []string) {}}
+	root.AddCommand(statusCmd)
+
+	destructive := &cobra.Command{Use: "deploy"}
+	apply := &cobra.Command{Use: "apply", Run: func(cmd *cobra.Command, args []string) {}}
+	destructive.AddCommand(apply)
+	root.AddCommand(destructive)
+
+	filter := func(path []string) bool {
+		return !(len(path) >= 2 && path[0] == "deploy" && path[1] == "apply")
+	}
+
+	tools := mcpserver.BuildCommandTools(root, executor, "/tmp", filter)
+	require.Len(t, tools, 1)
+	require.Equal(t, "status", tools[0].Name)
 }
