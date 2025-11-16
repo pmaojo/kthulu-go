@@ -613,7 +613,7 @@ func (g *TemplateGenerator) generateCoreProviders() string {
 	default:
 		driverImport = "\"gorm.io/driver/sqlite\""
 		imports = append(imports, "\"path/filepath\"")
-		connectionBuilder.WriteString(fmt.Sprintf("\t\tdbPath := fmt.Sprintf(\"%%s\", getEnv(\"SQLITE_PATH\", \"data/%s.db\"))\n", dbName))
+		connectionBuilder.WriteString(fmt.Sprintf("\t\tdbPath := getEnv(\"SQLITE_PATH\", \"data/%s.db\")\n", dbName))
 		connectionBuilder.WriteString("\t\tif err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {\n")
 		connectionBuilder.WriteString("\t\t\treturn nil, err\n")
 		connectionBuilder.WriteString("\t\t}\n")
