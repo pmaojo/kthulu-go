@@ -283,6 +283,7 @@ func (g *TemplateGenerator) generateModuleFiles(moduleName string, structure *Pr
 
 // generateMainFile generates the main.go file
 func (g *TemplateGenerator) generateMainFile() string {
+	coreImport := g.moduleImportPath("internal/core")
 	return fmt.Sprintf(`// @kthulu:project:%s
 // @kthulu:generated:true
 // @kthulu:features:%s
@@ -301,7 +302,7 @@ import (
 	"github.com/gorilla/mux"
 	"go.uber.org/fx"
 
-	"%s/internal/core"
+	"%s"
 %s
 )
 
@@ -374,7 +375,7 @@ func setupRoutes(%s) http.Handler {
 }
 `, g.config.ProjectName,
 		strings.Join(g.config.Features, ","),
-		g.config.ProjectName,
+		coreImport,
 		g.generateModuleImports(),
 		g.generateModuleProviders(),
 		g.generateInvokeParams(),
