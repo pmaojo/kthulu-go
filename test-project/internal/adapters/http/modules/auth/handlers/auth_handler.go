@@ -1,4 +1,4 @@
-// @kthulu:handler:test-project
+// @kthulu:handler:auth
 package handlers
 
 import (
@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
-	"auth/internal/adapters/http/modules/Auth/domain"
+	"test-project/internal/adapters/http/modules/auth/domain"
 )
 
 type AuthHandler struct {
@@ -15,12 +15,12 @@ type AuthHandler struct {
 }
 
 func NewAuthHandler(service domain.AuthService) *AuthHandler {
-	return &authHandler{service: service}
+	return &AuthHandler{service: service}
 }
 
-// RegisterRoutes registers all routes for Auth
-func (h *authHandler) RegisterRoutes(router *mux.Router) {
-	sub := router.PathPrefix("/Auth").Subrouter()
+// RegisterRoutes registers all routes for auth
+func (h *AuthHandler) RegisterRoutes(router *mux.Router) {
+	sub := router.PathPrefix("/auth").Subrouter()
 	sub.HandleFunc("", h.List).Methods("GET")
 	sub.HandleFunc("", h.Create).Methods("POST")
 	sub.HandleFunc("/{id}", h.GetByID).Methods("GET")
@@ -102,8 +102,8 @@ func (h *AuthHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h *AuthsHandler) List(w http.ResponseWriter, r *http.Request) {
-	entities, err := h.service.List%!s(MISSING)()
+func (h *AuthHandler) List(w http.ResponseWriter, r *http.Request) {
+	entities, err := h.service.ListAuths()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
