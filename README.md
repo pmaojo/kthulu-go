@@ -52,7 +52,7 @@ This runs:
 
 See [DOCKER.md](./DOCKER.md) for more options.
 
-> **Quickstart tip:** When the frontend is running at `http://localhost:5173`, the header displays a connectivity badge ("API Conectada" / "Sin conexión"). Use it to confirm the UI can reach the Go API before exploring the panels.
+> **Quickstart tip:** When the frontend is running at `http://localhost:5173`, the header displays a connectivity badge ("API Connected" / "Offline"). Use it to confirm the UI can reach the Go API before exploring the panels.
 
 ### Local Development
 
@@ -79,12 +79,12 @@ go test ./...        # Run tests
 
 You can install the `kthulu-cli` binary in two ways:
 
-1. **Descargar el artefacto publicado**. Cada tag `v*` genera una GitHub Release con binarios y checksums para Linux, macOS y Windows. Descargue el archivo correspondiente a su plataforma, verifique el checksum y añada el ejecutable a su `PATH`.
-2. **`go install` (cuando el módulo tenga ruta canónica).** Ejecute `go install github.com/<org>/kthulu-go/backend/cmd/kthulu-cli@latest` para compilar y situar la herramienta en su `$GOBIN`.
+1. **Download the published artifact.** Every `v*` tag generates a GitHub Release with binaries and checksums for Linux, macOS, and Windows. Download the appropriate file for your platform, verify the checksum, and add the executable to your `PATH`.
+2. **`go install` (once the module has a canonical path).** Run `go install github.com/<org>/kthulu-go/backend/cmd/kthulu-cli@latest` to compile and place the tool in your `$GOBIN`.
 
-Ambos métodos respetan la inyección de metadatos de versión y build realizados durante el proceso de release.
+Both methods respect the version and build metadata injection performed during the release process.
 
-¿Necesita ejecutar su **primer release automático**? Consulte [backend/docs/releases.md](backend/docs/releases.md) para ver los pasos de preparación, los secretos requeridos y cómo se conecta GoReleaser con el workflow de GitHub Actions que publica los binarios multiplataforma.
+Need to run your **first automated release**? See [backend/docs/releases.md](backend/docs/releases.md) for preparation steps, required secrets, and how GoReleaser connects with the GitHub Actions workflow that publishes the multi-platform binaries.
 
 #### Database
 
@@ -146,7 +146,7 @@ The main UI (see `frontend/src/pages/Index.tsx`) organizes functionality into de
 - **Template Manager** — Manages template registries, renders, and cache operations.
 - **Audit Workbench** — Runs architecture and compliance audits.
 - **AI Chat / Assistant** — Conversational helpers for planning, refactoring, or code suggestions.
-- **Project Generator Dialog** — Accessible from the header “Generar” button for end-to-end project scaffolding.
+- **Project Generator Dialog** — Accessible from the header “Generate” button for end-to-end project scaffolding.
 
 ### Service Canvas workflow
 
