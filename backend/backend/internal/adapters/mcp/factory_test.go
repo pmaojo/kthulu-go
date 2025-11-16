@@ -1,10 +1,10 @@
-package mcpserver_test
+package mcp_test
 
 import (
 	"testing"
 
-	"github.com/pmaojo/kthulu-go/backend/internal/adapters/mcp/mcpserver"
 	"github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/parser"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/mcp"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 )
@@ -17,7 +17,7 @@ func TestToolFactoryBuildsCommandAndAnalysisTools(t *testing.T) {
 	executor := &stubExecutor{}
 	tagParser := parser.NewTagParser(nil)
 
-	factory := mcpserver.NewToolFactory(root, executor, tagParser)
+	factory := mcp.NewToolFactory(root, executor, tagParser)
 	tools := factory.BuildTools("/tmp", nil)
 
 	names := make(map[string]struct{})

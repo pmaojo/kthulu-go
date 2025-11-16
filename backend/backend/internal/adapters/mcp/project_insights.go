@@ -1,4 +1,4 @@
-package mcpserver
+package mcp
 
 import (
 	"context"
@@ -18,6 +18,8 @@ type ProjectInsightsService struct {
 	parser *parser.TagParser
 }
 
+type projectInsightArgs struct{}
+
 // NewProjectInsightsService creates a new insights service.
 func NewProjectInsightsService(p *parser.TagParser) *ProjectInsightsService {
 	return &ProjectInsightsService{parser: p}
@@ -27,7 +29,7 @@ func NewProjectInsightsService(p *parser.TagParser) *ProjectInsightsService {
 
 // OverviewTool returns a tool that summarizes the project.
 func (s *ProjectInsightsService) OverviewTool(projectPath string) RegisteredTool {
-	handler := func(ctx context.Context, _ struct{}) (*mcp_golang.ToolResponse, error) {
+	handler := func(ctx context.Context, _ projectInsightArgs) (*mcp_golang.ToolResponse, error) {
 		overview, err := s.BuildOverview(projectPath)
 		if err != nil {
 			return nil, err
@@ -41,7 +43,7 @@ func (s *ProjectInsightsService) OverviewTool(projectPath string) RegisteredTool
 
 // ModulesTool returns a tool that lists modules, packages, files, and dependencies.
 func (s *ProjectInsightsService) ModulesTool(projectPath string) RegisteredTool {
-	handler := func(ctx context.Context, _ struct{}) (*mcp_golang.ToolResponse, error) {
+	handler := func(ctx context.Context, _ projectInsightArgs) (*mcp_golang.ToolResponse, error) {
 		description, err := s.DescribeModules(projectPath)
 		if err != nil {
 			return nil, err
@@ -55,7 +57,7 @@ func (s *ProjectInsightsService) ModulesTool(projectPath string) RegisteredTool 
 
 // TagsTool returns a tool that summarizes tag types across the project.
 func (s *ProjectInsightsService) TagsTool(projectPath string) RegisteredTool {
-	handler := func(ctx context.Context, _ struct{}) (*mcp_golang.ToolResponse, error) {
+	handler := func(ctx context.Context, _ projectInsightArgs) (*mcp_golang.ToolResponse, error) {
 		description, err := s.DescribeTags(projectPath)
 		if err != nil {
 			return nil, err
@@ -69,7 +71,7 @@ func (s *ProjectInsightsService) TagsTool(projectPath string) RegisteredTool {
 
 // DependenciesTool returns a tool that lists module dependency edges.
 func (s *ProjectInsightsService) DependenciesTool(projectPath string) RegisteredTool {
-	handler := func(ctx context.Context, _ struct{}) (*mcp_golang.ToolResponse, error) {
+	handler := func(ctx context.Context, _ projectInsightArgs) (*mcp_golang.ToolResponse, error) {
 		description, err := s.DescribeDependencies(projectPath)
 		if err != nil {
 			return nil, err

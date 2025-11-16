@@ -4,16 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
-	mcp_golang "github.com/metoro-io/mcp-golang"
-	mcptransport "github.com/metoro-io/mcp-golang/transport"
-	mcphttp "github.com/metoro-io/mcp-golang/transport/http"
-	"github.com/metoro-io/mcp-golang/transport/stdio"
 	"github.com/spf13/cobra"
 
-	"github.com/pmaojo/kthulu-go/backend/internal/adapters/mcp/mcpserver"
 	"github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/parser"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/mcp"
 )
 
 var (
@@ -54,33 +49,33 @@ func runMCPServer(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to resolve kthulu binary: %w", err)
 	}
 
-	executor := mcpserver.NewBinaryCommandExecutor(execPath)
+	executor := mcp.NewBinaryCommandExecutor(execPath)
 	tagParser := parser.NewTagParser(nil)
-	factory := mcpserver.NewToolFactory(rootCmd, executor, tagParser)
-	filter := mcpserver.NewAllowDenyFilter(mcpAllowList, mcpDenyList)
-	tools := factory.BuildTools(workingDir, filter)
-
-	transport, endpoint, err := buildMCPTransport(mcpTransport, mcpListenAddr, mcpHTTPPath)
+	builder := mcp.NewServerBuilder(mcp.ServerBuilderDependencies{
+		RootCmd:   rootCmd,
+		Executor:  executor,
+		TagParser: tagParser,
+	})
+	instructions := "Expose kthulu CLI commands safely. Always respect the working directory and never run destructive shell commands outside of the provided tools."
+	instance, err := builder.BuildServer(mcp.ServerOptions{
+		WorkingDir: workingDir,
+		AllowList:  mcpAllowList,
+		DenyList:   mcpDenyList,
+		Transport: mcp.TransportOptions{
+			Kind:       mcpTransport,
+			ListenAddr: mcpListenAddr,
+			HTTPPath:   mcpHTTPPath,
+		},
+		Name:         "Kthulu CLI MCP",
+		Version:      version,
+		Instructions: instructions,
+	})
 	if err != nil {
 		return err
 	}
-	instructions := "Expose kthulu CLI commands safely. Always respect the working directory and never run destructive shell commands outside of the provided tools."
 
-	server := mcp_golang.NewServer(
-		transport,
-		mcp_golang.WithName("Kthulu CLI MCP"),
-		mcp_golang.WithVersion(version),
-		mcp_golang.WithInstructions(instructions),
-	)
-
-	for _, tool := range tools {
-		if err := server.RegisterTool(tool.Name, tool.Description, tool.Handler); err != nil {
-			return fmt.Errorf("register tool %s: %w", tool.Name, err)
-		}
-	}
-
-	fmt.Fprintf(cmd.OutOrStdout(), "Started MCP server (%s) with %d tools in %s\n", endpoint, len(tools), workingDir)
-	return server.Serve()
+	fmt.Fprintf(cmd.OutOrStdout(), "Started MCP server (%s) with %d tools in %s\n", instance.Endpoint, len(instance.Tools), workingDir)
+	return instance.Server.Serve()
 }
 
 func resolveWorkingDir(flagValue string) (string, error) {
@@ -102,47 +97,4 @@ func resolveWorkingDir(flagValue string) (string, error) {
 	}
 
 	return dir, nil
-}
-
-func buildMCPTransport(kind string, listenAddr string, httpPath string) (mcptransport.Transport, string, error) {
-	switch strings.ToLower(strings.TrimSpace(kind)) {
-	case "", "stdio":
-		return stdio.NewStdioServerTransport(), "stdio", nil
-	case "http":
-		path := normalizeHTTPPath(httpPath)
-		transport := mcphttp.NewHTTPTransport(path)
-		addr := strings.TrimSpace(listenAddr)
-		if addr != "" {
-			transport = transport.WithAddr(addr)
-		}
-		displayAddr := renderHTTPAddress(addr)
-		return transport, fmt.Sprintf("%s%s", displayAddr, path), nil
-	default:
-		return nil, "", fmt.Errorf("unsupported MCP transport %s", kind)
-	}
-}
-
-func normalizeHTTPPath(path string) string {
-	trimmed := strings.TrimSpace(path)
-	if trimmed == "" {
-		return "/mcp"
-	}
-	if !strings.HasPrefix(trimmed, "/") {
-		return "/" + trimmed
-	}
-	return trimmed
-}
-
-func renderHTTPAddress(addr string) string {
-	display := strings.TrimSpace(addr)
-	if display == "" {
-		display = ":8080"
-	}
-	if strings.HasPrefix(display, "http://") || strings.HasPrefix(display, "https://") {
-		return display
-	}
-	if strings.HasPrefix(display, ":") {
-		display = "localhost" + display
-	}
-	return "http://" + display
 }
