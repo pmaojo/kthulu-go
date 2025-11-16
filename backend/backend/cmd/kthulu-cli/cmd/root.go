@@ -47,9 +47,8 @@ func Execute() {
 
 func init() {
 	// Core commands
-	rootCmd.AddCommand(newCmd)      // kthulu create/new
-	rootCmd.AddCommand(addCmd)      // kthulu add module
-	rootCmd.AddCommand(generateCmd) // kthulu generate component
+	rootCmd.AddCommand(newCmd) // kthulu create/new
+	rootCmd.AddCommand(addCmd) // kthulu add module
 
 	// AI commands
 	rootCmd.AddCommand(aiCmd) // kthulu ai "prompt"
