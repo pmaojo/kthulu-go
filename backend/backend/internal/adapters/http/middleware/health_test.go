@@ -40,7 +40,7 @@ func TestHealthCheckHandler_EncodeFailure(t *testing.T) {
 	defer db.Close()
 	mock.ExpectPing()
 
-	handler := HealthCheckHandler(db, &observability.ZapLogger{zap.NewNop()}, "test-version")
+	handler := HealthCheckHandler(db, observability.NewLoggerFromZap(zap.NewNop()), "test-version")
 
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	w := &failingResponseWriter{}
