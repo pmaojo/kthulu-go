@@ -261,9 +261,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gorilla/mux"
 	"go.uber.org/fx"
 
-	"github.com/pmaojo/kthulu-go/backend/internal/core"
+	"%s/internal/core"
 %s
 )
 
@@ -278,10 +279,11 @@ func main() {
 %s
 		
 		// HTTP server
-		fx.Invoke(func(lc fx.Lifecycle) {
+		fx.Invoke(func(lc fx.Lifecycle, %s) {
+			router := setupRoutes(%s)
 			server := &http.Server{
 				Addr:    ":8080",
-				Handler: setupRoutes(),
+				Handler: router,
 			}
 			
 			lc.Append(fx.Hook{
@@ -318,23 +320,29 @@ func main() {
 	log.Println("Server stopped")
 }
 
-func setupRoutes() http.Handler {
-	mux := http.NewServeMux()
+func setupRoutes(%s) http.Handler {
+	router := mux.NewRouter()
 	
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})
+
+	apiRouter := router.PathPrefix("/api/v1").Subrouter()
 	
 	// Add module routes here
 %s
 	
-	return mux
+	return router
 }
 `, g.config.ProjectName,
 		strings.Join(g.config.Features, ","),
+		g.config.ProjectName,
 		g.generateModuleImports(),
 		g.generateModuleProviders(),
+		g.generateInvokeParams(),
+		g.generateInvokeArgs(),
+		g.generateInvokeParams(),
 		g.generateModuleRoutes())
 }
 
@@ -352,7 +360,9 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.0
 %s
 )
-`, g.config.ProjectName, g.config.Database, g.generateDependencies())
+
+replace %s => ./
+`, g.config.ProjectName, g.config.Database, g.generateDependencies(), g.config.ProjectName)
 }
 
 // generateReadme generates the README.md file
@@ -422,7 +432,9 @@ func (g *TemplateGenerator) generateModuleImports() string {
 	// Use resolved dependencies, not just initial features
 	plan, _ := g.resolver.ResolveDependencies(g.config.Features)
 	for _, module := range plan.RequiredModules {
-		imports = append(imports, fmt.Sprintf(`	"github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules/%s"`, module))
+		imports = append(imports, fmt.Sprintf(`	"%s/internal/adapters/http/modules/%s"`, g.config.ProjectName, module))
+		imports = append(imports, fmt.Sprintf(`	%sDomain "%s/internal/adapters/http/modules/%s/domain"`, module, g.config.ProjectName, module))
+		imports = append(imports, fmt.Sprintf(`	%sHandlers "%s/internal/adapters/http/modules/%s/handlers"`, module, g.config.ProjectName, module))
 	}
 	return strings.Join(imports, "\n")
 }
@@ -440,12 +452,29 @@ func (g *TemplateGenerator) generateModuleRoutes() string {
 	var routes []string
 	plan, _ := g.resolver.ResolveDependencies(g.config.Features)
 	for _, module := range plan.RequiredModules {
-		capModule := Capitalize(module)
 		routes = append(routes, fmt.Sprintf(`	// %s routes`, module))
-		routes = append(routes, fmt.Sprintf(`	%sHandler := %s.New%sHandler(%sService)`, module, module, capModule, module))
-		routes = append(routes, fmt.Sprintf(`	%sHandler.RegisterRoutes(mux.PathPrefix("/api/v1").Subrouter())`, module))
+		routes = append(routes, fmt.Sprintf(`	%sHandler := %sHandlers.New%sHandler(%sService)`, module, module, Capitalize(module), module))
+		routes = append(routes, fmt.Sprintf(`	%sHandler.RegisterRoutes(apiRouter)`, module))
 	}
 	return strings.Join(routes, "\n")
+}
+
+func (g *TemplateGenerator) generateInvokeParams() string {
+	var params []string
+	plan, _ := g.resolver.ResolveDependencies(g.config.Features)
+	for _, module := range plan.RequiredModules {
+		params = append(params, fmt.Sprintf(`%sService %sDomain.%sService`, module, module, Capitalize(module)))
+	}
+	return strings.Join(params, ", ")
+}
+
+func (g *TemplateGenerator) generateInvokeArgs() string {
+	var args []string
+	plan, _ := g.resolver.ResolveDependencies(g.config.Features)
+	for _, module := range plan.RequiredModules {
+		args = append(args, fmt.Sprintf(`%sService`, module))
+	}
+	return strings.Join(args, ", ")
 }
 
 func (g *TemplateGenerator) generateDependencies() string {
@@ -546,7 +575,7 @@ package repository
 
 import (
 	"gorm.io/gorm"
-	"github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules/%s/domain"
+	"%s/internal/adapters/http/modules/%s/domain"
 )
 
 type %sRepository struct {
@@ -593,7 +622,7 @@ func (g *TemplateGenerator) generateServiceFile(name string, info *resolver.Modu
 package service
 
 import (
-	"github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules/%s/domain"
+	"%s/internal/adapters/http/modules/%s/domain"
 )
 
 type %sService struct {
@@ -626,7 +655,7 @@ func (s *%sService) Delete%s(id uint) error {
 func (s *%sService) List%s() ([]*domain.%s, error) {
 	return s.repo.List()
 }
-`, name, name, capName, capName, capName,
+`, g.config.ProjectName, name, capName, capName, capName,
 		capName, capName, capName, capName, capName, capName,
 		capName, capName, capName, capName, capName, capName,
 		capName, capName, capName, pluralName, capName)
@@ -644,7 +673,7 @@ import (
 	"strconv"
 	
 	"github.com/gorilla/mux"
-	"github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules/%s/domain"
+	"%s/internal/adapters/http/modules/%s/domain"
 )
 
 type %sHandler struct {
@@ -749,7 +778,7 @@ func (h *%sHandler) List(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(entities)
 }
-`, name, name, capName, capName, capName,
+`, g.config.ProjectName, name, capName, capName, capName,
 		capName, capName, capName, name, capName, name,
 		capName, capName, capName, capName, capName,
 		capName, capName, capName, capName, capName, capName, pluralName)

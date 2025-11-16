@@ -46,7 +46,7 @@ type %sService interface {
 		name, capName, name, capName,
 		capName, capName, capName, capName, capName, capName,
 		capName, capName, capName, capName, capName, capName,
-		capName, capName, pluralName, capName)
+		capName, capName, capName, pluralName, capName)
 }
 
 func (g *TemplateGenerator) generateRepositoryFileFixed(name string, info *resolver.ModuleInfo) string {
@@ -57,7 +57,7 @@ package repository
 
 import (
 	"gorm.io/gorm"
-	"github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules/%s/domain"
+	"%s/internal/adapters/http/modules/%s/domain"
 )
 
 type %sRepository struct {
@@ -93,7 +93,7 @@ func (r *%sRepository) List() ([]*domain.%s, error) {
 }
 `
 	return fmt.Sprintf(template,
-		name, name, capName, capName, capName, capName,
+		name, g.config.ProjectName, name, capName, capName, capName, capName,
 		capName, capName, capName, capName, capName,
 		capName, capName, capName, capName, capName, capName)
 }
@@ -106,7 +106,7 @@ func (g *TemplateGenerator) generateServiceFileFixed(name string, info *resolver
 package service
 
 import (
-	"github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules/%s/domain"
+	"%s/internal/adapters/http/modules/%s/domain"
 )
 
 type %sService struct {
@@ -141,7 +141,7 @@ func (s *%sService) List%s() ([]*domain.%s, error) {
 }
 `
 	return fmt.Sprintf(template,
-		name, name, capName, capName, capName, capName, capName, capName,
+		name, g.config.ProjectName, name, capName, capName, capName, capName, capName,
 		capName, capName, capName, capName, capName, capName,
 		capName, capName, capName, capName, capName,
 		capName, pluralName, capName)
@@ -151,10 +151,7 @@ func (s *%sService) List%s() ([]*domain.%s, error) {
 func (g *TemplateGenerator) generateDockerCompose() string {
 	dbService := g.getDatabaseService()
 
-	return fmt.Sprintf(`version: '3.8'
-
-services:
-  app:
+	appService := fmt.Sprintf(`  app:
     build: .
     ports:
       - "8080:8080"
@@ -164,10 +161,18 @@ services:
       - DB_NAME=%s
       - DB_USER=admin
       - DB_PASSWORD=password
-    depends_on:
-      - %s
     networks:
-      - %s-network
+      - %s-network`, dbService.host, dbService.port, g.config.ProjectName, g.config.ProjectName)
+
+	if g.config.Database != "sqlite" {
+		appService += fmt.Sprintf(`
+    depends_on:
+      - %s`, dbService.name)
+	}
+
+	dbServiceStr := ""
+	if g.config.Database != "sqlite" {
+		dbServiceStr = fmt.Sprintf(`
 
   %s:
     image: %s
@@ -178,7 +183,16 @@ services:
     networks:
       - %s-network
     volumes:
-      - %s-data:/var/lib/%s
+      - %s-data:/var/lib/%s`, dbService.name, dbService.image,
+			dbService.env, dbService.port, dbService.port, g.config.ProjectName,
+			g.config.ProjectName, dbService.name)
+	}
+
+	return fmt.Sprintf(`version: '3.8'
+
+services:
+%s
+%s
 
 volumes:
   %s-data:
@@ -186,10 +200,7 @@ volumes:
 networks:
   %s-network:
     driver: bridge
-`, dbService.host, dbService.port, g.config.ProjectName,
-		dbService.name, g.config.ProjectName, dbService.name, dbService.image,
-		dbService.env, dbService.port, dbService.port, g.config.ProjectName,
-		g.config.ProjectName, dbService.name, g.config.ProjectName, g.config.ProjectName)
+`, appService, dbServiceStr, g.config.ProjectName, g.config.ProjectName)
 }
 
 func (g *TemplateGenerator) generateMakefile() string {
