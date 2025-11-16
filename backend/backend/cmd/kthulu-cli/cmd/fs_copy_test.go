@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"testing/fstest"
 )
@@ -43,6 +44,9 @@ func (d dirReadlinkFS) Readlink(name string) (string, error) {
 }
 
 func TestCopyFileFSSymlink(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlink creation requires elevated permissions on Windows")
+	}
 	srcDir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(srcDir, "target.txt"), []byte("t"), 0o644); err != nil {
 		t.Fatalf("write target: %v", err)
@@ -97,6 +101,9 @@ func TestCopyDirFSSkipSpecialDirs(t *testing.T) {
 }
 
 func TestCopyDirFSSymlink(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlink creation requires elevated permissions on Windows")
+	}
 	src := t.TempDir()
 	if err := os.Mkdir(filepath.Join(src, "dir"), 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
