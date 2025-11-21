@@ -10,9 +10,9 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
+	"github.com/pmaojo/kthulu-go/backend/core"
 	"github.com/pmaojo/kthulu-go/backend/internal/domain"
 	"github.com/pmaojo/kthulu-go/backend/internal/domain/repository"
-	"github.com/pmaojo/kthulu-go/backend/internal/infrastructure/observability"
 )
 
 // Mock implementations for testing
@@ -252,13 +252,13 @@ func (m *mockNotificationProvider) SendWelcomeEmail(ctx context.Context, email, 
 
 type mockLogger struct{}
 
-func (m *mockLogger) Debug(msg string, fields ...interface{})         {}
-func (m *mockLogger) Info(msg string, fields ...interface{})          {}
-func (m *mockLogger) Warn(msg string, fields ...interface{})          {}
-func (m *mockLogger) Error(msg string, fields ...interface{})         {}
-func (m *mockLogger) Fatal(msg string, fields ...interface{})         {}
-func (m *mockLogger) With(fields ...interface{}) observability.Logger { return m }
-func (m *mockLogger) Sync() error                                     { return nil }
+func (m *mockLogger) Debug(msg string, fields ...interface{}) {}
+func (m *mockLogger) Info(msg string, fields ...interface{})  {}
+func (m *mockLogger) Warn(msg string, fields ...interface{})  {}
+func (m *mockLogger) Error(msg string, fields ...interface{}) {}
+func (m *mockLogger) Fatal(msg string, fields ...interface{}) {}
+func (m *mockLogger) With(fields ...interface{}) core.Logger  { return m }
+func (m *mockLogger) Sync() error                             { return nil }
 
 func TestAuthUseCase_Register(t *testing.T) {
 	// Setup mocks

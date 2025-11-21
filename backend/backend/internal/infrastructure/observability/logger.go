@@ -30,6 +30,11 @@ func NewLogger(cfg *core.Config) (Logger, error) {
 	return &ZapLogger{z}, nil
 }
 
+// NewLoggerFromZap wraps an existing zap.Logger with the observability Logger interface.
+func NewLoggerFromZap(z *zap.Logger) Logger {
+	return &ZapLogger{z}
+}
+
 // NewNopLogger returns a logger that does nothing.
 func NewNopLogger() Logger {
 	return &ZapLogger{zap.NewNop()}
