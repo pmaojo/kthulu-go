@@ -12,10 +12,10 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/pmaojo/kthulu-go/backend/core"
 	"github.com/pmaojo/kthulu-go/backend/internal/adapters/http/middleware"
 	"github.com/pmaojo/kthulu-go/backend/internal/domain"
 	"github.com/pmaojo/kthulu-go/backend/internal/domain/repository"
-	"github.com/pmaojo/kthulu-go/backend/internal/infrastructure/observability"
 	"github.com/pmaojo/kthulu-go/backend/internal/usecase"
 )
 
@@ -135,8 +135,9 @@ func TestContactHandler_AddressRoutes(t *testing.T) {
 			return &domain.ContactAddress{ID: addressID, ContactID: contactID}, nil
 		},
 	}
-	uc := usecase.NewContactUseCase(repo, observability.NewLoggerFromZap(zap.NewNop()))
-	handler := NewContactHandler(uc, observability.NewLoggerFromZap(zap.NewNop()))
+	zapLogger := zap.NewNop()
+	uc := usecase.NewContactUseCase(repo, zapLogger)
+	handler := NewContactHandler(uc, core.NewLoggerFromZap(zapLogger))
 
 	router := chi.NewRouter()
 	router.Use(middleware.OrganizationContextMiddleware)
@@ -188,8 +189,9 @@ func TestContactHandler_PhoneRoutes(t *testing.T) {
 			return &domain.ContactPhone{ID: phoneID, ContactID: contactID}, nil
 		},
 	}
-	uc := usecase.NewContactUseCase(repo, observability.NewLoggerFromZap(zap.NewNop()))
-	handler := NewContactHandler(uc, observability.NewLoggerFromZap(zap.NewNop()))
+	zapLogger := zap.NewNop()
+	uc := usecase.NewContactUseCase(repo, zapLogger)
+	handler := NewContactHandler(uc, core.NewLoggerFromZap(zapLogger))
 
 	router := chi.NewRouter()
 	router.Use(middleware.OrganizationContextMiddleware)
