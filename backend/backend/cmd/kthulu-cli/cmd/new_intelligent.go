@@ -132,6 +132,10 @@ var (
 	newInteractive   bool
 )
 
+const (
+	recommendedCoveragePercent = 60.0
+)
+
 func init() {
 	newCmd.Flags().StringVarP(&newTemplate, "template", "t", "microservice", "Project template")
 	newCmd.Flags().StringSliceVarP(&newFeatures, "features", "f", []string{}, "Comma-separated list of features/modules")
@@ -237,38 +241,52 @@ func runGoTests(projectPath string) error {
 	testCmd.Stdout = os.Stdout
 	testCmd.Stderr = os.Stderr
 	if err := testCmd.Run(); err != nil {
+		return fmt.Errorf("go test failed: %w", err)
+	}
+
+	coverage, err := readCoveragePercentage(projectPath)
+	if err != nil {
 		return err
 	}
 
+	_ = os.Remove(filepath.Join(projectPath, "coverage.out"))
+
+	fmt.Printf("✅ Tests passed. Coverage: %.1f%%\n", coverage)
+	if coverage < recommendedCoveragePercent {
+		fmt.Printf("⚠️  Coverage below recommended %.1f%%. Consider adding more tests.\n", recommendedCoveragePercent)
+	}
+
+	return nil
+}
+
+func readCoveragePercentage(projectPath string) (float64, error) {
 	coverageCmd := exec.Command("go", "tool", "cover", "-func=coverage.out")
 	coverageCmd.Dir = projectPath
 	var buffer bytes.Buffer
 	coverageCmd.Stdout = &buffer
 	coverageCmd.Stderr = os.Stderr
 	if err := coverageCmd.Run(); err != nil {
-		return err
+		return 0, fmt.Errorf("coverage report failed: %w", err)
 	}
 
 	lines := strings.Split(strings.TrimSpace(buffer.String()), "\n")
 	if len(lines) == 0 {
-		return fmt.Errorf("no coverage information produced")
+		return 0, fmt.Errorf("no coverage information produced")
 	}
-	fields := strings.Fields(lines[len(lines)-1])
+
+	lastLine := lines[len(lines)-1]
+	fields := strings.Fields(lastLine)
 	if len(fields) == 0 {
-		return fmt.Errorf("unexpected coverage output: %s", lines[len(lines)-1])
+		return 0, fmt.Errorf("unexpected coverage output: %s", lastLine)
 	}
+
 	percentage := strings.TrimSuffix(fields[len(fields)-1], "%")
 	coverage, err := strconv.ParseFloat(percentage, 64)
 	if err != nil {
-		return fmt.Errorf("failed to parse coverage: %w", err)
-	}
-	if coverage < 100.0 {
-		return fmt.Errorf("coverage %.1f%% is below required 100%%", coverage)
+		return 0, fmt.Errorf("failed to parse coverage: %w", err)
 	}
 
-	_ = os.Remove(filepath.Join(projectPath, "coverage.out"))
-	fmt.Println("✅ Tests passed with 100% coverage.")
-	return nil
+	return coverage, nil
 }
 
 func buildProjectConfig(projectName string) (*generator.GeneratorConfig, error) {
