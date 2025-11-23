@@ -14,11 +14,11 @@ import (
 // migrateCmd represents the migrate command group
 var migrateCmd = &cobra.Command{
 	Use:   "migrate",
-	Short: "Gestiona las migraciones de la base de datos",
+	Short: "Manage database migrations",
 }
 
 func init() {
-	rootCmd.AddCommand(migrateCmd)
+	// migrateCmd is added in root.go
 
 	migrateCmd.AddCommand(migrateUpCmd)
 	migrateCmd.AddCommand(migrateDownCmd)
@@ -30,7 +30,7 @@ func init() {
 
 var migrateUpCmd = &cobra.Command{
 	Use:   "up",
-	Short: "Aplica todas las migraciones pendientes",
+	Short: "Apply all pending migrations",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return withDB(func(db *sql.DB, logger *zap.Logger) error {
 			return core.Migrate(db, logger)
@@ -40,7 +40,7 @@ var migrateUpCmd = &cobra.Command{
 
 var migrateDownCmd = &cobra.Command{
 	Use:   "down",
-	Short: "Revierte la última migración",
+	Short: "Revert the last migration",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return withDB(func(db *sql.DB, logger *zap.Logger) error {
 			return core.MigrateDown(db, logger)
@@ -50,7 +50,7 @@ var migrateDownCmd = &cobra.Command{
 
 var migrateResetCmd = &cobra.Command{
 	Use:   "reset",
-	Short: "Resetea la base de datos y reaplica todas las migraciones",
+	Short: "Reset database and reapply all migrations",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return withDB(func(db *sql.DB, logger *zap.Logger) error {
 			return core.ResetDatabase(db, logger)
@@ -60,7 +60,7 @@ var migrateResetCmd = &cobra.Command{
 
 var migrateStatusCmd = &cobra.Command{
 	Use:   "status",
-	Short: "Muestra la versión actual de la base de datos",
+	Short: "Show current database version",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return withDB(func(db *sql.DB, logger *zap.Logger) error {
 			v, err := core.GetMigrationStatus(db, logger)
@@ -75,7 +75,7 @@ var migrateStatusCmd = &cobra.Command{
 
 var migrateVersionCmd = &cobra.Command{
 	Use:   "version [target]",
-	Short: "Migra la base de datos a una versión específica",
+	Short: "Migrate database to a specific version",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		target, err := strconv.ParseInt(args[0], 10, 64)
@@ -90,7 +90,7 @@ var migrateVersionCmd = &cobra.Command{
 
 var migrateValidateCmd = &cobra.Command{
 	Use:   "validate",
-	Short: "Valida que todas las migraciones sean correctas",
+	Short: "Validate all migrations are correct",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := core.NewConfig()
 		if err != nil {

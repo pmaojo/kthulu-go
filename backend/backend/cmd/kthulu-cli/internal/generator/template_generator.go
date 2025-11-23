@@ -332,7 +332,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -578,7 +577,6 @@ func (g *TemplateGenerator) generateCoreProviders() string {
 	}
 
 	imports := []string{
-		"\"fmt\"",
 		"\"log\"",
 		"\"os\"",
 		"\"go.uber.org/fx\"",
@@ -589,6 +587,7 @@ func (g *TemplateGenerator) generateCoreProviders() string {
 	var driverImport string
 	switch dbDriver {
 	case "postgres":
+		imports = append(imports, "\"fmt\"")
 		driverImport = "\"gorm.io/driver/postgres\""
 		connectionBuilder.WriteString("\t\tdsn := fmt.Sprintf(\"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable\",\n")
 		connectionBuilder.WriteString("\t\t\tgetEnv(\"DB_HOST\", \"localhost\"),\n")
@@ -600,6 +599,7 @@ func (g *TemplateGenerator) generateCoreProviders() string {
 		connectionBuilder.WriteString(fmt.Sprintf("\t\tlog.Printf(\"Connecting to PostgreSQL at %%s:%%s/%%s\", getEnv(\"DB_HOST\", \"localhost\"), getEnv(\"DB_PORT\", \"5432\"), getEnv(\"DB_NAME\", \"%s\"))\n", dbName))
 		connectionBuilder.WriteString("\t\treturn gorm.Open(postgres.Open(dsn), &gorm.Config{})\n")
 	case "mysql":
+		imports = append(imports, "\"fmt\"")
 		driverImport = "\"gorm.io/driver/mysql\""
 		connectionBuilder.WriteString("\t\tdsn := fmt.Sprintf(\"%s:%s@tcp(%s:%s)/%s?parseTime=true\",\n")
 		connectionBuilder.WriteString("\t\t\tgetEnv(\"DB_USER\", \"root\"),\n")
