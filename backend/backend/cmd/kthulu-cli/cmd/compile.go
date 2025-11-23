@@ -16,7 +16,7 @@ import (
 
 var compileCmd = &cobra.Command{
 	Use:   "compile",
-	Short: "Compila overrides y extensiones",
+	Short: "Compile overrides and extensions",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		out, _ := cmd.Flags().GetString("out")
 		watch, _ := cmd.Flags().GetBool("watch")
@@ -52,8 +52,8 @@ var compileCmd = &cobra.Command{
 }
 
 func init() {
-	compileCmd.Flags().String("out", "build", "Directorio de salida")
-	compileCmd.Flags().Bool("watch", false, "Observar cambios")
+	compileCmd.Flags().String("out", "build", "Output directory")
+	compileCmd.Flags().Bool("watch", false, "Watch for changes")
 	rootCmd.AddCommand(compileCmd)
 }
 

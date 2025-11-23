@@ -10,12 +10,12 @@ import (
 
 var queueCmd = &cobra.Command{
 	Use:   "queue",
-	Short: "Comandos para interactuar con colas de mensajes",
+	Short: "Commands to interact with message queues",
 }
 
 var publishCmd = &cobra.Command{
-	Use:   "publish [cola] [mensaje]",
-	Short: "Publica un mensaje en una cola",
+	Use:   "publish [queue] [message]",
+	Short: "Publish a message to a queue",
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		q, err := queues.NewAsynqQueue()
@@ -28,8 +28,8 @@ var publishCmd = &cobra.Command{
 }
 
 var consumeCmd = &cobra.Command{
-	Use:   "consume [cola]",
-	Short: "Consume mensajes de una cola",
+	Use:   "consume [queue]",
+	Short: "Consume messages from a queue",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		q, err := queues.NewAsynqQueue()
