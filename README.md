@@ -228,6 +228,7 @@ go install github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli@latest
 | Command | Purpose | Example |
 | --- | --- | --- |
 | `kthulu create <name>` | Scaffolds an intelligent project from curated templates with optional feature toggles, database/front-end choices, and enterprise add-ons. | `kthulu create my-app --template=saas --features=user,invoice --enterprise` |
+| `kthulu add module <name> [field:type]...` | Adds new modules with optional fields definition. | `kthulu add module cars make:string model:string year:int` |
 | `kthulu add module <name>` / `kthulu add component <type> <name>` | Adds new modules or components to an existing project, resolving dependencies, integrations, and optional tests/migrations. | `kthulu add module payment --with=stripe`<br>`kthulu add component handler User --with-tests` |
 | `kthulu generate <type> <name>` | Generates production-ready code artifacts (handlers, use cases, entities, migrations, tests, etc.) with security, validation, and metrics toggles. | `kthulu generate handler Order --crud --auth` |
 | `kthulu ai "<prompt>"` | Invokes the AI assistant to propose or apply code updates. Subcommands like `kthulu ai review` and `kthulu ai optimize` offer code review and performance tuning workflows. | `kthulu ai "Add rate limiting to the API" --provider=openai --model=gpt-4` |

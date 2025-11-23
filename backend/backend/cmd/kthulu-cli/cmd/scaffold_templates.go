@@ -6,14 +6,23 @@ import (
 )
 
 type moduleTemplateData struct {
-	Name  string
-	Title string
+	Name   string
+	Title  string
+	Fields []Field
 }
 
-func newModuleTemplateData(name string) moduleTemplateData {
+type Field struct {
+	Name string
+	Type string
+	JSON string
+	GORM string
+}
+
+func newModuleTemplateData(name string, fields []Field) moduleTemplateData {
 	return moduleTemplateData{
-		Name:  name,
-		Title: exportName(name),
+		Name:   name,
+		Title:  exportName(name),
+		Fields: fields,
 	}
 }
 
@@ -54,8 +63,8 @@ type {{.Title}} struct {
         ID        uint      ` + "`json:\"id\" gorm:\"primaryKey\"`" + `
         CreatedAt time.Time ` + "`json:\"created_at\"`" + `
         UpdatedAt time.Time ` + "`json:\"updated_at\"`" + `
-
-        // Add your fields here
+{{range .Fields}}
+        {{.Name}} {{.Type}} ` + "`json:\"{{.JSON}}\" gorm:\"{{.GORM}}\"`" + `{{end}}
 }
 
 // {{.Title}}Repository defines the repository interface
@@ -226,26 +235,26 @@ func (h *{{.Title}}Handler) List(w http.ResponseWriter, r *http.Request) {
 )
 
 func generateModuleFile(name string) string {
-	data := newModuleTemplateData(name)
+	data := newModuleTemplateData(name, nil)
 	return renderModuleTemplate(moduleFileTemplate, data)
 }
 
-func generateDomainFile(name string) string {
-	data := newModuleTemplateData(name)
+func generateDomainFile(name string, fields []Field) string {
+	data := newModuleTemplateData(name, fields)
 	return renderModuleTemplate(domainFileTemplate, data)
 }
 
 func generateRepositoryFile(name string) string {
-	data := newModuleTemplateData(name)
+	data := newModuleTemplateData(name, nil)
 	return renderModuleTemplate(repositoryFileTemplate, data)
 }
 
 func generateServiceFile(name string) string {
-	data := newModuleTemplateData(name)
+	data := newModuleTemplateData(name, nil)
 	return renderModuleTemplate(serviceFileTemplate, data)
 }
 
 func generateHandlerFile(name string) string {
-	data := newModuleTemplateData(name)
+	data := newModuleTemplateData(name, nil)
 	return renderModuleTemplate(handlerFileTemplate, data)
 }
