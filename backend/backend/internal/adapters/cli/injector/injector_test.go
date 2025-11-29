@@ -25,7 +25,7 @@ func NewEndpoint() string {
 	expectedContains := "func NewEndpoint() string"
 	expectedContainsComment := "// NewEndpoint is a new function injected via AST"
 
-	result, err := InjectFunction(originalSource, newFunction)
+	result, err := InjectFunction(originalSource, newFunction, nil)
 	if err != nil {
 		t.Fatalf("InjectFunction failed: %v", err)
 	}
@@ -42,8 +42,29 @@ func NewEndpoint() string {
 	if !strings.Contains(result, `fmt.Println("Hello, World!")`) {
 		t.Errorf("Result lost original code. Result:\n%s", result)
 	}
+}
 
-	t.Logf("Generated Code:\n%s", result)
+func TestInjectFunctionWithImports(t *testing.T) {
+	originalSource := `package main
+func main() {}
+`
+	newFunction := `func Now() time.Time { return time.Now() }`
+	imports := []string{"time"}
+
+	result, err := InjectFunction(originalSource, newFunction, imports)
+	if err != nil {
+		t.Fatalf("InjectFunction failed: %v", err)
+	}
+
+	if !strings.Contains(result, `import "time"`) && !strings.Contains(result, `import (
+	"time"
+)`) {
+		// Just check for "time" anywhere in imports block is tricky with simple strings
+		// but astutil usually adds it clearly.
+		if !strings.Contains(result, "\"time\"") {
+			t.Errorf("Result does not contain imported package 'time'. Result:\n%s", result)
+		}
+	}
 }
 
 func TestInjectDuplicateFunction(t *testing.T) {
@@ -52,7 +73,7 @@ func Existing() {}
 `
 	newFunction := `func Existing() {}`
 
-	_, err := InjectFunction(originalSource, newFunction)
+	_, err := InjectFunction(originalSource, newFunction, nil)
 	if err == nil {
 		t.Error("Expected error when injecting duplicate function, got nil")
 	}
@@ -66,7 +87,7 @@ func (s *Service) Start() {}
 	// Same name "Start", but no receiver (function vs method) -> Should succeed
 	newFunction := `func Start() {}`
 
-	result, err := InjectFunction(originalSource, newFunction)
+	result, err := InjectFunction(originalSource, newFunction, nil)
 	if err != nil {
 		t.Fatalf("InjectFunction failed for distinct receiver types: %v", err)
 	}
@@ -74,7 +95,6 @@ func (s *Service) Start() {}
 	if !strings.Contains(result, "func (s *Service) Start() {}") {
 		t.Error("Original method lost")
 	}
-	// We check for "func Start()" instead of exact brace matching to be safer against formatting
 	if !strings.Contains(result, "func Start()") {
 		t.Errorf("New function not injected. Result:\n%s", result)
 	}
@@ -88,8 +108,40 @@ func (s *Service) Start() {}
 	// Same name "Start", same receiver -> Should fail
 	newFunction := `func (x *Service) Start() {}` // variable name 'x' shouldn't matter
 
-	_, err := InjectFunction(originalSource, newFunction)
+	_, err := InjectFunction(originalSource, newFunction, nil)
 	if err == nil {
 		t.Error("Expected error when injecting duplicate method, got nil")
+	}
+}
+
+func TestInjectStructField(t *testing.T) {
+	originalSource := `package main
+type User struct {
+	ID int
+}
+`
+	result, err := InjectStructField(originalSource, "User", "Email", "string", `json:"email"`)
+	if err != nil {
+		t.Fatalf("InjectStructField failed: %v", err)
+	}
+
+	if !strings.Contains(result, "Email string `json:\"email\"`") {
+		t.Errorf("Result does not contain new field. Result:\n%s", result)
+	}
+}
+
+func TestInjectStructTag(t *testing.T) {
+	originalSource := `package main
+type User struct {
+	ID int
+}
+`
+	result, err := InjectStructTag(originalSource, "User", "ID", `json:"id" gorm:"primaryKey"`)
+	if err != nil {
+		t.Fatalf("InjectStructTag failed: %v", err)
+	}
+
+	if !strings.Contains(result, "ID int `json:\"id\" gorm:\"primaryKey\"`") {
+		t.Errorf("Result does not contain updated tag. Result:\n%s", result)
 	}
 }
