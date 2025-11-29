@@ -28,16 +28,17 @@ Examples:
 }
 
 var addModuleCmd = &cobra.Command{
-	Use:   "module [name]",
-	Short: "Add a new module to your project",
-	Args:  cobra.ExactArgs(1),
+	Use:   "module [name] [field:type]...",
+	Short: "Add a new module to your project with optional fields",
+	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		module := args[0]
+		fields := args[1:]
 		withIntegrations, _ := cmd.Flags().GetStringSlice("with")
 		compliance, _ := cmd.Flags().GetString("compliance")
 		force, _ := cmd.Flags().GetBool("force")
 
-		return runAddModule(module, withIntegrations, compliance, force)
+		return runAddModule(module, fields, withIntegrations, compliance, force)
 	},
 }
 
@@ -72,9 +73,41 @@ func init() {
 	addCmd.AddCommand(addComponentCmd)
 }
 
-func runAddModule(module string, integrations []string, compliance string, force bool) error {
+func runAddModule(module string, fieldDefs []string, integrations []string, compliance string, force bool) error {
 	fmt.Printf("🧠 Intelligently adding module: %s\n", module)
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+	// Parse fields
+	var fields []Field
+	for _, def := range fieldDefs {
+		parts := strings.Split(def, ":")
+		if len(parts) == 2 {
+			name := exportName(parts[0])
+			jsonName := strings.ToLower(parts[0])
+			typeName := parts[1]
+
+			// Simple type mapping
+			switch typeName {
+			case "string":
+				typeName = "string"
+			case "int":
+				typeName = "int"
+			case "bool":
+				typeName = "bool"
+			case "time", "datetime":
+				typeName = "time.Time"
+			case "float":
+				typeName = "float64"
+			}
+
+			fields = append(fields, Field{
+				Name: name,
+				Type: typeName,
+				JSON: jsonName,
+				GORM: jsonName,
+			})
+		}
+	}
 
 	// Step 1: Analyze current project structure
 	fmt.Println("🔍 Analyzing current project structure...")
@@ -186,7 +219,7 @@ func runAddModule(module string, integrations []string, compliance string, force
 	}
 
 	// Generate only the specific module
-	if err := generateSpecificModule(config, module, templateGenerator); err != nil {
+	if err := generateSpecificModule(config, module, fields, templateGenerator); err != nil {
 		return fmt.Errorf("error generating module: %w", err)
 	}
 
@@ -290,7 +323,7 @@ func displayDependencyPlan(moduleName string, plan *resolver.ResolutionPlan) {
 	}
 }
 
-func generateSpecificModule(config *generator.GeneratorConfig, moduleName string, gen *generator.TemplateGenerator) error {
+func generateSpecificModule(config *generator.GeneratorConfig, moduleName string, fields []Field, gen *generator.TemplateGenerator) error {
 	fmt.Printf("   📁 Creating module structure for '%s'\n", moduleName)
 
 	// Create module directory
@@ -313,7 +346,7 @@ func generateSpecificModule(config *generator.GeneratorConfig, moduleName string
 	// This is a simplified version - the full generator.GenerateProject would handle this
 	files := map[string]string{
 		"module.go":                             generateModuleFile(moduleName),
-		fmt.Sprintf("domain/%s.go", moduleName): generateDomainFile(moduleName),
+		fmt.Sprintf("domain/%s.go", moduleName): generateDomainFile(moduleName, fields),
 		fmt.Sprintf("repository/%s_repository.go", moduleName): generateRepositoryFile(moduleName),
 		fmt.Sprintf("service/%s_service.go", moduleName):       generateServiceFile(moduleName),
 		fmt.Sprintf("handlers/%s_handler.go", moduleName):      generateHandlerFile(moduleName),
