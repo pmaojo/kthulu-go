@@ -135,12 +135,11 @@ func (g *TemplateGenerator) GenerateProject(config *GeneratorConfig) (*ProjectSt
 	}
 
 	// Step 5: Generate frontend if requested
-	// Frontend generation is currently suppressed until implementation is ready
-	// if config.Frontend != "none" {
-	// 	if err := g.generateFrontend(structure); err != nil {
-	// 		return nil, fmt.Errorf("failed to generate frontend: %w", err)
-	// 	}
-	// }
+	if config.Frontend == "react" {
+		if err := g.generateFrontend(structure); err != nil {
+			return nil, fmt.Errorf("failed to generate frontend: %w", err)
+		}
+	}
 
 	// Step 6: Generate configuration files
 	if err := g.generateConfiguration(structure); err != nil {
@@ -1026,8 +1025,84 @@ func (h *%sHandler) List(w http.ResponseWriter, r *http.Request) {
 
 // Additional methods for frontend, configuration, and build scripts
 func (g *TemplateGenerator) generateFrontend(structure *ProjectStructure) error {
-	// Implementation for frontend generation based on config.Frontend
-	// React, Templ, Fyne, etc.
+	// Generate frontend modules for each feature
+	// Note: We only generate the basic structure here.
+	// Field-specific generation happens in generateFrontendModule
+	// which is called by the 'add module' command or when we have field info.
+
+	// For initial project generation, we don't have field info for the modules
+	// in g.config.Features, so we skip detailed generation unless we implement
+	// a way to pass schema definitions during project creation.
+
+	// However, we can create the directory structure.
+
+	fmt.Println("  🎨 Setting up frontend structure...")
+
+	for _, feature := range g.config.Features {
+		if feature == "auth" || feature == "users" {
+			// Skip special modules for now or handle them differently
+			continue
+		}
+
+		// For standard modules, we create the folder structure AND the basic content.
+		// Since we don't have field info at this stage, we'll generate a basic "Hello World"
+		// version of the module with just a name field, so the user has something runnable.
+		if err := g.GenerateFrontendModule(feature, []string{"name:string"}, structure); err != nil {
+			return fmt.Errorf("failed to generate frontend module for %s: %w", feature, err)
+		}
+	}
+
+	return nil
+}
+
+// GenerateFrontendModule generates a specific frontend module with fields
+func (g *TemplateGenerator) GenerateFrontendModule(moduleName string, fields []string, structure *ProjectStructure) error {
+	fmt.Printf("  🎨 Generating frontend module: %s\n", moduleName)
+
+	frontendFields := ParseFrontendFields(fields)
+	data := FrontendTemplateData{
+		Name:       moduleName,
+		Title:      Capitalize(moduleName),
+		PluralName: Pluralize(moduleName),
+		Fields:     frontendFields,
+	}
+
+	moduleDir := fmt.Sprintf("frontend/src/modules/%s", moduleName)
+
+	// Create directories
+	dirs := []string{
+		moduleDir,
+		path.Join(moduleDir, "domain"),
+		path.Join(moduleDir, "infrastructure"),
+		path.Join(moduleDir, "application"),
+		path.Join(moduleDir, "presentation"),
+		path.Join(moduleDir, "presentation", "components"),
+	}
+	structure.Directories = append(structure.Directories, dirs...)
+
+	// Generate files
+	files := map[string]*template.Template{
+		"domain/" + data.Title + ".ts":                       frontendDomainTemplate,
+		"infrastructure/" + data.Title + "Service.ts":        frontendInfraTemplate,
+		"application/use" + data.Title + "s.ts":              frontendApplicationTemplate,
+		"presentation/components/" + data.Title + "List.tsx": frontendListTemplate,
+		"presentation/components/" + data.Title + "Form.tsx": frontendFormTemplate,
+		"presentation/" + data.Title + "Page.tsx":            frontendPageTemplate,
+		"index.ts":                                           frontendIndexTemplate,
+	}
+
+	for relPath, tmpl := range files {
+		content, err := GenerateFrontendContent(tmpl, data)
+		if err != nil {
+			return fmt.Errorf("failed to generate %s: %w", relPath, err)
+		}
+
+		structure.Files = append(structure.Files, GeneratedFile{
+			Path:    path.Join(moduleDir, relPath),
+			Content: content,
+		})
+	}
+
 	return nil
 }
 
