@@ -42,7 +42,7 @@ var projectTemplates = map[string]ProjectTemplate{
 		Description: "Full-featured monolithic application",
 		Features:    []string{"user", "auth", "organization", "contact", "product"},
 		Database:    "postgres",
-		Frontend:    "react",
+		Frontend:    "none",
 		Auth:        "jwt",
 		Enterprise:  false,
 	},
@@ -60,7 +60,7 @@ var projectTemplates = map[string]ProjectTemplate{
 		Description: "Financial services with compliance and security",
 		Features:    []string{"user", "auth", "organization", "contact", "product", "invoice", "payment", "verifactu", "audit"},
 		Database:    "postgres",
-		Frontend:    "react",
+		Frontend:    "none",
 		Auth:        "both",
 		Enterprise:  true,
 	},
@@ -69,7 +69,7 @@ var projectTemplates = map[string]ProjectTemplate{
 		Description: "Complete e-commerce platform",
 		Features:    []string{"user", "auth", "organization", "contact", "product", "inventory", "invoice", "payment", "notification", "calendar"},
 		Database:    "postgres",
-		Frontend:    "react",
+		Frontend:    "none",
 		Auth:        "oauth",
 		Enterprise:  false,
 	},
@@ -78,7 +78,7 @@ var projectTemplates = map[string]ProjectTemplate{
 		Description: "Multi-tenant SaaS application",
 		Features:    []string{"user", "auth", "organization", "contact", "product", "invoice", "payment", "oauthsso", "notification", "audit", "realtime"},
 		Database:    "postgres",
-		Frontend:    "react",
+		Frontend:    "none",
 		Auth:        "both",
 		Enterprise:  true,
 	},
@@ -105,7 +105,6 @@ Examples:
   kthulu create my-shop --template=ecommerce    # Use e-commerce template
   kthulu create my-api --features=user,product  # Custom features
   kthulu create my-fintech --enterprise         # Enable enterprise features
-  kthulu create my-frontend --frontend=react    # Include React frontend
   
 Advanced Features:
   • Intelligent dependency resolution
@@ -140,7 +139,7 @@ func init() {
 	newCmd.Flags().StringVarP(&newTemplate, "template", "t", "microservice", "Project template")
 	newCmd.Flags().StringSliceVarP(&newFeatures, "features", "f", []string{}, "Comma-separated list of features/modules")
 	newCmd.Flags().StringVarP(&newDatabase, "database", "d", "", "Database type (sqlite, postgres, mysql)")
-	newCmd.Flags().StringVar(&newFrontend, "frontend", "", "Frontend type (react, templ, fyne, none)")
+	// newCmd.Flags().StringVar(&newFrontend, "frontend", "", "Frontend type (react, templ, fyne, none)")
 	newCmd.Flags().StringVar(&newAuth, "auth", "", "Auth type (jwt, oauth, both)")
 	newCmd.Flags().StringVar(&newModulePath, "module-path", "", "Go module path (default: project name)")
 	newCmd.Flags().BoolVar(&newEnterprise, "enterprise", false, "Enable enterprise features")
@@ -319,9 +318,9 @@ func buildProjectConfig(projectName string) (*generator.GeneratorConfig, error) 
 	if newDatabase != "" {
 		config.Database = newDatabase
 	}
-	if newFrontend != "" {
-		config.Frontend = newFrontend
-	}
+	// if newFrontend != "" {
+	// 	config.Frontend = newFrontend
+	// }
 	if newAuth != "" {
 		config.Auth = newAuth
 	}
@@ -358,7 +357,7 @@ func displayProjectConfiguration(config *generator.GeneratorConfig) {
 	fmt.Printf("   Template:      %s\n", newTemplate)
 	fmt.Printf("   Features:      %s\n", strings.Join(config.Features, ", "))
 	fmt.Printf("   Database:      %s\n", config.Database)
-	fmt.Printf("   Frontend:      %s\n", config.Frontend)
+	// fmt.Printf("   Frontend:      %s\n", config.Frontend)
 	fmt.Printf("   Auth:          %s\n", config.Auth)
 	fmt.Printf("   Enterprise:    %v\n", config.Enterprise)
 	fmt.Printf("   Observability: %v\n", config.Observability)
@@ -404,15 +403,15 @@ func displaySuccessMessage(projectName string, config *generator.GeneratorConfig
 		fmt.Printf("   # Configure %s connection in configs/app.yaml\n", config.Database)
 	}
 
-	fmt.Printf("   go run cmd/migrate/main.go  # Run database migrations\n")
+	fmt.Printf("   kthulu migrate up           # Run database migrations\n")
 	fmt.Printf("   go run cmd/server/main.go   # Start development server\n")
 
-	if config.Frontend == "react" {
-		fmt.Printf("\n💻 Frontend development:\n")
-		fmt.Printf("   cd frontend\n")
-		fmt.Printf("   npm install\n")
-		fmt.Printf("   npm run dev\n")
-	}
+	// if config.Frontend == "react" {
+	// 	fmt.Printf("\n💻 Frontend development:\n")
+	// 	fmt.Printf("   cd frontend\n")
+	// 	fmt.Printf("   npm install\n")
+	// 	fmt.Printf("   npm run dev\n")
+	// }
 
 	fmt.Printf("\n🔧 Additional commands:\n")
 	fmt.Printf("   kthulu add module <name>    # Add new modules\n")
