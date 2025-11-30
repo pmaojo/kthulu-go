@@ -54,6 +54,7 @@ func init() {
 	rootCmd.AddCommand(aiCmd) // kthulu ai "prompt"
 
 	// Enterprise commands
+	rootCmd.AddCommand(analyzeCmd) // kthulu analyze
 	rootCmd.AddCommand(auditCmd)   // kthulu audit
 	rootCmd.AddCommand(deployCmd)  // kthulu deploy
 	rootCmd.AddCommand(statusCmd)  // kthulu status
