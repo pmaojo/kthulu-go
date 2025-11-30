@@ -49,6 +49,13 @@ package domain
 
 import "time"
 
+// SearchFilter represents search criteria
+type SearchFilter struct {
+	Query string
+	Limit int
+	Offset int
+}
+
 // {{.Title}} represents a {{.Name}} entity
 type {{.Title}} struct {
         ID        uint      ` + "`json:\"id\" gorm:\"primaryKey\"`" + `
@@ -64,7 +71,7 @@ type {{.Title}}Repository interface {
         GetByID(id uint) (*{{.Title}}, error)
         Update(entity *{{.Title}}) error
         Delete(id uint) error
-        List() ([]*{{.Title}}, error)
+        List(filter SearchFilter) ([]*{{.Title}}, error)
 }
 
 // {{.Title}}Service defines the service interface
@@ -73,7 +80,7 @@ type {{.Title}}Service interface {
         Get{{.Title}}ByID(id uint) (*{{.Title}}, error)
         Update{{.Title}}(entity *{{.Title}}) error
         Delete{{.Title}}(id uint) error
-        List{{.Title}}s() ([]*{{.Title}}, error)
+        List{{.Title}}s(filter SearchFilter) ([]*{{.Title}}, error)
 }
 `))
 
@@ -112,9 +119,24 @@ func (r *{{.Title}}Repository) Delete(id uint) error {
         return r.db.Delete(&domain.{{.Title}}{}, id).Error
 }
 
-func (r *{{.Title}}Repository) List() ([]*domain.{{.Title}}, error) {
+func (r *{{.Title}}Repository) List(filter domain.SearchFilter) ([]*domain.{{.Title}}, error) {
         var entities []*domain.{{.Title}}
-        err := r.db.Find(&entities).Error
+        query := r.db.Model(&domain.{{.Title}}{})
+
+		if filter.Query != "" {
+			// Basic search implementation
+			// Note: Adjust fields based on your actual model
+			// query = query.Where("name LIKE ?", "%"+filter.Query+"%")
+		}
+
+		if filter.Limit > 0 {
+			query = query.Limit(filter.Limit)
+		}
+		if filter.Offset > 0 {
+			query = query.Offset(filter.Offset)
+		}
+
+        err := query.Find(&entities).Error
         return entities, err
 }
 `))
@@ -153,8 +175,8 @@ func (s *{{.Title}}Service) Delete{{.Title}}(id uint) error {
         return s.repo.Delete(id)
 }
 
-func (s *{{.Title}}Service) List{{.Title}}s() ([]*domain.{{.Title}}, error) {
-        return s.repo.List()
+func (s *{{.Title}}Service) List{{.Title}}s(filter domain.SearchFilter) ([]*domain.{{.Title}}, error) {
+        return s.repo.List(filter)
 }
 `))
 
@@ -213,7 +235,17 @@ func (h *{{.Title}}Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *{{.Title}}Handler) List(w http.ResponseWriter, r *http.Request) {
-        entities, err := h.service.List{{.Title}}s()
+		query := r.URL.Query().Get("q")
+		limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+		offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
+
+		filter := domain.SearchFilter{
+			Query: query,
+			Limit: limit,
+			Offset: offset,
+		}
+
+        entities, err := h.service.List{{.Title}}s(filter)
         if err != nil {
                 http.Error(w, err.Error(), http.StatusInternalServerError)
                 return

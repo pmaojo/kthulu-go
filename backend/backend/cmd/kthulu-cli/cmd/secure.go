@@ -42,7 +42,7 @@ var secureCmd = &cobra.Command{
 	},
 }
 
-var analyzeCmd = &cobra.Command{
+var securityAnalyzeCmd = &cobra.Command{
 	Use:   "analyze [path]",
 	Short: "🔍 Advanced semantic analysis of Kthulu projects",
 	Long: `Performs comprehensive semantic analysis including:
@@ -242,6 +242,6 @@ var generateSecurityCmd = &cobra.Command{
 
 func init() {
 	secureCmd.Flags().Bool("patch", false, "attempt to patch vulnerable modules")
-	secureCmd.AddCommand(analyzeCmd)
+	secureCmd.AddCommand(securityAnalyzeCmd)
 	secureCmd.AddCommand(generateSecurityCmd)
 }
