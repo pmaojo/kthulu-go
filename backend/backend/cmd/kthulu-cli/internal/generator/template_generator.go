@@ -526,7 +526,7 @@ A Kthulu-powered enterprise application with the following features:
 go mod download
 
 # Run migrations
-go run cmd/migrate/main.go
+kthulu migrate up
 
 # Start development server
 go run cmd/server/main.go

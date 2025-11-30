@@ -2,19 +2,71 @@ package cmd
 
 import (
 	"bytes"
+	"strings"
 	"text/template"
 )
 
-type moduleTemplateData struct {
-	Name  string
-	Title string
+type Field struct {
+	Name    string
+	Type    string
+	JSONTag string
+	GormTag string
+	SQLType string
 }
 
-func newModuleTemplateData(name string) moduleTemplateData {
+type moduleTemplateData struct {
+	Name   string
+	Title  string
+	Fields []Field
+}
+
+func newModuleTemplateData(name string, fields []string) moduleTemplateData {
 	return moduleTemplateData{
-		Name:  name,
-		Title: exportName(name),
+		Name:   name,
+		Title:  exportName(name),
+		Fields: parseFields(fields),
 	}
+}
+
+func parseFields(rawFields []string) []Field {
+	fields := make([]Field, 0, len(rawFields))
+	for _, f := range rawFields {
+		parts := strings.Split(f, ":")
+		if len(parts) != 2 {
+			continue
+		}
+		name := exportName(parts[0])
+		typ := parts[1]
+		sqlType := "TEXT"
+		goType := "string"
+
+		switch typ {
+		case "string":
+			goType = "string"
+			sqlType = "TEXT"
+		case "int":
+			goType = "int"
+			sqlType = "INTEGER"
+		case "bool":
+			goType = "bool"
+			sqlType = "BOOLEAN"
+		case "float":
+			goType = "float64"
+			sqlType = "REAL"
+		case "time":
+			goType = "time.Time"
+			sqlType = "TIMESTAMP"
+		}
+
+		fields = append(fields, Field{
+			Name:    name,
+			Type:    goType,
+			JSONTag: strings.ToLower(name),
+			GormTag: strings.ToLower(name),
+			SQLType: sqlType,
+		})
+	}
+	return fields
 }
 
 func renderModuleTemplate(t *template.Template, data moduleTemplateData) string {
@@ -62,7 +114,13 @@ type {{.Title}} struct {
         CreatedAt time.Time ` + "`json:\"created_at\"`" + `
         UpdatedAt time.Time ` + "`json:\"updated_at\"`" + `
 
-        // Add your fields here
+{{range .Fields}}        {{.Name}} {{.Type}} ` + "`json:\"{{.JSONTag}}\" gorm:\"{{.GormTag}}\"`" + `
+{{end}}
+}
+
+// TableName overrides the table name used by User to ` + "`{{.Name}}s`" + `
+func ({{.Title}}) TableName() string {
+	return "{{.Name}}s"
 }
 
 // {{.Title}}Repository defines the repository interface
@@ -255,29 +313,48 @@ func (h *{{.Title}}Handler) List(w http.ResponseWriter, r *http.Request) {
         json.NewEncoder(w).Encode(entities)
 }
 `))
+
+	migrationFileTemplate = template.Must(template.New("migrationFile").Parse(`-- +goose Up
+-- SQL in section 'Up' is executed when this migration is applied
+CREATE TABLE IF NOT EXISTS {{.Name}}s (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP{{range .Fields}},
+    {{.JSONTag}} {{.SQLType}}{{end}}
+);
+
+-- +goose Down
+-- SQL section 'Down' is executed when this migration is rolled back
+DROP TABLE IF EXISTS {{.Name}}s;
+`))
 )
 
 func generateModuleFile(name string) string {
-	data := newModuleTemplateData(name)
+	data := newModuleTemplateData(name, nil)
 	return renderModuleTemplate(moduleFileTemplate, data)
 }
 
-func generateDomainFile(name string) string {
-	data := newModuleTemplateData(name)
+func generateDomainFile(name string, fields []string) string {
+	data := newModuleTemplateData(name, fields)
 	return renderModuleTemplate(domainFileTemplate, data)
 }
 
 func generateRepositoryFile(name string) string {
-	data := newModuleTemplateData(name)
+	data := newModuleTemplateData(name, nil)
 	return renderModuleTemplate(repositoryFileTemplate, data)
 }
 
 func generateServiceFile(name string) string {
-	data := newModuleTemplateData(name)
+	data := newModuleTemplateData(name, nil)
 	return renderModuleTemplate(serviceFileTemplate, data)
 }
 
 func generateHandlerFile(name string) string {
-	data := newModuleTemplateData(name)
+	data := newModuleTemplateData(name, nil)
 	return renderModuleTemplate(handlerFileTemplate, data)
+}
+
+func generateMigrationContent(name string, fields []string) string {
+	data := newModuleTemplateData(name, fields)
+	return renderModuleTemplate(migrationFileTemplate, data)
 }
