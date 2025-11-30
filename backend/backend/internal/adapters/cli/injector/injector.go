@@ -159,12 +159,19 @@ func areReceiversSame(r1, r2 *ast.FieldList) bool {
 	}
 
 	if len(r1.List) > 0 {
-		type1 := formatNode(r1.List[0].Type)
-		type2 := formatNode(r2.List[0].Type)
+		type1 := getBaseTypeName(r1.List[0].Type)
+		type2 := getBaseTypeName(r2.List[0].Type)
 		return type1 == type2
 	}
 
 	return true
+}
+
+func getBaseTypeName(expr ast.Expr) string {
+	if star, ok := expr.(*ast.StarExpr); ok {
+		return formatNode(star.X)
+	}
+	return formatNode(expr)
 }
 
 func formatNode(node ast.Node) string {

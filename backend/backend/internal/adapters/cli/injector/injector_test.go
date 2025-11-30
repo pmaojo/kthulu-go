@@ -114,6 +114,32 @@ func (s *Service) Start() {}
 	}
 }
 
+func TestInjectMethodReceiverCollision(t *testing.T) {
+	// Case 1: Existing method has value receiver, new method has pointer receiver
+	originalSource := `package main
+type Service struct{}
+func (s Service) Start() {}
+`
+	newFunction := `func (s *Service) Start() {}`
+
+	_, err := InjectFunction(originalSource, newFunction, nil)
+	if err == nil {
+		t.Error("Expected error when injecting method with pointer receiver when value receiver exists, got nil")
+	}
+
+	// Case 2: Existing method has pointer receiver, new method has value receiver
+	originalSource2 := `package main
+type Service struct{}
+func (s *Service) Stop() {}
+`
+	newFunction2 := `func (s Service) Stop() {}`
+
+	_, err = InjectFunction(originalSource2, newFunction2, nil)
+	if err == nil {
+		t.Error("Expected error when injecting method with value receiver when pointer receiver exists, got nil")
+	}
+}
+
 func TestInjectStructField(t *testing.T) {
 	originalSource := `package main
 type User struct {
