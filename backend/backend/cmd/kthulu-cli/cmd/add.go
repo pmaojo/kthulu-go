@@ -255,7 +255,7 @@ func runAddComponent(componentType, name, module string, withTests, withMigratio
 		subdir = "repository"
 		filename = fmt.Sprintf("%s_repository.go", strings.ToLower(name))
 	case "domain":
-		content = generateDomainFile(name)
+		content = generateDomainFile(name, nil)
 		subdir = "domain"
 		filename = fmt.Sprintf("%s.go", strings.ToLower(name))
 	default:

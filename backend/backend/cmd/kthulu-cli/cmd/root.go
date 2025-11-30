@@ -48,7 +48,8 @@ func Execute() {
 func init() {
 	// Core commands
 	// newCmd is already added in its own init()
-	rootCmd.AddCommand(addCmd) // kthulu add module
+	rootCmd.AddCommand(addCmd)    // kthulu add module
+	rootCmd.AddCommand(doctorCmd) // kthulu doctor
 
 	// AI commands
 	rootCmd.AddCommand(aiCmd) // kthulu ai "prompt"
