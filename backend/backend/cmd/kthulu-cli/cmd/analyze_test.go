@@ -12,7 +12,7 @@ import (
 	graphpkg "github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/graph"
 )
 
-func TestPlanCommand(t *testing.T) {
+func TestAnalyzeCommand(t *testing.T) {
 	rootDir := t.TempDir()
 	overrides := filepath.Join(rootDir, "overrides")
 	if err := os.MkdirAll(overrides, 0o755); err != nil {
@@ -23,8 +23,8 @@ func TestPlanCommand(t *testing.T) {
 	}
 
 	root := &cobra.Command{Use: "root"}
-	root.AddCommand(newPlanCmd())
-	root.SetArgs([]string{"plan", rootDir})
+	root.AddCommand(newAnalyzeCmd())
+	root.SetArgs([]string{"analyze", rootDir})
 	if err := root.Execute(); err != nil {
 		t.Fatalf("execute plan: %v", err)
 	}
@@ -52,15 +52,15 @@ func TestPlanCommand(t *testing.T) {
 	}
 }
 
-func TestPlanCommandGraph(t *testing.T) {
+func TestAnalyzeCommandGraph(t *testing.T) {
 	t.Setenv("JWT_SECRET", "s")
 	t.Setenv("JWT_REFRESH_SECRET", "s")
 	t.Setenv("JWT_REFRESH_TOKEN_TTL", "1h")
 	os.Remove("/tmp/kthulu.graph.json")
 
 	root := &cobra.Command{Use: "root"}
-	root.AddCommand(newPlanCmd())
-	root.SetArgs([]string{"plan", "--graph", "--format=json"})
+	root.AddCommand(newAnalyzeCmd())
+	root.SetArgs([]string{"analyze", "--graph", "--format=json"})
 	if err := root.Execute(); err != nil {
 		t.Fatalf("execute plan with graph: %v", err)
 	}
@@ -74,30 +74,30 @@ func TestPlanCommandGraph(t *testing.T) {
 	}
 }
 
-func TestPlanCommandValidate(t *testing.T) {
+func TestAnalyzeCommandValidate(t *testing.T) {
 	t.Setenv("JWT_SECRET", "s")
 	t.Setenv("JWT_REFRESH_SECRET", "s")
 	t.Setenv("JWT_REFRESH_TOKEN_TTL", "1h")
 
 	root := &cobra.Command{Use: "root"}
-	root.AddCommand(newPlanCmd())
-	root.SetArgs([]string{"plan", "--validate"})
+	root.AddCommand(newAnalyzeCmd())
+	root.SetArgs([]string{"analyze", "--validate"})
 	if err := root.Execute(); err != nil {
 		t.Fatalf("execute plan validate: %v", err)
 	}
 }
-func TestPlanCommandDepAnalysisFailures(t *testing.T) {
+func TestAnalyzeCommandDepAnalysisFailures(t *testing.T) {
 	cases := []struct {
 		name string
 		base string
 	}{
 		{
 			name: "layer violation",
-			base: filepath.Join("..", "..", "..", "internal", "cli", "depanalysis", "testdata", "violates"),
+			base: filepath.Join("..", "..", "..", "internal", "adapters", "cli", "depanalysis", "testdata", "violates"),
 		},
 		{
 			name: "import cycle",
-			base: filepath.Join("..", "..", "..", "internal", "cli", "depanalysis", "testdata", "cycle"),
+			base: filepath.Join("..", "..", "..", "internal", "adapters", "cli", "depanalysis", "testdata", "cycle"),
 		},
 	}
 	for _, tc := range cases {
@@ -105,8 +105,8 @@ func TestPlanCommandDepAnalysisFailures(t *testing.T) {
 			// ensure leftover plan does not exist
 			os.RemoveAll(filepath.Join(tc.base, ".kthulu"))
 			root := &cobra.Command{Use: "root"}
-			root.AddCommand(newPlanCmd())
-			root.SetArgs([]string{"plan", tc.base})
+			root.AddCommand(newAnalyzeCmd())
+			root.SetArgs([]string{"analyze", tc.base})
 			if err := root.Execute(); err == nil {
 				t.Fatalf("expected error")
 			}

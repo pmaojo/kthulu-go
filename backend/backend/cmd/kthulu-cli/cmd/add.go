@@ -9,8 +9,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/generator"
-	"github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/parser"
 	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/resolver"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/parser"
 )
 
 var addCmd = &cobra.Command{
@@ -23,7 +23,7 @@ Automatically resolves dependencies, updates configuration, and ensures compatib
 Examples:
   kthulu add module payment --with-stripe
   kthulu add module auth --with-oauth
-  kthulu add component UserHandler --with-tests
+  kthulu add component handler UserHandler --module users
   kthulu add integration stripe --compliance=pci`,
 }
 
@@ -44,7 +44,14 @@ var addModuleCmd = &cobra.Command{
 var addComponentCmd = &cobra.Command{
 	Use:   "component [type] [name]",
 	Short: "Add a new component to your project",
-	Args:  cobra.ExactArgs(2),
+	Long: `Add a component (handler, service, repository, domain) to an existing module.
+
+Types:
+  handler    - HTTP handler
+  service    - Business logic service
+  repository - Data access repository
+  domain     - Domain entity definition`,
+	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		componentType := args[0]
 		name := args[1]
@@ -203,7 +210,79 @@ func runAddModule(module string, integrations []string, compliance string, force
 }
 
 func runAddComponent(componentType, name, module string, withTests, withMigration bool) error {
-	return fmt.Errorf("enterprise component generation not yet implemented - coming in FASE 1.1")
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("error getting current directory: %w", err)
+	}
+
+	// Ensure we are in a Kthulu project
+	if !isKthuluProject(currentDir) {
+		return fmt.Errorf("not in a Kthulu project directory")
+	}
+
+	// Detect module if not provided
+	if module == "" {
+		module = detectModuleFromDir(currentDir)
+		if module == "" {
+			return fmt.Errorf("could not detect module. Please specify --module <name>")
+		}
+	}
+
+	// Verify module existence
+	modulePath := filepath.Join(currentDir, "internal", "adapters", "http", "modules", module)
+	if _, err := os.Stat(modulePath); os.IsNotExist(err) {
+		return fmt.Errorf("module '%s' does not exist at %s", module, modulePath)
+	}
+
+	fmt.Printf("Adding %s '%s' to module '%s'...\n", componentType, name, module)
+
+	var content string
+	var filename string
+	var subdir string
+
+	switch componentType {
+	case "handler":
+		content = generateHandlerFile(name)
+		subdir = "handlers"
+		filename = fmt.Sprintf("%s_handler.go", strings.ToLower(name))
+	case "service":
+		content = generateServiceFile(name)
+		subdir = "service"
+		filename = fmt.Sprintf("%s_service.go", strings.ToLower(name))
+	case "repository":
+		content = generateRepositoryFile(name)
+		subdir = "repository"
+		filename = fmt.Sprintf("%s_repository.go", strings.ToLower(name))
+	case "domain":
+		content = generateDomainFile(name)
+		subdir = "domain"
+		filename = fmt.Sprintf("%s.go", strings.ToLower(name))
+	default:
+		return fmt.Errorf("unknown component type: %s. Supported: handler, service, repository, domain", componentType)
+	}
+
+	// Write file
+	targetDir := filepath.Join(modulePath, subdir)
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		return fmt.Errorf("failed to create directory %s: %w", targetDir, err)
+	}
+
+	targetPath := filepath.Join(targetDir, filename)
+	if err := os.WriteFile(targetPath, []byte(content), 0644); err != nil {
+		return fmt.Errorf("failed to write file %s: %w", targetPath, err)
+	}
+
+	fmt.Printf("✅ Created %s\n", targetPath)
+
+	if withTests {
+		fmt.Println("⚠️  Test generation not yet implemented")
+	}
+
+	if withMigration {
+		fmt.Println("⚠️  Migration generation not yet implemented")
+	}
+
+	return nil
 }
 
 // Helper functions for intelligent module addition
@@ -269,6 +348,23 @@ func detectAuth(dir string) string {
 	}
 
 	return "jwt" // default
+}
+
+func detectModuleFromDir(dir string) string {
+	// Try to detect module from current path
+	// Path should look like .../internal/adapters/http/modules/<module_name>...
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		return ""
+	}
+
+	parts := strings.Split(absDir, string(os.PathSeparator))
+	for i, part := range parts {
+		if part == "modules" && i+1 < len(parts) {
+			return parts[i+1]
+		}
+	}
+	return ""
 }
 
 func displayDependencyPlan(moduleName string, plan *resolver.ResolutionPlan) {
