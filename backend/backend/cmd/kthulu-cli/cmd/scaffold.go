@@ -147,6 +147,35 @@ func scaffoldProject(base string, modules []string, skipExisting bool) error {
 		{"openapi", filepath.Join(base, "openapi")},
 	}
 
+	// BDD scaffolding
+	// We create the features directory and test runner manually here since they are new additions
+	// and might not strictly follow the "copyTemplateTree" pattern if we want to place them specifically.
+
+	// Create features directory
+	if err := os.MkdirAll(filepath.Join(base, "features"), 0o755); err != nil {
+		return err
+	}
+
+	// Create tests/bdd directory
+	if err := os.MkdirAll(filepath.Join(base, "tests", "bdd"), 0o755); err != nil {
+		return err
+	}
+
+	// Write BDD templates
+	bddFiles := []struct {
+		src string
+		dst string
+	}{
+		{"bdd/health.feature.tmpl", filepath.Join(base, "features", "health.feature")},
+		{"bdd/main_test.go.tmpl", filepath.Join(base, "tests", "bdd", "main_test.go")},
+	}
+
+	for _, f := range bddFiles {
+		if err := writeTemplate(f.src, f.dst, templateData, skipExisting); err != nil {
+			return err
+		}
+	}
+
 	for _, dir := range directories {
 		if err := copyTemplateTree(templates.Templates, dir.src, dir.dst, templateData, skipExisting); err != nil {
 			return err
