@@ -426,7 +426,8 @@ func generateSpecificModule(config *generator.GeneratorConfig, moduleName string
 
 	// Generate database migration
 	migrationName := fmt.Sprintf("create_%ss_table", moduleName)
-	migrationContent := generateMigrationContent(moduleName, fields)
+	database := detectDatabase(config.OutputPath)
+	migrationContent := generateMigrationContent(moduleName, fields, database)
 	if err := createMigrationFile(migrationName, migrationContent); err != nil {
 		fmt.Printf("   ⚠️  Failed to generate migration: %v\n", err)
 	} else {
