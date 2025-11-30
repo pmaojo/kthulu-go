@@ -135,11 +135,12 @@ func (g *TemplateGenerator) GenerateProject(config *GeneratorConfig) (*ProjectSt
 	}
 
 	// Step 5: Generate frontend if requested
-	if config.Frontend != "none" {
-		if err := g.generateFrontend(structure); err != nil {
-			return nil, fmt.Errorf("failed to generate frontend: %w", err)
-		}
-	}
+	// Frontend generation is currently suppressed until implementation is ready
+	// if config.Frontend != "none" {
+	// 	if err := g.generateFrontend(structure); err != nil {
+	// 		return nil, fmt.Errorf("failed to generate frontend: %w", err)
+	// 	}
+	// }
 
 	// Step 6: Generate configuration files
 	if err := g.generateConfiguration(structure); err != nil {
@@ -516,7 +517,6 @@ A Kthulu-powered enterprise application with the following features:
 ## Architecture
 - **Framework**: Kthulu Enterprise
 - **Database**: %s
-- **Frontend**: %s
 - **Authentication**: %s
 
 ## Quick Start
@@ -526,7 +526,7 @@ A Kthulu-powered enterprise application with the following features:
 go mod download
 
 # Run migrations
-go run cmd/migrate/main.go
+kthulu migrate up
 
 # Start development server
 go run cmd/server/main.go
@@ -557,7 +557,6 @@ Dependencies resolved: %s
 `, g.config.ProjectName,
 		g.generateFeatureList(),
 		g.config.Database,
-		g.config.Frontend,
 		g.config.Auth,
 		strings.Join(g.config.Features, ", "),
 		fmt.Sprintf("%d modules", len(g.config.Features)))

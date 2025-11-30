@@ -28,16 +28,17 @@ Examples:
 }
 
 var addModuleCmd = &cobra.Command{
-	Use:   "module [name]",
-	Short: "Add a new module to your project",
-	Args:  cobra.ExactArgs(1),
+	Use:   "module [name] [field:type...]",
+	Short: "Add a new module to your project with optional fields",
+	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		module := args[0]
+		fields := args[1:]
 		withIntegrations, _ := cmd.Flags().GetStringSlice("with")
 		compliance, _ := cmd.Flags().GetString("compliance")
 		force, _ := cmd.Flags().GetBool("force")
 
-		return runAddModule(module, withIntegrations, compliance, force)
+		return runAddModule(module, fields, withIntegrations, compliance, force)
 	},
 }
 
@@ -72,7 +73,7 @@ func init() {
 	addCmd.AddCommand(addComponentCmd)
 }
 
-func runAddModule(module string, integrations []string, compliance string, force bool) error {
+func runAddModule(module string, fields []string, integrations []string, compliance string, force bool) error {
 	fmt.Printf("🧠 Intelligently adding module: %s\n", module)
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
@@ -186,7 +187,7 @@ func runAddModule(module string, integrations []string, compliance string, force
 	}
 
 	// Generate only the specific module
-	if err := generateSpecificModule(config, module, templateGenerator); err != nil {
+	if err := generateSpecificModule(config, module, fields, templateGenerator); err != nil {
 		return fmt.Errorf("error generating module: %w", err)
 	}
 
@@ -290,7 +291,7 @@ func displayDependencyPlan(moduleName string, plan *resolver.ResolutionPlan) {
 	}
 }
 
-func generateSpecificModule(config *generator.GeneratorConfig, moduleName string, gen *generator.TemplateGenerator) error {
+func generateSpecificModule(config *generator.GeneratorConfig, moduleName string, fields []string, gen *generator.TemplateGenerator) error {
 	fmt.Printf("   📁 Creating module structure for '%s'\n", moduleName)
 
 	// Create module directory
@@ -313,7 +314,7 @@ func generateSpecificModule(config *generator.GeneratorConfig, moduleName string
 	// This is a simplified version - the full generator.GenerateProject would handle this
 	files := map[string]string{
 		"module.go":                             generateModuleFile(moduleName),
-		fmt.Sprintf("domain/%s.go", moduleName): generateDomainFile(moduleName),
+		fmt.Sprintf("domain/%s.go", moduleName): generateDomainFile(moduleName, fields),
 		fmt.Sprintf("repository/%s_repository.go", moduleName): generateRepositoryFile(moduleName),
 		fmt.Sprintf("service/%s_service.go", moduleName):       generateServiceFile(moduleName),
 		fmt.Sprintf("handlers/%s_handler.go", moduleName):      generateHandlerFile(moduleName),
@@ -325,6 +326,15 @@ func generateSpecificModule(config *generator.GeneratorConfig, moduleName string
 			return fmt.Errorf("failed to write file %s: %w", filePath, err)
 		}
 		fmt.Printf("   📝 Generated %s\n", filename)
+	}
+
+	// Generate database migration
+	migrationName := fmt.Sprintf("create_%ss_table", moduleName)
+	migrationContent := generateMigrationContent(moduleName, fields, config.Database)
+	if err := createMigrationFile(migrationName, migrationContent); err != nil {
+		fmt.Printf("   ⚠️  Failed to generate migration: %v\n", err)
+	} else {
+		fmt.Printf("   🐘 Generated database migration for %s\n", moduleName)
 	}
 
 	return nil
