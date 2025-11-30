@@ -198,6 +198,27 @@ func runAddModule(module string, fields []string, integrations []string, complia
 		return fmt.Errorf("error generating module: %w", err)
 	}
 
+	// Step 8b: Generate frontend module if frontend exists
+	if config.Frontend == "react" {
+		// Create a mock structure to capture generated files
+		structure := &generator.ProjectStructure{
+			RootPath:    currentDir,
+			Directories: []string{},
+			Files:       []generator.GeneratedFile{},
+		}
+
+		if err := templateGenerator.GenerateFrontendModule(module, fields, structure); err != nil {
+			fmt.Printf("   ⚠️  Failed to generate frontend module: %v\n", err)
+		} else {
+			// Write the generated frontend files
+			if err := templateGenerator.WriteProject(structure); err != nil {
+				fmt.Printf("   ⚠️  Failed to write frontend files: %v\n", err)
+			} else {
+				fmt.Printf("   🎨 Generated frontend module for %s\n", module)
+			}
+		}
+	}
+
 	// Step 9: Update project configuration
 	fmt.Println("🔧 Updating project configuration...")
 	if err := updateProjectConfig(currentDir, plan); err != nil {
