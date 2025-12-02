@@ -133,6 +133,23 @@ Our backend exposes all `kthulu-cli` functionalities as MCP tools. This means an
 
 This architecture turns Kthulu Forge into a powerful, AI-native software foundry where agents can autonomously manage project lifecycles. For more details, see the official [MCP Specification](https://mcp.dev).
 
+### Using Kthulu with Claude Desktop
+
+To use Kthulu as an MCP server with Claude Desktop, add the following configuration to your `claude_desktop_config.json` file (typically located at `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS or `%APPDATA%/Claude/claude_desktop_config.json` on Windows):
+
+```json
+{
+  "mcpServers": {
+    "kthulu": {
+      "command": "/path/to/kthulu-cli",
+      "args": ["mcp", "--working-dir", "/path/to/your/project"]
+    }
+  }
+}
+```
+
+Replace `/path/to/kthulu-cli` with the absolute path to your compiled binary (or `go run ...`) and `/path/to/your/project` with the directory where you want the AI to perform actions.
+
 ## Frontend Experience
 
 The main UI (see `frontend/src/pages/Index.tsx`) organizes functionality into dedicated panels that can be opened from the sidebar:
