@@ -229,7 +229,7 @@ export const {{.Title}}List: React.FC<{{.Title}}ListProps> = ({
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
+      <div style={ { marginBottom: 16, display: 'flex', justifyContent: 'flex-end' } }>
         <Button type="primary" icon={<PlusOutlined />} onClick={onCreate}>
           Add {{.Title}}
         </Button>
@@ -302,7 +302,7 @@ export const {{.Title}}Form: React.FC<{{.Title}}FormProps> = ({
           rules={[{ required: {{.Required}}, message: 'Please input {{.Label}}!' }]}
           valuePropName="{{if eq .Type "boolean"}}checked{{else}}value{{end}}"
         >
-          {{if eq .Type "number"}}<InputNumber style={{ width: '100%' }} />
+          {{if eq .Type "number"}}<InputNumber style={ { width: '100%' } } />
           {{else if eq .Type "boolean"}}<Switch />
           {{else}}<Input />{{end}}
         </Form.Item>
