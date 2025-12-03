@@ -24,6 +24,11 @@ func NewAIUseCase(client ai.Client) *AIUseCase {
 	return &AIUseCase{client: client, contextTTL: 5 * time.Minute}
 }
 
+// SetClient updates the AI client used by the use case
+func (a *AIUseCase) SetClient(client ai.Client) {
+	a.client = client
+}
+
 // Suggest generates a suggestion for a given prompt, optionally including project context
 func (a *AIUseCase) Suggest(ctx context.Context, prompt string, includeContext bool, projectPath string) (string, error) {
 	fullPrompt := prompt

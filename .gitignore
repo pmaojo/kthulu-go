@@ -29,4 +29,5 @@ kthulu-cli
 kthulu-server
 kthulu-app
 backend/backend/kthulu-app
+backend/backend/kthulu-clibackend/backend/kthulu-cli
 backend/backend/kthulu-cli
