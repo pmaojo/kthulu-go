@@ -74,7 +74,7 @@ func runMCPServer(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	fmt.Fprintf(cmd.OutOrStdout(), "Started MCP server (%s) with %d tools in %s\n", instance.Endpoint, len(instance.Tools), workingDir)
+	fmt.Fprintf(cmd.ErrOrStderr(), "Started MCP server (%s) with %d tools in %s\n", instance.Endpoint, len(instance.Tools), workingDir)
 	return instance.Server.Serve()
 }
 
