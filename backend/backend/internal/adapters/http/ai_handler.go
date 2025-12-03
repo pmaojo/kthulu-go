@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 
+	"github.com/pmaojo/kthulu-go/backend/internal/infrastructure/ai"
 	"github.com/pmaojo/kthulu-go/backend/internal/usecase"
 )
 
@@ -122,16 +123,32 @@ func (h *AIHandler) setProvider(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Implement provider switching logic
-	// This would require injecting the AIService and updating it
-	validProviders := map[string]bool{
-		"litellm":   true,
-		"gemini":    true,
-		"openai":    false, // TODO: implement
-		"anthropic": false, // TODO: implement
-	}
+	var newClient ai.Client
+	var err error
 
-	if !validProviders[req.Provider] {
+	switch req.Provider {
+	case "litellm":
+		// Default to GPT-4 for LiteLLM general use, but it can be overridden per request
+		newClient = ai.NewLiteLLMClientWithModel("gpt-4", 2*time.Minute)
+	case "gemini":
+		newClient, err = ai.NewGeminiClient("gemini-pro", 2*time.Minute)
+		if err != nil {
+			h.log.Errorw("Failed to create Gemini client", "error", err)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(setProviderResponse{
+				Status: "error",
+				Error:  "failed to initialize gemini client",
+			})
+			return
+		}
+	case "openai":
+		// Fallback to LiteLLM for now as direct OpenAI provider isn't fully implemented or is similar
+		newClient = ai.NewLiteLLMClientWithModel("gpt-4", 2*time.Minute)
+	case "anthropic":
+		// Fallback to LiteLLM for now
+		newClient = ai.NewLiteLLMClientWithModel("claude-3-opus", 2*time.Minute)
+	default:
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(setProviderResponse{
@@ -140,6 +157,8 @@ func (h *AIHandler) setProvider(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+
+	h.ai.SetClient(newClient)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(setProviderResponse{Status: "ok"})

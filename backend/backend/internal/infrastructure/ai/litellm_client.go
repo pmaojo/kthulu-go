@@ -68,6 +68,16 @@ func NewLiteLLMClient(config LiteLLMConfig, cacheTTL time.Duration) *LiteLLMClie
 	}
 }
 
+// NewLiteLLMClientWithModel creates a new LiteLLM client with a default config but allows specifying the model implicitly via usage
+// Note: This helper is primarily to satisfy the interface expected by other packages which pass string as config
+// In a real implementation, we should refactor to be more consistent
+func NewLiteLLMClientWithModel(model string, cacheTTL time.Duration) *LiteLLMClient {
+	return NewLiteLLMClient(LiteLLMConfig{
+		BaseURL: "http://localhost:4000",
+		Timeout: 30 * time.Second,
+	}, cacheTTL)
+}
+
 // GenerateText generates text using LiteLLM with optional caching
 func (c *LiteLLMClient) GenerateText(ctx context.Context, prompt string) (string, error) {
 	// Check cache first
