@@ -27,6 +27,7 @@ var BuiltinModules = map[string]fx.Option{
 	"projects":     ProjectsModule,
 	"modules":      ModulesModule,
 	"templates":    TemplatesModule,
+	"cli":          CliModule,
 }
 
 func init() {

@@ -14,6 +14,7 @@ import (
 var (
 	debugCmdStr   string
 	debugPersist  bool
+	debugTestWatch bool
 )
 
 var debugCmd = &cobra.Command{
@@ -34,6 +35,7 @@ Examples:
   kthulu debug
   kthulu debug --cmd="go run cmd/server/main.go"
   kthulu debug --persist
+  kthulu debug --test-watch
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Determine command to run
@@ -45,7 +47,12 @@ Examples:
 			} else if _, err := os.Stat("main.go"); err == nil {
 				runCmd = "go run main.go"
 			} else {
-				return fmt.Errorf("could not auto-detect entrypoint. Please use --cmd")
+				// If not found, and we are not in test watch mode, error out.
+				// For test watch mode, running the app is optional/secondary.
+				if !debugTestWatch {
+					return fmt.Errorf("could not auto-detect entrypoint. Please use --cmd")
+				}
+				runCmd = "echo 'No app running'"
 			}
 		}
 
@@ -67,7 +74,7 @@ Examples:
 		subProc.Env = append(os.Environ(), "PYTHONUNBUFFERED=1", "GOLANG_LOG=text")
 
 		// Initialize the Bubble Tea model
-		model := debugui.NewModel(subProc, debugPersist)
+		model := debugui.NewModel(subProc, debugPersist, debugTestWatch)
 
 		// Run the TUI
 		p := tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseCellMotion())
@@ -82,5 +89,6 @@ Examples:
 func init() {
 	debugCmd.Flags().StringVar(&debugCmdStr, "cmd", "", "Command to run the application (default: auto-detect 'go run ...')")
 	debugCmd.Flags().BoolVar(&debugPersist, "persist", false, "Persist debug events to disk")
+	debugCmd.Flags().BoolVar(&debugTestWatch, "test-watch", false, "Watch tests and display status")
 	rootCmd.AddCommand(debugCmd)
 }
