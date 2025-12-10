@@ -3,8 +3,10 @@ package bdd
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -62,10 +64,19 @@ func (c *BDDContext) theResponseCodeShouldBe(code int) error {
 }
 
 func (c *BDDContext) theResponseBodyShouldContain(text string) error {
-	// TODO: Read body and check content
-	// body, _ := io.ReadAll(c.resp.Body)
-	// c.lastBody = string(body)
-	// if !strings.Contains(c.lastBody, text) ...
+	if c.resp == nil {
+		return fmt.Errorf("no response received")
+	}
+	body, err := io.ReadAll(c.resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response body: %w", err)
+	}
+	c.resp.Body.Close() // Ensure we close it
+	c.lastBody = string(body)
+
+	if !strings.Contains(c.lastBody, text) {
+		return fmt.Errorf("expected response to contain '%s', got '%s'", text, c.lastBody)
+	}
 	return nil
 }
 

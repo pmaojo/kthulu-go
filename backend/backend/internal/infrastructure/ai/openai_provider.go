@@ -1,8 +1,12 @@
 package ai
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"time"
 )
 
@@ -12,6 +16,7 @@ type OpenAIProvider struct {
 	model     string
 	baseURL   string
 	timeout   time.Duration
+	client    *http.Client
 	cache     *LRUCache
 	cacheSize int
 }
@@ -40,6 +45,9 @@ type OpenAIResponse struct {
 		CompletionTokens int `json:"completion_tokens"`
 		TotalTokens      int `json:"total_tokens"`
 	} `json:"usage"`
+	Error *struct {
+		Message string `json:"message"`
+	} `json:"error"`
 }
 
 // Message represents a message in the conversation
@@ -56,13 +64,14 @@ func NewOpenAIProvider(apiKey, model string, cacheSize int, timeout time.Duratio
 		model:     model,
 		baseURL:   "https://api.openai.com/v1",
 		timeout:   timeout,
+		client:    &http.Client{Timeout: timeout},
 		cache:     cache,
 		cacheSize: cacheSize,
 	}
 }
 
 // GenerateText generates text using OpenAI API
-func (p *OpenAIProvider) GenerateText(ctx context.Context, prompt string, options ...ProviderOption) (string, error) {
+func (p *OpenAIProvider) GenerateText(ctx context.Context, prompt string) (string, error) {
 	// Check cache first
 	if cached, ok := p.cache.Get(prompt); ok {
 		return cached.Response, nil
@@ -85,28 +94,64 @@ func (p *OpenAIProvider) GenerateText(ctx context.Context, prompt string, option
 		Temperature: 0.7,
 	}
 
-	// Apply options
-	for _, opt := range options {
-		opt(&req)
+	body, err := json.Marshal(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal openai request: %w", err)
 	}
 
-	// Execute request with timeout
-	ctx, cancel := context.WithTimeout(ctx, p.timeout)
-	defer cancel()
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", p.baseURL+"/chat/completions", bytes.NewReader(body))
+	if err != nil {
+		return "", fmt.Errorf("failed to create openai request: %w", err)
+	}
 
-	// TODO: Implement actual HTTP call to OpenAI API
-	// For now, return a placeholder
-	result := fmt.Sprintf("[OpenAI/%s] Generated response for: %s", p.model, prompt)
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Authorization", "Bearer "+p.apiKey)
+
+	resp, err := p.client.Do(httpReq)
+	if err != nil {
+		return "", fmt.Errorf("failed to execute openai request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read openai response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("openai returned status %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	var result OpenAIResponse
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		return "", fmt.Errorf("failed to unmarshal openai response: %w", err)
+	}
+
+	if result.Error != nil {
+		return "", fmt.Errorf("openai error: %s", result.Error.Message)
+	}
+
+	if len(result.Choices) == 0 {
+		return "", fmt.Errorf("no choices in openai response")
+	}
+
+	output := result.Choices[0].Message.Content
 
 	// Cache the result
 	p.cache.Set(prompt, &CacheEntry{
 		Prompt:   prompt,
-		Response: result,
-		Tags:     []string{"openai"},
+		Response: output,
+		Tags:     []string{"openai", p.model},
 		Model:    p.model,
 	})
 
-	return result, nil
+	return output, nil
+}
+
+// Close closes the provider
+func (p *OpenAIProvider) Close() error {
+	p.cache.Clear()
+	return nil
 }
 
 // Name returns the name of the provider
@@ -130,25 +175,4 @@ func (p *OpenAIProvider) Health(ctx context.Context) error {
 		return fmt.Errorf("OpenAI API key not configured")
 	}
 	return nil
-}
-
-// ProviderOption is a function that modifies a request
-type ProviderOption func(interface{})
-
-// WithMaxTokens sets the max tokens for the request
-func WithMaxTokens(tokens int) ProviderOption {
-	return func(v interface{}) {
-		if req, ok := v.(*OpenAIRequest); ok {
-			req.MaxTokens = tokens
-		}
-	}
-}
-
-// WithTemperature sets the temperature for the request
-func WithTemperature(temp float32) ProviderOption {
-	return func(v interface{}) {
-		if req, ok := v.(*OpenAIRequest); ok {
-			req.Temperature = temp
-		}
-	}
 }
