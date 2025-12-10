@@ -92,11 +92,7 @@ func copyTemplateTree(fsys fs.FS, src, dst string, data map[string]any, skipExis
 		}
 
 		if d.IsDir() {
-			info, err := d.Info()
-			if err != nil {
-				return err
-			}
-			return os.MkdirAll(target, info.Mode())
+			return os.MkdirAll(target, 0o755)
 		}
 
 		if strings.HasSuffix(d.Name(), ".tmpl") {
@@ -104,6 +100,33 @@ func copyTemplateTree(fsys fs.FS, src, dst string, data map[string]any, skipExis
 		}
 
 		return copyTemplateFile(path, target, skipExisting)
+	})
+}
+
+// copyFSTree copies a directory tree from the OS filesystem.
+func copyFSTree(src, dst string) error {
+	return filepath.Walk(src, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		rel, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+
+		target := filepath.Join(dst, rel)
+
+		if info.IsDir() {
+			return os.MkdirAll(target, 0o755)
+		}
+
+		contents, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+
+		return os.WriteFile(target, contents, info.Mode())
 	})
 }
 
@@ -145,6 +168,7 @@ func scaffoldProject(base string, modules []string, skipExisting bool) error {
 		{"internal", filepath.Join(base, "internal")},
 		{"migrations", filepath.Join(base, "migrations")},
 		{"openapi", filepath.Join(base, "openapi")},
+		{".kthulu", filepath.Join(base, ".kthulu")},
 	}
 
 	// BDD scaffolding
@@ -202,6 +226,11 @@ func scaffoldProject(base string, modules []string, skipExisting bool) error {
 		}
 	}
 
+	overrideDir := filepath.Join(base, ".kthulu", "override")
+	if _, err := os.Stat(overrideDir); err == nil {
+		return copyFSTree(overrideDir, base)
+	}
+
 	return nil
 }
 
@@ -231,6 +260,17 @@ func copyModule(name, base string, skipExisting bool) error {
 	if info, err := fs.Stat(templates.Templates, filepath.Join("frontend", "src", "modules", name)); err == nil && info.IsDir() {
 		dst := filepath.Join(base, "frontend", "src", "modules", name)
 		if err := copyTemplateTree(templates.Templates, filepath.Join("frontend", "src", "modules", name), dst, nil, skipExisting); err != nil {
+			return err
+		}
+	}
+
+	overrideSrc := filepath.Join(base, ".kthulu", "override", "modules", name)
+	if _, err := os.Stat(overrideSrc); err == nil {
+		dst := filepath.Join(base, "backend", "internal", "modules", name)
+		if err := os.MkdirAll(dst, 0o755); err != nil {
+			return err
+		}
+		if err := copyFSTree(overrideSrc, dst); err != nil {
 			return err
 		}
 	}
