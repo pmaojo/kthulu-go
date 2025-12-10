@@ -122,21 +122,13 @@ func (h *AIHandler) setProvider(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Implement provider switching logic
-	// This would require injecting the AIService and updating it
-	validProviders := map[string]bool{
-		"litellm":   true,
-		"gemini":    true,
-		"openai":    false, // TODO: implement
-		"anthropic": false, // TODO: implement
-	}
-
-	if !validProviders[req.Provider] {
+	// Attempt to switch provider
+	if err := h.ai.SetProvider(req.Provider); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(setProviderResponse{
 			Status: "error",
-			Error:  "invalid or disabled provider",
+			Error:  err.Error(),
 		})
 		return
 	}
