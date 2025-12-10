@@ -126,3 +126,62 @@ func TestCopyDirFSSymlink(t *testing.T) {
 		t.Fatalf("file not copied: %v", err)
 	}
 }
+
+func TestCopyFSTree(t *testing.T) {
+	// Setup source directory
+	srcDir := t.TempDir()
+	dir1 := filepath.Join(srcDir, "dir1")
+	if err := os.Mkdir(dir1, 0o755); err != nil {
+		t.Fatalf("Failed to create dir1: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(srcDir, "file1.txt"), []byte("file1"), 0o644); err != nil {
+		t.Fatalf("Failed to create file1.txt: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir1, "file2.txt"), []byte("file2"), 0o600); err != nil {
+		t.Fatalf("Failed to create file2.txt: %v", err)
+	}
+
+	// Setup destination directory
+	dstDir := t.TempDir()
+
+	// Perform the copy
+	if err := copyFSTree(srcDir, dstDir); err != nil {
+		t.Fatalf("copyFSTree failed: %v", err)
+	}
+
+	// Verify the copy
+	// Check file1.txt
+	content, err := os.ReadFile(filepath.Join(dstDir, "file1.txt"))
+	if err != nil {
+		t.Fatalf("Failed to read file1.txt in destination: %v", err)
+	}
+	if string(content) != "file1" {
+		t.Errorf("Expected content of file1.txt to be 'file1', got '%s'", string(content))
+	}
+
+	// Check file2.txt in dir1
+	content, err = os.ReadFile(filepath.Join(dstDir, "dir1", "file2.txt"))
+	if err != nil {
+		t.Fatalf("Failed to read file2.txt in destination: %v", err)
+	}
+	if string(content) != "file2" {
+		t.Errorf("Expected content of file2.txt to be 'file2', got '%s'", string(content))
+	}
+
+	// Check file modes
+	info, err := os.Stat(filepath.Join(dstDir, "file1.txt"))
+	if err != nil {
+		t.Fatalf("Failed to stat file1.txt in destination: %v", err)
+	}
+	if info.Mode() != 0o644 {
+		t.Errorf("Expected mode of file1.txt to be 0644, got %s", info.Mode())
+	}
+
+	info, err = os.Stat(filepath.Join(dstDir, "dir1", "file2.txt"))
+	if err != nil {
+		t.Fatalf("Failed to stat file2.txt in destination: %v", err)
+	}
+	if info.Mode() != 0o600 {
+		t.Errorf("Expected mode of file2.txt to be 0600, got %s", info.Mode())
+	}
+}

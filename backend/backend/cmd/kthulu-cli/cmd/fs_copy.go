@@ -68,11 +68,7 @@ func copyDirFS(fsys fs.FS, src, dst string, skipExisting bool) error {
 			if name == ".git" || name == "node_modules" {
 				return fs.SkipDir
 			}
-			info, err := d.Info()
-			if err != nil {
-				return err
-			}
-			return os.MkdirAll(target, info.Mode())
+			return os.MkdirAll(target, 0o755)
 		}
 		return copyFileFS(fsys, path, target, skipExisting)
 	})

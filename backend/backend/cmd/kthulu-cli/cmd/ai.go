@@ -170,16 +170,49 @@ func runAICommand(prompt, provider, model string, includeContext, apply bool, mo
 
 	ctx := context.Background()
 
-	// Determine if using mock or real client
-	var client ai.Client
-	var err error
+	// Initialize multi-provider client
+	multi := ai.NewMultiProviderClient()
 
-	// For CLI, we check if --mock flag was passed via environment or use real client
-	// In this implementation, NewGeminiClient returns mock if GEMINI_API_KEY is not set
-	client, err = ai.NewGeminiClient(model, 5*time.Minute)
-	if err != nil {
-		return fmt.Errorf("AI client init failed: %w", err)
+	// Register Mock (default fallback)
+	multi.RegisterProvider("mock", ai.NewMockClientWithCache(256, 5*time.Minute))
+
+	// Register Gemini
+	geminiClient, err := ai.NewGeminiClient(model, 5*time.Minute)
+	if err == nil {
+		multi.RegisterProvider("gemini", geminiClient)
 	}
+
+	// Register OpenAI
+	if apiKey := strings.TrimSpace(os.Getenv("OPENAI_API_KEY")); apiKey != "" {
+		multi.RegisterProvider("openai", ai.NewOpenAIProvider(apiKey, model, 256, 5*time.Minute))
+	}
+
+	// Register LiteLLM
+	if baseURL := os.Getenv("LITELLM_BASE_URL"); baseURL != "" {
+		multi.RegisterProvider("litellm", ai.NewLiteLLMClient(ai.LiteLLMConfig{
+			BaseURL: baseURL,
+		}, 5*time.Minute))
+	} else if provider == "litellm" {
+		// Fallback for default local litellm
+		multi.RegisterProvider("litellm", ai.NewLiteLLMClient(ai.LiteLLMConfig{
+			BaseURL: "http://localhost:4000",
+		}, 5*time.Minute))
+	}
+
+	// Determine if using mock override via flag
+	// cmd is not passed here, so we rely on the provider arg or env vars,
+	// but provider was already extracted from flags in the caller.
+	if provider == "mock" {
+		// already handled by SetProvider("mock") later
+	}
+
+	// Attempt to set the requested provider
+	if err := multi.SetProvider(provider); err != nil {
+		fmt.Printf("⚠️ Provider '%s' not available, falling back to 'mock'. (Set GEMINI_API_KEY or OPENAI_API_KEY?)\n", provider)
+		multi.SetProvider("mock")
+	}
+
+	client := multi
 	defer client.Close()
 
 	uc := usecase.NewAIUseCase(client)

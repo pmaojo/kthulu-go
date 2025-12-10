@@ -24,6 +24,14 @@ func NewAIUseCase(client ai.Client) *AIUseCase {
 	return &AIUseCase{client: client, contextTTL: 5 * time.Minute}
 }
 
+// SetProvider switches the underlying AI provider if supported
+func (a *AIUseCase) SetProvider(name string) error {
+	if mp, ok := a.client.(*ai.MultiProviderClient); ok {
+		return mp.SetProvider(name)
+	}
+	return fmt.Errorf("provider switching not supported by current client")
+}
+
 // Suggest generates a suggestion for a given prompt, optionally including project context
 func (a *AIUseCase) Suggest(ctx context.Context, prompt string, includeContext bool, projectPath string) (string, error) {
 	fullPrompt := prompt
