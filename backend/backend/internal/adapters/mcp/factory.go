@@ -32,5 +32,12 @@ func (f *ToolFactory) BuildTools(workingDir string, filter CommandFilter) []Regi
 		insights.DependenciesTool(workingDir),
 	)
 
+	bdd := NewBDDService()
+	tools = append(tools,
+		bdd.ListFeaturesTool(workingDir),
+		bdd.ReadFeatureTool(workingDir),
+		bdd.RunScenarioTool(workingDir),
+	)
+
 	return tools
 }

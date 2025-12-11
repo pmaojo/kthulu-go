@@ -301,6 +301,19 @@ export const kthuluApi = {
     }
   },
 
+  // BDD / Behavior Lab
+  async listFeatures() {
+    return this.runCliCommand('bdd', { args: ['features'] });
+  },
+
+  async runScenario(filter: string) {
+    const args = ['run'];
+    if (filter) {
+      args.push('--filter', filter);
+    }
+    return this.runCliCommand('bdd', { args });
+  },
+
   async runGenerateCommand(options: Record<string, unknown> = {}) {
     return this.runCliCommand('generate', options);
   },

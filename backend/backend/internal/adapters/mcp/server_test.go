@@ -37,7 +37,17 @@ func TestServerBuilderBuildServer(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, instance.Server)
 	require.Equal(t, "stdio", instance.Endpoint)
-	require.Equal(t, 6, len(instance.Tools))
+	// Tools:
+	// 1. status (CLI)
+	// 2. guide (factory.go)
+	// 3. overview (insights)
+	// 4. modules (insights)
+	// 5. tags (insights)
+	// 6. dependencies (insights)
+	// 7. list_features (bdd)
+	// 8. read_feature (bdd)
+	// 9. run_scenario (bdd)
+	require.Equal(t, 9, len(instance.Tools))
 }
 
 func TestBuildTransportHTTP(t *testing.T) {
