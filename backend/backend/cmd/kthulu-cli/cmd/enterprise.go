@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/deployment"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/compliance"
 	"github.com/spf13/cobra"
 )
 
@@ -128,8 +130,9 @@ func init() {
 	upgradeCmd.Flags().Bool("dry-run", false, "Preview changes without applying")
 }
 
-func runAuditCommand(compliance string, security, dependencies, fix bool) error {
+func runAuditCommand(complianceStd string, security, dependencies, fix bool) error {
 	fmt.Println("🔍 Enterprise Security Audit")
+	var errs []error
 
 	if security {
 		fmt.Println("🔒 Running SAST security scan...")
@@ -141,16 +144,56 @@ func runAuditCommand(compliance string, security, dependencies, fix bool) error 
 		// TODO: Check Go mod dependencies
 	}
 
-	if compliance != "" {
-		fmt.Printf("📋 Validating %s compliance...\n", compliance)
-		// TODO: Check compliance requirements
+	if complianceStd != "" {
+		fmt.Printf("📋 Validating %s compliance...\n", complianceStd)
+
+		cwd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("failed to get current working directory: %w", err)
+		}
+
+		report, err := compliance.Validate(complianceStd, cwd)
+		if err != nil {
+			return fmt.Errorf("compliance check failed: %w", err)
+		}
+
+		if report.Passed {
+			fmt.Printf("✅ %s Compliance Checks Passed\n", report.Standard)
+		} else {
+			fmt.Printf("❌ %s Compliance Checks Failed\n", report.Standard)
+		}
+
+		for _, check := range report.Checks {
+			icon := "✅"
+			status := "PASS"
+			if !check.Passed {
+				icon = "❌"
+				status = "FAIL"
+			}
+			fmt.Printf("  %s %-20s: %s\n", icon, check.Name, status)
+			if !check.Passed {
+				fmt.Printf("      Error: %v\n", check.Error)
+			}
+		}
+
+		if !report.Passed {
+			errs = append(errs, fmt.Errorf("%s compliance checks failed", complianceStd))
+		}
 	}
 
 	if fix {
 		fmt.Println("🔧 Auto-fixing detected issues...")
 	}
 
-	return fmt.Errorf("enterprise auditing not yet implemented - coming in FASE 1.2!")
+	if len(errs) > 0 {
+		return errs[0]
+	}
+
+	if !security && !dependencies && complianceStd == "" && !fix {
+		return fmt.Errorf("no audit options selected. Try --compliance=sox or --security")
+	}
+
+	return nil
 }
 
 func runDeployCommand(cloud, scale, region, namespace string) error {
