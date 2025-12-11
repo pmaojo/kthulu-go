@@ -13,6 +13,7 @@ import (
 
 	"github.com/pmaojo/kthulu-go/backend/internal/infrastructure/ai"
 	"github.com/pmaojo/kthulu-go/backend/internal/usecase"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/parser"
 )
 
 const ApplyInstruction = "\n\nIMPORTANT: To apply changes, output the code using the following format for each file you want to create or update:\n<<<FILE:path/to/file>>>\n[file content]\n<<<END>>>\n"
@@ -176,7 +177,61 @@ func runAICommand(prompt, provider, model string, includeContext, apply bool, mo
 
 	if includeContext {
 		fmt.Println("📖 Analyzing project context...")
-		// TODO: Scan project files, analyze tags, understand architecture
+
+		// Use advanced integration for context analysis
+		integration := parser.NewAdvancedIntegration()
+		result, insights, _, err := integration.AnalyzeProjectWithInsights(".")
+
+		if err != nil {
+			// Fallback to basic context in usecase if advanced analysis fails
+			fmt.Printf("⚠️ Warning: Advanced context analysis failed (falling back to basic): %v\n", err)
+		} else {
+			// Construct advanced context summary
+			var sb strings.Builder
+			sb.WriteString("\n\n[Project Analysis Context]\n")
+
+			// Modules
+			if len(result.Modules) > 0 {
+				sb.WriteString("Modules:\n")
+				for _, mod := range result.Modules {
+					sb.WriteString(fmt.Sprintf("- %s (%d files)\n", mod.Name, len(mod.Files)))
+				}
+			}
+
+			// Architecture Patterns
+			if insights != nil && len(insights.Patterns) > 0 {
+				sb.WriteString("\nDetected Patterns:\n")
+				for _, p := range insights.Patterns {
+					if p.Confidence > 0.5 {
+						sb.WriteString(fmt.Sprintf("- %s (%.0f%%)\n", p.Name, p.Confidence*100))
+					}
+				}
+			}
+
+			// Metrics
+			metrics := integration.GetProjectMetrics()
+			if metrics != nil {
+				sb.WriteString("\nMetrics:\n")
+				sb.WriteString(fmt.Sprintf("- Total Files: %d\n", metrics.TotalFiles))
+				sb.WriteString(fmt.Sprintf("- Complexity Score: %.2f\n", metrics.ComplexityScore))
+			}
+
+			// Recommendations
+			recommendations := integration.GetRecommendations()
+			if len(recommendations) > 0 {
+				sb.WriteString("\nRecommendations:\n")
+				for i, rec := range recommendations {
+					if i >= 3 {
+						break
+					}
+					sb.WriteString(fmt.Sprintf("- %s: %s\n", rec.Type, rec.Message))
+				}
+			}
+
+			// Add to prompt and disable basic context in usecase to avoid duplication
+			prompt += sb.String()
+			includeContext = false
+		}
 	}
 
 	fmt.Println("🔮 Generating code...")
