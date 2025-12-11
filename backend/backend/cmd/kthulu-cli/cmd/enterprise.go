@@ -3,10 +3,9 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
 
+	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/deployment"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/compliance"
 	"github.com/spf13/cobra"
 )
 
@@ -131,8 +130,9 @@ func init() {
 	upgradeCmd.Flags().Bool("dry-run", false, "Preview changes without applying")
 }
 
-func runAuditCommand(compliance string, security, dependencies, fix bool) error {
+func runAuditCommand(complianceStd string, security, dependencies, fix bool) error {
 	fmt.Println("🔍 Enterprise Security Audit")
+	var errs []error
 
 	var errs []error
 
@@ -148,9 +148,41 @@ func runAuditCommand(compliance string, security, dependencies, fix bool) error 
 		}
 	}
 
-	if compliance != "" {
-		fmt.Printf("📋 Validating %s compliance...\n", compliance)
-		// TODO: Check compliance requirements
+	if complianceStd != "" {
+		fmt.Printf("📋 Validating %s compliance...\n", complianceStd)
+
+		cwd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("failed to get current working directory: %w", err)
+		}
+
+		report, err := compliance.Validate(complianceStd, cwd)
+		if err != nil {
+			return fmt.Errorf("compliance check failed: %w", err)
+		}
+
+		if report.Passed {
+			fmt.Printf("✅ %s Compliance Checks Passed\n", report.Standard)
+		} else {
+			fmt.Printf("❌ %s Compliance Checks Failed\n", report.Standard)
+		}
+
+		for _, check := range report.Checks {
+			icon := "✅"
+			status := "PASS"
+			if !check.Passed {
+				icon = "❌"
+				status = "FAIL"
+			}
+			fmt.Printf("  %s %-20s: %s\n", icon, check.Name, status)
+			if !check.Passed {
+				fmt.Printf("      Error: %v\n", check.Error)
+			}
+		}
+
+		if !report.Passed {
+			errs = append(errs, fmt.Errorf("%s compliance checks failed", complianceStd))
+		}
 	}
 
 	if fix {
@@ -223,6 +255,10 @@ func checkDependencyVulnerabilities() error {
 		return err
 	}
 
+	if !security && !dependencies && complianceStd == "" && !fix {
+		return fmt.Errorf("no audit options selected. Try --compliance=sox or --security")
+	}
+
 	return nil
 }
 
@@ -231,26 +267,46 @@ func runDeployCommand(cloud, scale, region, namespace string) error {
 
 	if cloud == "" {
 		fmt.Println("🔍 Auto-detecting best cloud provider...")
-		cloud = "aws" // Default
+		cloud = "kubernetes" // Default to generic k8s
 	}
 
-	fmt.Printf("☁️  Deploying to %s\n", cloud)
-
-	if region != "" {
-		fmt.Printf("🌍 Target region: %s\n", region)
+	manager, err := deployment.NewManager(cloud, region, namespace, scale)
+	if err != nil {
+		return fmt.Errorf("failed to initialize deployment manager: %w", err)
 	}
 
-	fmt.Printf("📈 Scaling: %s\n", scale)
-
-	// TODO:
 	// 1. Analyze project structure
-	// 2. Generate cloud-specific configs
-	// 3. Build container images
-	// 4. Deploy to target platform
-	// 5. Setup monitoring/logging
-	// 6. Configure auto-scaling
+	if err := manager.Analyze(); err != nil {
+		return fmt.Errorf("analysis failed: %w", err)
+	}
 
-	return fmt.Errorf("cloud deployment not yet implemented - coming in FASE 3!")
+	// 2. Generate cloud-specific configs
+	if err := manager.GenerateConfig(); err != nil {
+		return fmt.Errorf("config generation failed: %w", err)
+	}
+
+	// 3. Build container images
+	if err := manager.Build(); err != nil {
+		return fmt.Errorf("build failed: %w", err)
+	}
+
+	// 4. Deploy to target platform
+	if err := manager.Deploy(); err != nil {
+		return fmt.Errorf("deployment failed: %w", err)
+	}
+
+	// 5. Setup monitoring/logging
+	if err := manager.SetupMonitoring(); err != nil {
+		return fmt.Errorf("monitoring setup failed: %w", err)
+	}
+
+	// 6. Configure auto-scaling
+	if err := manager.ConfigureAutoScaling(); err != nil {
+		return fmt.Errorf("auto-scaling configuration failed: %w", err)
+	}
+
+	fmt.Println("\n✨ Deployment complete!")
+	return nil
 }
 
 func runStatusCommand(detailed, modules bool) error {

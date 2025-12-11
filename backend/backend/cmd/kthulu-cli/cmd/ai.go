@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -12,7 +13,10 @@ import (
 
 	"github.com/pmaojo/kthulu-go/backend/internal/infrastructure/ai"
 	"github.com/pmaojo/kthulu-go/backend/internal/usecase"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/parser"
 )
+
+const ApplyInstruction = "\n\nIMPORTANT: To apply changes, output the code using the following format for each file you want to create or update:\n<<<FILE:path/to/file>>>\n[file content]\n<<<END>>>\n"
 
 var aiCmd = &cobra.Command{
 	Use:   "ai [prompt]",
@@ -43,7 +47,9 @@ var aiFeatureCmd = &cobra.Command{
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		description := strings.Join(args, " ")
-		prompt := fmt.Sprintf("Generate a Gherkin feature file for: %s. \n\nIMPORTANT: Start the response with 'FILENAME: path/to/file.feature' on the first line, followed by the feature content.", description)
+		// Removed legacy format instruction. runAICommand will append new instructions if apply is set.
+		// Added extension hint.
+		prompt := fmt.Sprintf("Generate a Gherkin feature file for: %s. Ensure the filename ends with .feature.", description)
 
 		provider, _ := cmd.Flags().GetString("provider")
 		model, _ := cmd.Flags().GetString("model")
@@ -66,7 +72,9 @@ var aiStepsCmd = &cobra.Command{
 			return fmt.Errorf("failed to read feature file: %w", err)
 		}
 
-		prompt := fmt.Sprintf("Generate Go step definitions (godog) for the following feature file:\n\n%s\n\nIMPORTANT: Start the response with 'FILENAME: path/to/steps_test.go' on the first line, followed by the Go code.", string(content))
+		// Removed legacy format instruction. runAICommand will append new instructions if apply is set.
+		// Added extension hint.
+		prompt := fmt.Sprintf("Generate Go step definitions (godog) for the following feature file:\n\n%s\n\nEnsure the filename ends with _test.go.", string(content))
 
 		provider, _ := cmd.Flags().GetString("provider")
 		model, _ := cmd.Flags().GetString("model")
@@ -159,11 +167,71 @@ func runAICommand(prompt, provider, model string, includeContext, apply bool, mo
 	if mode != "" {
 		fmt.Printf("🎯 Mode: %s\n", mode)
 	}
+
+	// Append formatting instructions if applying changes
+	if apply {
+		prompt += ApplyInstruction
+	}
+
 	fmt.Printf("💭 Prompt: %s\n", prompt)
 
 	if includeContext {
 		fmt.Println("📖 Analyzing project context...")
-		// TODO: Scan project files, analyze tags, understand architecture
+
+		// Use advanced integration for context analysis
+		integration := parser.NewAdvancedIntegration()
+		result, insights, _, err := integration.AnalyzeProjectWithInsights(".")
+
+		if err != nil {
+			// Fallback to basic context in usecase if advanced analysis fails
+			fmt.Printf("⚠️ Warning: Advanced context analysis failed (falling back to basic): %v\n", err)
+		} else {
+			// Construct advanced context summary
+			var sb strings.Builder
+			sb.WriteString("\n\n[Project Analysis Context]\n")
+
+			// Modules
+			if len(result.Modules) > 0 {
+				sb.WriteString("Modules:\n")
+				for _, mod := range result.Modules {
+					sb.WriteString(fmt.Sprintf("- %s (%d files)\n", mod.Name, len(mod.Files)))
+				}
+			}
+
+			// Architecture Patterns
+			if insights != nil && len(insights.Patterns) > 0 {
+				sb.WriteString("\nDetected Patterns:\n")
+				for _, p := range insights.Patterns {
+					if p.Confidence > 0.5 {
+						sb.WriteString(fmt.Sprintf("- %s (%.0f%%)\n", p.Name, p.Confidence*100))
+					}
+				}
+			}
+
+			// Metrics
+			metrics := integration.GetProjectMetrics()
+			if metrics != nil {
+				sb.WriteString("\nMetrics:\n")
+				sb.WriteString(fmt.Sprintf("- Total Files: %d\n", metrics.TotalFiles))
+				sb.WriteString(fmt.Sprintf("- Complexity Score: %.2f\n", metrics.ComplexityScore))
+			}
+
+			// Recommendations
+			recommendations := integration.GetRecommendations()
+			if len(recommendations) > 0 {
+				sb.WriteString("\nRecommendations:\n")
+				for i, rec := range recommendations {
+					if i >= 3 {
+						break
+					}
+					sb.WriteString(fmt.Sprintf("- %s: %s\n", rec.Type, rec.Message))
+				}
+			}
+
+			// Add to prompt and disable basic context in usecase to avoid duplication
+			prompt += sb.String()
+			includeContext = false
+		}
 	}
 
 	fmt.Println("🔮 Generating code...")
@@ -226,34 +294,61 @@ func runAICommand(prompt, provider, model string, includeContext, apply bool, mo
 	fmt.Println("=====================")
 
 	if apply {
-		// Parse FILENAME if present
-		lines := strings.Split(res, "\n")
-		var filename string
-		var content string
+		fmt.Println("✅ Applying changes...")
 
-		if len(lines) > 0 && strings.HasPrefix(strings.TrimSpace(lines[0]), "FILENAME:") {
-			filename = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(lines[0]), "FILENAME:"))
-			content = strings.Join(lines[1:], "\n")
+		// Regex for new block format
+		// Matches <<<FILE:path>>> content <<<END>>>
+		// Uses ?s to allow . to match newlines
+		blockRegex := regexp.MustCompile(`(?s)<<<FILE:(.*?)>>>(.*?)<<<END>>>`)
+		matches := blockRegex.FindAllStringSubmatch(res, -1)
+
+		appliedCount := 0
+
+		if len(matches) > 0 {
+			for _, match := range matches {
+				filename := strings.TrimSpace(match[1])
+				content := match[2]
+
+				// Clean path and check for security issues
+				filename = filepath.Clean(filename)
+				if strings.Contains(filename, "..") || filepath.IsAbs(filename) {
+					fmt.Printf("⚠️ Skipping unsafe path: %s\n", filename)
+					continue
+				}
+
+				// Trim leading/trailing newlines from format extraction
+				content = strings.TrimPrefix(content, "\n")
+				content = strings.TrimSuffix(content, "\n")
+				// Ensure single trailing newline
+				content += "\n"
+
+				if filename != "" {
+					fmt.Printf("📝 Writing to %s...\n", filename)
+
+					// Ensure directory exists
+					dir := filepath.Dir(filename)
+					if err := os.MkdirAll(dir, 0755); err != nil {
+						fmt.Printf("❌ Failed to create directory %s: %v\n", dir, err)
+						continue
+					}
+
+					// Write file
+					if err := os.WriteFile(filename, []byte(content), 0644); err != nil {
+						fmt.Printf("❌ Failed to write file %s: %v\n", filename, err)
+						continue
+					}
+					appliedCount++
+				}
+			}
 		}
 
-		if filename != "" {
-			fmt.Printf("✅ Applying changes to %s...\n", filename)
-
-			// Ensure directory exists
-			dir := filepath.Dir(filename)
-			if err := os.MkdirAll(dir, 0755); err != nil {
-				return fmt.Errorf("failed to create directory %s: %w", dir, err)
-			}
-
-			// Write file
-			if err := os.WriteFile(filename, []byte(content), 0644); err != nil {
-				return fmt.Errorf("failed to write file %s: %w", filename, err)
-			}
-			fmt.Println("🎉 File created successfully!")
+		if appliedCount > 0 {
+			fmt.Printf("🎉 Successfully applied %d file(s)!\n", appliedCount)
 		} else {
-			fmt.Println("⚠️  Could not detect 'FILENAME:' marker in AI response. Skipping auto-apply.")
-			fmt.Println("Tip: Copy the content manually or try again.")
+			fmt.Println("⚠️  Could not detect file markers in AI response. Skipping auto-apply.")
+			fmt.Println("Tip: AI may not have followed the format instructions. Try again.")
 		}
+
 	} else {
 		fmt.Println("📋 Preview mode - use --apply to execute changes")
 	}
