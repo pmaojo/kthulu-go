@@ -224,33 +224,6 @@ func (r *ProductRepository) List(ctx context.Context, organizationID uint, filte
 			return nil, 0, fmt.Errorf("failed to scan product: %w", err)
 		}
 
-		// Load related data if requested
-		if filters.IncludeVariants {
-			variants, err := r.GetVariantsByProductID(ctx, product.ID)
-			if err != nil {
-				r.logger.Error("Failed to load product variants", "error", err, "productId", product.ID)
-			} else {
-				// Convert []*domain.ProductVariant to []domain.ProductVariant
-				product.Variants = make([]domain.ProductVariant, len(variants))
-				for i, variant := range variants {
-					product.Variants[i] = *variant
-				}
-			}
-		}
-
-		if filters.IncludePrices {
-			prices, err := r.GetPricesByProductID(ctx, product.ID)
-			if err != nil {
-				r.logger.Error("Failed to load product prices", "error", err, "productId", product.ID)
-			} else {
-				// Convert []*domain.ProductPrice to []domain.ProductPrice
-				product.Prices = make([]domain.ProductPrice, len(prices))
-				for i, price := range prices {
-					product.Prices[i] = *price
-				}
-			}
-		}
-
 		products = append(products, product)
 	}
 
@@ -258,7 +231,135 @@ func (r *ProductRepository) List(ctx context.Context, organizationID uint, filte
 		return nil, 0, fmt.Errorf("failed to iterate products: %w", err)
 	}
 
+	// Bulk load related data if requested
+	if len(products) > 0 {
+		productIDs := make([]uint, len(products))
+		productMap := make(map[uint]*domain.Product)
+		for i, p := range products {
+			productIDs[i] = p.ID
+			productMap[p.ID] = p
+		}
+
+		if filters.IncludeVariants {
+			if err := r.loadVariantsForProducts(ctx, productIDs, productMap); err != nil {
+				r.logger.Error("Failed to bulk load product variants", "error", err)
+			}
+		}
+
+		if filters.IncludePrices {
+			if err := r.loadPricesForProducts(ctx, productIDs, productMap); err != nil {
+				r.logger.Error("Failed to bulk load product prices", "error", err)
+			}
+		}
+	}
+
 	return products, total, nil
+}
+
+// loadVariantsForProducts loads variants for a list of product IDs and assigns them to the products
+func (r *ProductRepository) loadVariantsForProducts(ctx context.Context, productIDs []uint, productMap map[uint]*domain.Product) error {
+	placeholders := make([]string, len(productIDs))
+	args := make([]interface{}, len(productIDs))
+	for i, id := range productIDs {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(`
+		SELECT id, product_id, sku, name, description, attributes, weight,
+			   dimensions, barcode, is_active, created_at, updated_at
+		FROM product_variants
+		WHERE product_id IN (%s)
+		ORDER BY created_at ASC`, strings.Join(placeholders, ","))
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to query product variants: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		variant := &domain.ProductVariant{}
+		var attributesJSON []byte
+
+		err := rows.Scan(
+			&variant.ID, &variant.ProductID, &variant.SKU, &variant.Name,
+			&variant.Description, &attributesJSON, &variant.Weight,
+			&variant.Dimensions, &variant.Barcode, &variant.IsActive,
+			&variant.CreatedAt, &variant.UpdatedAt,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to scan product variant: %w", err)
+		}
+
+		// Unmarshal attributes
+		if len(attributesJSON) > 0 {
+			if err := json.Unmarshal(attributesJSON, &variant.Attributes); err != nil {
+				// Log but don't fail
+				r.logger.Error("Failed to unmarshal variant attributes", "error", err, "variantId", variant.ID)
+				variant.Attributes = make(map[string]interface{})
+			}
+		}
+
+		if product, ok := productMap[variant.ProductID]; ok {
+			product.Variants = append(product.Variants, *variant)
+		}
+	}
+
+	if err = rows.Err(); err != nil {
+		return fmt.Errorf("failed to iterate product variants: %w", err)
+	}
+
+	return nil
+}
+
+// loadPricesForProducts loads prices for a list of product IDs and assigns them to the products
+func (r *ProductRepository) loadPricesForProducts(ctx context.Context, productIDs []uint, productMap map[uint]*domain.Product) error {
+	placeholders := make([]string, len(productIDs))
+	args := make([]interface{}, len(productIDs))
+	for i, id := range productIDs {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(`
+		SELECT id, product_id, product_variant_id, price_type, currency, amount,
+			   min_quantity, max_quantity, valid_from, valid_until,
+			   is_active, created_at, updated_at
+		FROM product_prices
+		WHERE product_id IN (%s)
+		ORDER BY price_type, min_quantity`, strings.Join(placeholders, ","))
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to query product prices: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		price := &domain.ProductPrice{}
+		err := rows.Scan(
+			&price.ID, &price.ProductID, &price.ProductVariantID, &price.PriceType,
+			&price.Currency, &price.Amount, &price.MinQuantity, &price.MaxQuantity,
+			&price.ValidFrom, &price.ValidUntil, &price.IsActive,
+			&price.CreatedAt, &price.UpdatedAt,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to scan product price: %w", err)
+		}
+
+		if price.ProductID != nil {
+			if product, ok := productMap[*price.ProductID]; ok {
+				product.Prices = append(product.Prices, *price)
+			}
+		}
+	}
+
+	if err = rows.Err(); err != nil {
+		return fmt.Errorf("failed to iterate product prices: %w", err)
+	}
+
+	return nil
 }
 
 // buildWhereClause builds the WHERE clause for product filtering
