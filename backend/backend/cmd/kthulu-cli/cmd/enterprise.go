@@ -2,6 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -130,14 +134,18 @@ func init() {
 func runAuditCommand(compliance string, security, dependencies, fix bool) error {
 	fmt.Println("🔍 Enterprise Security Audit")
 
+	var errs []error
+
 	if security {
 		fmt.Println("🔒 Running SAST security scan...")
 		// TODO: Integrate with security scanners
 	}
 
 	if dependencies {
-		fmt.Println("📦 Checking dependency vulnerabilities...")
-		// TODO: Check Go mod dependencies
+		if err := checkDependencyVulnerabilities(); err != nil {
+			fmt.Printf("❌ Dependency check failed: %v\n", err)
+			errs = append(errs, err)
+		}
 	}
 
 	if compliance != "" {
@@ -149,7 +157,73 @@ func runAuditCommand(compliance string, security, dependencies, fix bool) error 
 		fmt.Println("🔧 Auto-fixing detected issues...")
 	}
 
-	return fmt.Errorf("enterprise auditing not yet implemented - coming in FASE 1.2!")
+	if len(errs) > 0 {
+		return fmt.Errorf("audit failed with %d errors", len(errs))
+	}
+
+	return nil
+}
+
+func checkDependencyVulnerabilities() error {
+	fmt.Println("📦 Checking dependency vulnerabilities...")
+
+	binName := "govulncheck"
+
+	// Check if in PATH
+	if path, err := exec.LookPath(binName); err == nil {
+		binName = path
+	} else {
+		// Determine installation path (GOBIN or GOPATH/bin)
+		installPath := ""
+
+		cmdGobin := exec.Command("go", "env", "GOBIN")
+		if out, err := cmdGobin.Output(); err == nil && strings.TrimSpace(string(out)) != "" {
+			installPath = strings.TrimSpace(string(out))
+		} else {
+			// Fallback to GOPATH/bin
+			goPath := os.Getenv("GOPATH")
+			if goPath == "" {
+				cmd := exec.Command("go", "env", "GOPATH")
+				if out, err := cmd.Output(); err == nil {
+					goPath = strings.TrimSpace(string(out))
+				}
+			}
+			if goPath == "" {
+				home, _ := os.UserHomeDir()
+				goPath = filepath.Join(home, "go")
+			}
+			installPath = filepath.Join(goPath, "bin")
+		}
+
+		candidate := filepath.Join(installPath, "govulncheck")
+		if _, err := os.Stat(candidate); err == nil {
+			binName = candidate
+		} else {
+			// Install
+			fmt.Println("⚠️  govulncheck not found. Installing...")
+			cmd := exec.Command("go", "install", "golang.org/x/vuln/cmd/govulncheck@latest")
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("failed to install govulncheck: %w", err)
+			}
+			binName = candidate
+		}
+	}
+
+	cmd := exec.Command(binName, "./...")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	fmt.Println("🚀 Running govulncheck...")
+	if err := cmd.Run(); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 3 {
+			return fmt.Errorf("vulnerabilities found")
+		}
+		return err
+	}
+
+	return nil
 }
 
 func runDeployCommand(cloud, scale, region, namespace string) error {
