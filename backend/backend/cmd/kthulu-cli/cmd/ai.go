@@ -14,6 +14,7 @@ import (
 	"github.com/pmaojo/kthulu-go/backend/internal/infrastructure/ai"
 	"github.com/pmaojo/kthulu-go/backend/internal/usecase"
 	"github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/parser"
+	"github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/compliance"
 )
 
 const ApplyInstruction = "\n\nIMPORTANT: To apply changes, output the code using the following format for each file you want to create or update:\n<<<FILE:path/to/file>>>\n[file content]\n<<<END>>>\n"
@@ -91,10 +92,10 @@ var reviewCmd = &cobra.Command{
 	Long: `Automatically review your code and apply fixes for security, performance, and best practices.
 
 Examples:
-  kthulu review --fix-security
-  kthulu review --fix-performance  
-  kthulu review --fix-all
-  kthulu review --compliance=sox`,
+  kthulu ai review --fix-security
+  kthulu ai review --fix-performance
+  kthulu ai review --fix-all
+  kthulu ai review --compliance=sox`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		fixSecurity, _ := cmd.Flags().GetBool("fix-security")
 		fixPerf, _ := cmd.Flags().GetBool("fix-performance")
@@ -134,6 +135,7 @@ func init() {
 	// Register subcommands
 	aiCmd.AddCommand(aiFeatureCmd)
 	aiCmd.AddCommand(aiStepsCmd)
+	aiCmd.AddCommand(reviewCmd)
 
 	// Propagate flags to subcommands (optional, but good practice if they share flags)
 	// We are re-declaring reading them from parent flags in RunE, or we can copy flags.
@@ -356,28 +358,86 @@ func runAICommand(prompt, provider, model string, includeContext, apply bool, mo
 	return nil
 }
 
-func runReviewCommand(fixSecurity, fixPerf, fixAll bool, compliance string) error {
+func runReviewCommand(fixSecurity, fixPerf, fixAll bool, complianceStd string) error {
 	fmt.Println("📝 AI Code Review")
-
 	fmt.Println("🔍 Scanning codebase...")
-	// TODO: Scan all Go files
-	// TODO: Run security analysis
-	// TODO: Run performance analysis
-	// TODO: Check compliance requirements
 
+	// Use advanced integration for context analysis
+	integration := parser.NewAdvancedIntegration()
+	result, insights, _, err := integration.AnalyzeProjectWithInsights(".")
+	if err != nil {
+		return fmt.Errorf("analysis failed: %w", err)
+	}
+
+	// 1. Scan Results
+	fmt.Println("\n[Codebase Overview]")
+	if result != nil {
+		fmt.Printf("📦 Modules: %d\n", len(result.Modules))
+		metrics := integration.GetProjectMetrics()
+		if metrics != nil {
+			fmt.Printf("📄 Files: %d\n", metrics.TotalFiles)
+			fmt.Printf("🧠 Complexity Score: %.2f\n", metrics.ComplexityScore)
+		}
+	}
+
+	// 2. Security Analysis
+	fmt.Println("\n[Security Analysis]")
+	securityIssues := 0
+	for _, rec := range insights.Recommendations {
+		if strings.Contains(strings.ToLower(rec.Type), "security") || strings.Contains(strings.ToLower(rec.Message), "security") {
+			securityIssues++
+			fmt.Printf("⚠️  %s (%s): %s\n", rec.Type, rec.Severity, rec.Message)
+		}
+	}
+	if securityIssues == 0 {
+		fmt.Println("✅ No immediate security issues detected in static analysis.")
+	}
+
+	// 3. Performance Analysis
+	fmt.Println("\n[Performance Analysis]")
+	perfIssues := 0
+	for _, rec := range insights.Recommendations {
+		if strings.Contains(strings.ToLower(rec.Type), "performance") || strings.Contains(strings.ToLower(rec.Message), "performance") {
+			perfIssues++
+			fmt.Printf("⚡ %s (%s): %s\n", rec.Type, rec.Severity, rec.Message)
+		}
+	}
+	if perfIssues == 0 {
+		fmt.Println("✅ No immediate performance bottlenecks detected.")
+	}
+
+	// 4. Compliance Checks
+	if complianceStd != "" {
+		fmt.Printf("\n[Compliance Check: %s]\n", complianceStd)
+		report, err := compliance.Validate(complianceStd, ".")
+		if err != nil {
+			fmt.Printf("❌ Compliance check failed: %v\n", err)
+		} else {
+			if report.Passed {
+				fmt.Printf("✅ %s Compliance Passed\n", report.Standard)
+			} else {
+				fmt.Printf("❌ %s Compliance Failed\n", report.Standard)
+			}
+			for _, check := range report.Checks {
+				icon := "✅"
+				if !check.Passed {
+					icon = "❌"
+				}
+				fmt.Printf("  %s %s\n", icon, check.Name)
+			}
+		}
+	}
+
+	// Fix Placeholders
 	if fixSecurity || fixAll {
-		fmt.Println("🔒 Fixing security issues...")
+		fmt.Println("\n🔒 Fixing security issues... (Not yet implemented)")
 	}
 
 	if fixPerf || fixAll {
-		fmt.Println("⚡ Fixing performance issues...")
+		fmt.Println("⚡ Fixing performance issues... (Not yet implemented)")
 	}
 
-	if compliance != "" {
-		fmt.Printf("📋 Checking %s compliance...\n", compliance)
-	}
-
-	return fmt.Errorf("code review not yet implemented - coming in FASE 1.2!")
+	return nil
 }
 
 func runOptimizeCommand(target string, benchmark bool) error {

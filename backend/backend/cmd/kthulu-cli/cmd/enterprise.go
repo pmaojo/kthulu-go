@@ -3,6 +3,9 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 
 	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/deployment"
 	"github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/compliance"
@@ -134,15 +137,13 @@ func runAuditCommand(complianceStd string, security, dependencies, fix bool) err
 	fmt.Println("🔍 Enterprise Security Audit")
 	var errs []error
 
-	var errs []error
-
 	if security {
 		fmt.Println("🔒 Running SAST security scan...")
 		// TODO: Integrate with security scanners
 	}
 
 	if dependencies {
-		if err := checkDependencyVulnerabilities(); err != nil {
+		if err := checkDependencyVulnerabilities(complianceStd, security, dependencies, fix); err != nil {
 			fmt.Printf("❌ Dependency check failed: %v\n", err)
 			errs = append(errs, err)
 		}
@@ -196,7 +197,7 @@ func runAuditCommand(complianceStd string, security, dependencies, fix bool) err
 	return nil
 }
 
-func checkDependencyVulnerabilities() error {
+func checkDependencyVulnerabilities(complianceStd string, security, dependencies, fix bool) error {
 	fmt.Println("📦 Checking dependency vulnerabilities...")
 
 	binName := "govulncheck"
