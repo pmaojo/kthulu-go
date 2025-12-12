@@ -149,7 +149,7 @@ func runAuditCommand(complianceStd string, security, dependencies, fix bool) err
 	}
 
 	if dependencies {
-		if err := checkDependencyVulnerabilities(complianceStd, security, dependencies, fix); err != nil {
+		if err := checkDependencyVulnerabilities(); err != nil {
 			fmt.Printf("❌ Dependency check failed: %v\n", err)
 			errs = append(errs, err)
 		}
@@ -203,8 +203,6 @@ func runAuditCommand(complianceStd string, security, dependencies, fix bool) err
 	return nil
 }
 
-func checkDependencyVulnerabilities(complianceStd string, security, dependencies, fix bool) error {
-	fmt.Println("📦 Checking dependency vulnerabilities...")
 func checkSAST() error {
 	binName, err := ensureToolInstalled("gosec", "github.com/securego/gosec/v2/cmd/gosec@latest")
 	if err != nil {
