@@ -134,8 +134,12 @@ func TestAISuggestionFlow(t *testing.T) {
 // TestProviderSwitching tests switching between providers
 func TestProviderSwitching(t *testing.T) {
 	logger := zap.NewNop()
-	mockClient := ai.NewMockClientWithCache(100, 1*time.Minute)
-	aiUC := usecase.NewAIUseCase(mockClient)
+
+	mpClient := ai.NewMultiProviderClient()
+	mpClient.RegisterProvider("litellm", ai.NewMockClientWithCache(10, time.Minute))
+	mpClient.RegisterProvider("gemini", ai.NewMockClientWithCache(10, time.Minute))
+
+	aiUC := usecase.NewAIUseCase(mpClient)
 	handler := NewAIHandler(aiUC, logger)
 
 	validProviders := []string{"litellm", "gemini"}
