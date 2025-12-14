@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/pmaojo/kthulu-go/backend/core"
 	"github.com/pmaojo/kthulu-go/backend/internal/domain"
 	"github.com/pmaojo/kthulu-go/backend/internal/domain/repository"
@@ -1007,68 +1009,84 @@ func (r *ProductRepository) BulkDelete(ctx context.Context, organizationID uint,
 
 // GetProductStats retrieves product statistics for an organization
 func (r *ProductRepository) GetProductStats(ctx context.Context, organizationID uint) (*repository.ProductStats, error) {
-	query := `
-		SELECT 
-			COUNT(*) as total_products,
-			COUNT(CASE WHEN is_active = true THEN 1 END) as active_products,
-			COUNT(CASE WHEN is_active = false THEN 1 END) as inactive_products,
-			COUNT(CASE WHEN is_trackable = true THEN 1 END) as trackable_products,
-			COUNT(CASE WHEN created_at >= NOW() - INTERVAL '30 days' THEN 1 END) as recent_products,
-			COUNT(DISTINCT category) as total_categories,
-			COUNT(DISTINCT brand) as total_brands
-		FROM products 
-		WHERE organization_id = $1`
-
 	stats := &repository.ProductStats{}
-	err := r.db.QueryRowContext(ctx, query, organizationID).Scan(
-		&stats.TotalProducts, &stats.ActiveProducts, &stats.InactiveProducts,
-		&stats.TrackableProducts, &stats.RecentProducts, &stats.TotalCategories,
-		&stats.TotalBrands,
-	)
+	g, ctx := errgroup.WithContext(ctx)
 
-	if err != nil {
-		r.logger.Error("Failed to get product stats", "error", err, "organizationId", organizationID)
-		return nil, fmt.Errorf("failed to get product stats: %w", err)
-	}
+	// 1. Get main product stats
+	g.Go(func() error {
+		query := `
+			SELECT
+				COUNT(*) as total_products,
+				COUNT(CASE WHEN is_active = true THEN 1 END) as active_products,
+				COUNT(CASE WHEN is_active = false THEN 1 END) as inactive_products,
+				COUNT(CASE WHEN is_trackable = true THEN 1 END) as trackable_products,
+				COUNT(CASE WHEN created_at >= NOW() - INTERVAL '30 days' THEN 1 END) as recent_products,
+				COUNT(DISTINCT category) as total_categories,
+				COUNT(DISTINCT brand) as total_brands
+			FROM products
+			WHERE organization_id = $1`
 
-	// Get variant count
-	variantQuery := `
-		SELECT COUNT(*) 
-		FROM product_variants pv
-		JOIN products p ON pv.product_id = p.id
-		WHERE p.organization_id = $1`
+		err := r.db.QueryRowContext(ctx, query, organizationID).Scan(
+			&stats.TotalProducts, &stats.ActiveProducts, &stats.InactiveProducts,
+			&stats.TrackableProducts, &stats.RecentProducts, &stats.TotalCategories,
+			&stats.TotalBrands,
+		)
 
-	err = r.db.QueryRowContext(ctx, variantQuery, organizationID).Scan(&stats.TotalVariants)
-	if err != nil {
-		r.logger.Error("Failed to get variant count", "error", err, "organizationId", organizationID)
-		// Don't fail the entire operation for this
-		stats.TotalVariants = 0
-	}
+		if err != nil {
+			r.logger.Error("Failed to get product stats", "error", err, "organizationId", organizationID)
+			return fmt.Errorf("failed to get product stats: %w", err)
+		}
+		return nil
+	})
 
-	// Get price statistics
-	priceQuery := `
-		SELECT 
-			COALESCE(AVG(pp.amount), 0) as avg_price,
-			COALESCE(MAX(pp.amount), 0) as max_price,
-			COALESCE(MIN(pp.amount), 0) as min_price
-		FROM product_prices pp
-		LEFT JOIN products p ON pp.product_id = p.id
-		LEFT JOIN product_variants pv ON pp.product_variant_id = pv.id
-		LEFT JOIN products p2 ON pv.product_id = p2.id
-		WHERE (p.organization_id = $1 OR p2.organization_id = $1)
-		  AND pp.is_active = true
-		  AND pp.price_type = 'base'`
+	// 2. Get variant count
+	g.Go(func() error {
+		variantQuery := `
+			SELECT COUNT(*)
+			FROM product_variants pv
+			JOIN products p ON pv.product_id = p.id
+			WHERE p.organization_id = $1`
 
-	err = r.db.QueryRowContext(ctx, priceQuery, organizationID).Scan(
-		&stats.AveragePrice, &stats.HighestPrice, &stats.LowestPrice,
-	)
+		err := r.db.QueryRowContext(ctx, variantQuery, organizationID).Scan(&stats.TotalVariants)
+		if err != nil && ctx.Err() == nil {
+			r.logger.Error("Failed to get variant count", "error", err, "organizationId", organizationID)
+			// Don't fail the entire operation for this, just set to 0
+			stats.TotalVariants = 0
+		}
+		return nil
+	})
 
-	if err != nil {
-		r.logger.Error("Failed to get price stats", "error", err, "organizationId", organizationID)
-		// Don't fail the entire operation for this
-		stats.AveragePrice = 0
-		stats.HighestPrice = 0
-		stats.LowestPrice = 0
+	// 3. Get price statistics
+	g.Go(func() error {
+		priceQuery := `
+			SELECT
+				COALESCE(AVG(pp.amount), 0) as avg_price,
+				COALESCE(MAX(pp.amount), 0) as max_price,
+				COALESCE(MIN(pp.amount), 0) as min_price
+			FROM product_prices pp
+			LEFT JOIN products p ON pp.product_id = p.id
+			LEFT JOIN product_variants pv ON pp.product_variant_id = pv.id
+			LEFT JOIN products p2 ON pv.product_id = p2.id
+			WHERE (p.organization_id = $1 OR p2.organization_id = $1)
+			  AND pp.is_active = true
+			  AND pp.price_type = 'base'`
+
+		err := r.db.QueryRowContext(ctx, priceQuery, organizationID).Scan(
+			&stats.AveragePrice, &stats.HighestPrice, &stats.LowestPrice,
+		)
+
+		if err != nil && ctx.Err() == nil {
+			r.logger.Error("Failed to get price stats", "error", err, "organizationId", organizationID)
+			// Don't fail the entire operation for this, just set to 0
+			stats.AveragePrice = 0
+			stats.HighestPrice = 0
+			stats.LowestPrice = 0
+		}
+		return nil
+	})
+
+	if err := g.Wait(); err != nil {
+		return nil, err
 	}
 
 	return stats, nil
