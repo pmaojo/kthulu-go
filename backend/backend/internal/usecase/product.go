@@ -173,23 +173,14 @@ func (uc *ProductUseCase) ListProducts(ctx context.Context, organizationID uint,
 		return nil, err
 	}
 
+	// The repository handles batch loading of related data (variants, prices) efficiently
 	products, total, err := uc.productRepo.List(ctx, organizationID, filters)
 	if err != nil {
 		uc.logger.Error("Failed to list products", zap.Error(err))
 		return nil, fmt.Errorf("failed to list products: %w", err)
 	}
 
-	// Load related data if requested
-	if filters.IncludeVariants || filters.IncludePrices {
-		for _, product := range products {
-			if err := uc.loadProductRelations(ctx, product); err != nil {
-				uc.logger.Warn("Failed to load product relations",
-					zap.Uint("product_id", product.ID),
-					zap.Error(err),
-				)
-			}
-		}
-	}
+	// Previously, we had a loop here to load relations manually (N+1), but it's now handled by the repository
 
 	return &ProductListResponse{
 		Products:   products,

@@ -315,11 +315,45 @@ func (r *ProductRepository) loadVariantsForProducts(ctx context.Context, product
 
 // loadPricesForProducts loads prices for a list of product IDs and assigns them to the products
 func (r *ProductRepository) loadPricesForProducts(ctx context.Context, productIDs []uint, productMap map[uint]*domain.Product) error {
-	placeholders := make([]string, len(productIDs))
-	args := make([]interface{}, len(productIDs))
-	for i, id := range productIDs {
-		placeholders[i] = fmt.Sprintf("$%d", i+1)
-		args[i] = id
+	// Map variant IDs to pointers of the variants in the product structs.
+	// This allows O(1) lookup when assigning prices to variants.
+	variantMap := make(map[uint]*domain.ProductVariant)
+	var variantIDs []uint
+
+	for _, product := range productMap {
+		// Use index iteration to get pointers to the actual slice elements.
+		// These pointers are safe to store because product.Variants slice capacity
+		// is fixed for this operation and no appending happens here.
+		for i := range product.Variants {
+			v := &product.Variants[i]
+			variantMap[v.ID] = v
+			variantIDs = append(variantIDs, v.ID)
+		}
+	}
+
+	args := make([]interface{}, 0, len(productIDs)+len(variantIDs))
+	var whereConditions []string
+
+	if len(productIDs) > 0 {
+		placeholders := make([]string, len(productIDs))
+		for i, id := range productIDs {
+			placeholders[i] = fmt.Sprintf("$%d", len(args)+1)
+			args = append(args, id)
+		}
+		whereConditions = append(whereConditions, fmt.Sprintf("product_id IN (%s)", strings.Join(placeholders, ",")))
+	}
+
+	if len(variantIDs) > 0 {
+		placeholders := make([]string, len(variantIDs))
+		for i, id := range variantIDs {
+			placeholders[i] = fmt.Sprintf("$%d", len(args)+1)
+			args = append(args, id)
+		}
+		whereConditions = append(whereConditions, fmt.Sprintf("product_variant_id IN (%s)", strings.Join(placeholders, ",")))
+	}
+
+	if len(whereConditions) == 0 {
+		return nil
 	}
 
 	query := fmt.Sprintf(`
@@ -327,8 +361,8 @@ func (r *ProductRepository) loadPricesForProducts(ctx context.Context, productID
 			   min_quantity, max_quantity, valid_from, valid_until,
 			   is_active, created_at, updated_at
 		FROM product_prices
-		WHERE product_id IN (%s)
-		ORDER BY price_type, min_quantity`, strings.Join(placeholders, ","))
+		WHERE %s
+		ORDER BY price_type, min_quantity`, strings.Join(whereConditions, " OR "))
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -351,6 +385,10 @@ func (r *ProductRepository) loadPricesForProducts(ctx context.Context, productID
 		if price.ProductID != nil {
 			if product, ok := productMap[*price.ProductID]; ok {
 				product.Prices = append(product.Prices, *price)
+			}
+		} else if price.ProductVariantID != nil {
+			if variant, ok := variantMap[*price.ProductVariantID]; ok {
+				variant.Prices = append(variant.Prices, *price)
 			}
 		}
 	}
