@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/pmaojo/kthulu-go/backend/core"
 	"github.com/pmaojo/kthulu-go/backend/internal/domain"
 	"github.com/pmaojo/kthulu-go/backend/internal/domain/repository"
@@ -1045,46 +1047,56 @@ func (r *ProductRepository) BulkDelete(ctx context.Context, organizationID uint,
 
 // GetProductStats retrieves product statistics for an organization
 func (r *ProductRepository) GetProductStats(ctx context.Context, organizationID uint) (*repository.ProductStats, error) {
-	query := `
+	stats := &repository.ProductStats{}
+	g, ctx := errgroup.WithContext(ctx)
+
+	// 1. Get main product stats
+	g.Go(func() error {
+		query := `
 		SELECT 
 			COUNT(*) as total_products,
 			COUNT(CASE WHEN is_active = true THEN 1 END) as active_products,
 			COUNT(CASE WHEN is_active = false THEN 1 END) as inactive_products,
 			COUNT(CASE WHEN is_trackable = true THEN 1 END) as trackable_products,
-			COUNT(CASE WHEN created_at >= NOW() - INTERVAL '30 days' THEN 1 END) as recent_products,
+			COUNT(CASE WHEN created_at >= date('now', '-30 days') THEN 1 END) as recent_products,
 			COUNT(DISTINCT category) as total_categories,
 			COUNT(DISTINCT brand) as total_brands
 		FROM products 
 		WHERE organization_id = $1`
 
-	stats := &repository.ProductStats{}
-	err := r.db.QueryRowContext(ctx, query, organizationID).Scan(
-		&stats.TotalProducts, &stats.ActiveProducts, &stats.InactiveProducts,
-		&stats.TrackableProducts, &stats.RecentProducts, &stats.TotalCategories,
-		&stats.TotalBrands,
-	)
+		err := r.db.QueryRowContext(ctx, query, organizationID).Scan(
+			&stats.TotalProducts, &stats.ActiveProducts, &stats.InactiveProducts,
+			&stats.TrackableProducts, &stats.RecentProducts, &stats.TotalCategories,
+			&stats.TotalBrands,
+		)
 
-	if err != nil {
-		r.logger.Error("Failed to get product stats", "error", err, "organizationId", organizationID)
-		return nil, fmt.Errorf("failed to get product stats: %w", err)
-	}
+		if err != nil {
+			r.logger.Error("Failed to get product stats", "error", err, "organizationId", organizationID)
+			return fmt.Errorf("failed to get product stats: %w", err)
+		}
+		return nil
+	})
 
-	// Get variant count
-	variantQuery := `
+	// 2. Get variant count
+	g.Go(func() error {
+		variantQuery := `
 		SELECT COUNT(*) 
 		FROM product_variants pv
 		JOIN products p ON pv.product_id = p.id
 		WHERE p.organization_id = $1`
 
-	err = r.db.QueryRowContext(ctx, variantQuery, organizationID).Scan(&stats.TotalVariants)
-	if err != nil {
-		r.logger.Error("Failed to get variant count", "error", err, "organizationId", organizationID)
-		// Don't fail the entire operation for this
-		stats.TotalVariants = 0
-	}
+		err := r.db.QueryRowContext(ctx, variantQuery, organizationID).Scan(&stats.TotalVariants)
+		if err != nil {
+			r.logger.Error("Failed to get variant count", "error", err, "organizationId", organizationID)
+			// Don't fail the entire operation for this
+			stats.TotalVariants = 0
+		}
+		return nil
+	})
 
-	// Get price statistics
-	priceQuery := `
+	// 3. Get price statistics
+	g.Go(func() error {
+		priceQuery := `
 		SELECT 
 			COALESCE(AVG(pp.amount), 0) as avg_price,
 			COALESCE(MAX(pp.amount), 0) as max_price,
@@ -1097,16 +1109,22 @@ func (r *ProductRepository) GetProductStats(ctx context.Context, organizationID 
 		  AND pp.is_active = true
 		  AND pp.price_type = 'base'`
 
-	err = r.db.QueryRowContext(ctx, priceQuery, organizationID).Scan(
-		&stats.AveragePrice, &stats.HighestPrice, &stats.LowestPrice,
-	)
+		err := r.db.QueryRowContext(ctx, priceQuery, organizationID).Scan(
+			&stats.AveragePrice, &stats.HighestPrice, &stats.LowestPrice,
+		)
 
-	if err != nil {
-		r.logger.Error("Failed to get price stats", "error", err, "organizationId", organizationID)
-		// Don't fail the entire operation for this
-		stats.AveragePrice = 0
-		stats.HighestPrice = 0
-		stats.LowestPrice = 0
+		if err != nil {
+			r.logger.Error("Failed to get price stats", "error", err, "organizationId", organizationID)
+			// Don't fail the entire operation for this
+			stats.AveragePrice = 0
+			stats.HighestPrice = 0
+			stats.LowestPrice = 0
+		}
+		return nil
+	})
+
+	if err := g.Wait(); err != nil {
+		return nil, err
 	}
 
 	return stats, nil
