@@ -105,6 +105,8 @@ func TestAnalyzeCommandDepAnalysisFailures(t *testing.T) {
 			// ensure leftover plan does not exist
 			os.RemoveAll(filepath.Join(tc.base, ".kthulu"))
 			root := &cobra.Command{Use: "root"}
+			root.SilenceUsage = true
+			root.SilenceErrors = true
 			root.AddCommand(newAnalyzeCmd())
 			root.SetArgs([]string{"analyze", tc.base})
 			if err := root.Execute(); err == nil {
