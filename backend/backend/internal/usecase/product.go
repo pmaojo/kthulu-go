@@ -385,16 +385,32 @@ func (uc *ProductUseCase) loadProductRelations(ctx context.Context, product *dom
 	}
 	// Convert []*domain.ProductVariant to []domain.ProductVariant
 	product.Variants = make([]domain.ProductVariant, len(variants))
+	variantIDs := make([]uint, len(variants))
 	for i, variant := range variants {
 		product.Variants[i] = *variant
+		variantIDs[i] = variant.ID
+	}
 
-		// Load prices for each variant
-		variantPrices, err := uc.productRepo.GetPricesByVariantID(ctx, variant.ID)
+	// Batch load prices for all variants (optimization: single query instead of N+1)
+	if len(variantIDs) > 0 {
+		variantPrices, err := uc.productRepo.GetPricesByVariantIDs(ctx, variantIDs)
 		if err == nil {
-			product.Variants[i].Prices = make([]domain.ProductPrice, len(variantPrices))
-			for j, price := range variantPrices {
-				product.Variants[i].Prices[j] = *price
+			// Map prices to variants
+			pricesByVariantID := make(map[uint][]domain.ProductPrice)
+			for _, price := range variantPrices {
+				if price.ProductVariantID != nil {
+					pricesByVariantID[*price.ProductVariantID] = append(pricesByVariantID[*price.ProductVariantID], *price)
+				}
 			}
+
+			// Assign prices to variants
+			for i := range product.Variants {
+				if prices, ok := pricesByVariantID[product.Variants[i].ID]; ok {
+					product.Variants[i].Prices = prices
+				}
+			}
+		} else {
+			uc.logger.Warn("Failed to batch load variant prices", zap.Error(err))
 		}
 	}
 

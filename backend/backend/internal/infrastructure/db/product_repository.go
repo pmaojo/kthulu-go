@@ -768,6 +768,58 @@ func (r *ProductRepository) GetPricesByVariantID(ctx context.Context, variantID 
 	return r.queryPrices(ctx, query, variantID)
 }
 
+// GetPricesByVariantIDs retrieves all prices for a list of product variants
+func (r *ProductRepository) GetPricesByVariantIDs(ctx context.Context, variantIDs []uint) ([]*domain.ProductPrice, error) {
+	if len(variantIDs) == 0 {
+		return []*domain.ProductPrice{}, nil
+	}
+
+	placeholders := make([]string, len(variantIDs))
+	args := make([]interface{}, len(variantIDs))
+	for i, id := range variantIDs {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(`
+		SELECT id, product_id, product_variant_id, price_type, currency, amount,
+			   min_quantity, max_quantity, valid_from, valid_until,
+			   is_active, created_at, updated_at
+		FROM product_prices
+		WHERE product_variant_id IN (%s)
+		ORDER BY product_variant_id, price_type, min_quantity`, strings.Join(placeholders, ","))
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		r.logger.Error("Failed to query product prices by variant IDs", "error", err)
+		return nil, fmt.Errorf("failed to query product prices: %w", err)
+	}
+	defer rows.Close()
+
+	var prices []*domain.ProductPrice
+	for rows.Next() {
+		price := &domain.ProductPrice{}
+		err := rows.Scan(
+			&price.ID, &price.ProductID, &price.ProductVariantID, &price.PriceType,
+			&price.Currency, &price.Amount, &price.MinQuantity, &price.MaxQuantity,
+			&price.ValidFrom, &price.ValidUntil, &price.IsActive,
+			&price.CreatedAt, &price.UpdatedAt,
+		)
+		if err != nil {
+			r.logger.Error("Failed to scan product price", "error", err)
+			return nil, fmt.Errorf("failed to scan product price: %w", err)
+		}
+
+		prices = append(prices, price)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate product prices: %w", err)
+	}
+
+	return prices, nil
+}
+
 // GetEffectivePrice retrieves the effective price for a product or variant
 func (r *ProductRepository) GetEffectivePrice(ctx context.Context, productID *uint, variantID *uint, priceType domain.PriceType, quantity int, at time.Time) (*domain.ProductPrice, error) {
 	var query string
