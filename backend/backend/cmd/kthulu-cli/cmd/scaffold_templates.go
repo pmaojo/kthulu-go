@@ -15,18 +15,20 @@ type Field struct {
 }
 
 type moduleTemplateData struct {
-	Name     string
-	Title    string
-	Fields   []Field
-	Database string
+	Name        string
+	Title       string
+	Fields      []Field
+	Database    string
+	ProjectModule string
 }
 
-func newModuleTemplateData(name string, fields []string, database string) moduleTemplateData {
+func newModuleTemplateData(name string, fields []string, database, projectModule string) moduleTemplateData {
 	return moduleTemplateData{
-		Name:     name,
-		Title:    exportName(name),
-		Fields:   parseFields(fields),
-		Database: database,
+		Name:          name,
+		Title:         exportName(name),
+		Fields:        parseFields(fields),
+		Database:      database,
+		ProjectModule: projectModule,
 	}
 }
 
@@ -150,7 +152,7 @@ package repository
 import (
         "gorm.io/gorm"
 
-        "github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules/{{.Name}}/domain"
+        "{{.ProjectModule}}/internal/adapters/http/modules/{{.Name}}/domain"
 )
 
 type {{.Title}}Repository struct {
@@ -205,7 +207,7 @@ func (r *{{.Title}}Repository) List(filter domain.SearchFilter) ([]*domain.{{.Ti
 package service
 
 import (
-        "github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules/{{.Name}}/domain"
+        "{{.ProjectModule}}/internal/adapters/http/modules/{{.Name}}/domain"
 )
 
 type {{.Title}}Service struct {
@@ -249,7 +251,7 @@ import (
         "strconv"
 
         "github.com/gorilla/mux"
-        "github.com/pmaojo/kthulu-go/backend/internal/adapters/http/modules/{{.Name}}/domain"
+        "{{.ProjectModule}}/internal/adapters/http/modules/{{.Name}}/domain"
 )
 
 type {{.Title}}Handler struct {
@@ -363,31 +365,31 @@ DROP TABLE IF EXISTS {{.Name}}s;
 )
 
 func generateModuleFile(name string) string {
-	data := newModuleTemplateData(name, nil, "")
+	data := newModuleTemplateData(name, nil, "", "")
 	return renderModuleTemplate(moduleFileTemplate, data)
 }
 
 func generateDomainFile(name string, fields []string) string {
-	data := newModuleTemplateData(name, fields, "")
+	data := newModuleTemplateData(name, fields, "", "")
 	return renderModuleTemplate(domainFileTemplate, data)
 }
 
-func generateRepositoryFile(name string) string {
-	data := newModuleTemplateData(name, nil, "")
+func generateRepositoryFile(name, projectModule string) string {
+	data := newModuleTemplateData(name, nil, "", projectModule)
 	return renderModuleTemplate(repositoryFileTemplate, data)
 }
 
-func generateServiceFile(name string) string {
-	data := newModuleTemplateData(name, nil, "")
+func generateServiceFile(name, projectModule string) string {
+	data := newModuleTemplateData(name, nil, "", projectModule)
 	return renderModuleTemplate(serviceFileTemplate, data)
 }
 
-func generateHandlerFile(name string) string {
-	data := newModuleTemplateData(name, nil, "")
+func generateHandlerFile(name, projectModule string) string {
+	data := newModuleTemplateData(name, nil, "", projectModule)
 	return renderModuleTemplate(handlerFileTemplate, data)
 }
 
 func generateMigrationContent(name string, fields []string, database string) string {
-	data := newModuleTemplateData(name, fields, database)
+	data := newModuleTemplateData(name, fields, database, "")
 	return renderModuleTemplate(migrationFileTemplate, data)
 }
