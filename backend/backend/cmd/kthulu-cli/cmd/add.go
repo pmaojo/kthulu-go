@@ -262,17 +262,23 @@ func runAddComponent(componentType, name, module string, withTests, withMigratio
 	var filename string
 	var subdir string
 
+	// Get project module name
+	projectModule, err := getProjectModule(currentDir)
+	if err != nil {
+		projectModule = "github.com/pmaojo/kthulu-go/backend" // Fallback
+	}
+
 	switch componentType {
 	case "handler":
-		content = generateHandlerFile(name)
+		content = generateHandlerFile(name, projectModule)
 		subdir = "handlers"
 		filename = fmt.Sprintf("%s_handler.go", strings.ToLower(name))
 	case "service":
-		content = generateServiceFile(name)
+		content = generateServiceFile(name, projectModule)
 		subdir = "service"
 		filename = fmt.Sprintf("%s_service.go", strings.ToLower(name))
 	case "repository":
-		content = generateRepositoryFile(name)
+		content = generateRepositoryFile(name, projectModule)
 		subdir = "repository"
 		filename = fmt.Sprintf("%s_repository.go", strings.ToLower(name))
 	case "domain":
@@ -427,14 +433,22 @@ func generateSpecificModule(config *generator.GeneratorConfig, moduleName string
 
 	fmt.Printf("   ✅ Module structure created\n")
 
+	// Get project module name
+	projectModule, err := getProjectModule(config.OutputPath)
+	if err != nil {
+		// Fallback if unable to read go.mod, though this should rarely happen as we check for Kthulu project earlier
+		projectModule = "github.com/pmaojo/kthulu-go/backend"
+		fmt.Printf("   ⚠️  Warning: Could not determine project module from go.mod, using default: %s\n", projectModule)
+	}
+
 	// Generate basic module files using the generator
 	// This is a simplified version - the full generator.GenerateProject would handle this
 	files := map[string]string{
 		"module.go":                             generateModuleFile(moduleName),
 		fmt.Sprintf("domain/%s.go", moduleName): generateDomainFile(moduleName, fields),
-		fmt.Sprintf("repository/%s_repository.go", moduleName): generateRepositoryFile(moduleName),
-		fmt.Sprintf("service/%s_service.go", moduleName):       generateServiceFile(moduleName),
-		fmt.Sprintf("handlers/%s_handler.go", moduleName):      generateHandlerFile(moduleName),
+		fmt.Sprintf("repository/%s_repository.go", moduleName): generateRepositoryFile(moduleName, projectModule),
+		fmt.Sprintf("service/%s_service.go", moduleName):       generateServiceFile(moduleName, projectModule),
+		fmt.Sprintf("handlers/%s_handler.go", moduleName):      generateHandlerFile(moduleName, projectModule),
 	}
 
 	for filename, content := range files {
