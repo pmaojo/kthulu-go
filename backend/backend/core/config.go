@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/joho/godotenv"
+	"bufio"
 )
 
 // DatabaseConfig holds database connection configuration
@@ -105,8 +105,8 @@ const databaseURLEnv = "DATABASE_URL"
 // NewConfig loads environment variables and constructs Config.
 // It validates all required configuration and provides sensible defaults.
 func NewConfig() (*Config, error) {
-	_ = godotenv.Load()
-	_ = godotenv.Overload(".env.local")
+	_ = loadEnvFile(".env", false)
+	_ = loadEnvFile(".env.local", true)
 	if err := loadVaultEnv(); err != nil {
 		return nil, err
 	}
@@ -291,6 +291,69 @@ func NewConfig() (*Config, error) {
 	}
 
 	return config, nil
+}
+
+// loadEnvFile loads environment variables from a file.
+// If overwrite is true, it overwrites existing environment variables.
+// Note: This is a simple parser and does not support variable expansion or multiline values.
+func loadEnvFile(filename string, overwrite bool) error {
+	file, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		// Handle export prefix
+		if strings.HasPrefix(line, "export ") {
+			line = strings.TrimSpace(strings.TrimPrefix(line, "export "))
+		}
+
+		// Split key and value
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+
+		// Handle quoted values and comments
+		if len(value) > 0 {
+			if value[0] == '"' {
+				// Find closing quote
+				if idx := strings.LastIndex(value, "\""); idx > 0 {
+					value = value[1:idx]
+				}
+			} else if value[0] == '\'' {
+				// Find closing quote
+				if idx := strings.LastIndex(value, "'"); idx > 0 {
+					value = value[1:idx]
+				}
+			} else {
+				// Remove inline comments for unquoted values
+				if idx := strings.Index(value, " #"); idx != -1 {
+					value = strings.TrimSpace(value[:idx])
+				}
+			}
+		}
+
+		if overwrite {
+			os.Setenv(key, value)
+		} else {
+			if _, exists := os.LookupEnv(key); !exists {
+				os.Setenv(key, value)
+			}
+		}
+	}
+
+	return scanner.Err()
 }
 
 // getEnvWithDefault returns the value of the environment variable or a default value
