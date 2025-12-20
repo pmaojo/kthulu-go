@@ -1,0 +1,14 @@
+version: 1
+git:
+  depth: 1
+dir: backend/backend
+main: ./cmd/kthulu-cli
+binary: kthulu-cli-windows-amd64.exe
+goos: windows
+goarch: amd64
+env:
+  - CGO_ENABLED=0
+ldflags:
+  - -s -w
+  - -X github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/cmd.version={{.Version}}
+  - -X github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/cmd.build={{.CommitDate}}
