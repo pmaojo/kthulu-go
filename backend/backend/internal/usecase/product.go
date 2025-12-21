@@ -393,20 +393,20 @@ func (uc *ProductUseCase) loadProductRelations(ctx context.Context, product *dom
 
 	// Batch load prices for all variants (optimization: single query instead of N+1)
 	if len(variantIDs) > 0 {
+		// Create a map of pointers to variants for O(1) lookup
+		variantMap := make(map[uint]*domain.ProductVariant, len(product.Variants))
+		for i := range product.Variants {
+			variantMap[product.Variants[i].ID] = &product.Variants[i]
+		}
+
 		variantPrices, err := uc.productRepo.GetPricesByVariantIDs(ctx, variantIDs)
 		if err == nil {
-			// Map prices to variants
-			pricesByVariantID := make(map[uint][]domain.ProductPrice)
+			// Assign prices directly to variants via the map
 			for _, price := range variantPrices {
 				if price.ProductVariantID != nil {
-					pricesByVariantID[*price.ProductVariantID] = append(pricesByVariantID[*price.ProductVariantID], *price)
-				}
-			}
-
-			// Assign prices to variants
-			for i := range product.Variants {
-				if prices, ok := pricesByVariantID[product.Variants[i].ID]; ok {
-					product.Variants[i].Prices = prices
+					if variant, ok := variantMap[*price.ProductVariantID]; ok {
+						variant.Prices = append(variant.Prices, *price)
+					}
 				}
 			}
 		} else {
