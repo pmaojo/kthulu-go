@@ -333,73 +333,113 @@ func (r *ProductRepository) loadPricesForProducts(ctx context.Context, productID
 		}
 	}
 
-	args := make([]interface{}, 0, len(productIDs)+len(variantIDs))
-	var whereConditions []string
-
-	if len(productIDs) > 0 {
-		placeholders := make([]string, len(productIDs))
-		for i, id := range productIDs {
-			placeholders[i] = fmt.Sprintf("$%d", len(args)+1)
-			args = append(args, id)
-		}
-		whereConditions = append(whereConditions, fmt.Sprintf("product_id IN (%s)", strings.Join(placeholders, ",")))
-	}
-
-	if len(variantIDs) > 0 {
-		placeholders := make([]string, len(variantIDs))
-		for i, id := range variantIDs {
-			placeholders[i] = fmt.Sprintf("$%d", len(args)+1)
-			args = append(args, id)
-		}
-		whereConditions = append(whereConditions, fmt.Sprintf("product_variant_id IN (%s)", strings.Join(placeholders, ",")))
-	}
-
-	if len(whereConditions) == 0 {
+	if len(productIDs) == 0 && len(variantIDs) == 0 {
 		return nil
 	}
 
-	query := fmt.Sprintf(`
-		SELECT id, product_id, product_variant_id, price_type, currency, amount,
-			   min_quantity, max_quantity, valid_from, valid_until,
-			   is_active, created_at, updated_at
-		FROM product_prices
-		WHERE %s
-		ORDER BY price_type, min_quantity`, strings.Join(whereConditions, " OR "))
+	g, ctx := errgroup.WithContext(ctx)
 
-	rows, err := r.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return fmt.Errorf("failed to query product prices: %w", err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		price := &domain.ProductPrice{}
-		err := rows.Scan(
-			&price.ID, &price.ProductID, &price.ProductVariantID, &price.PriceType,
-			&price.Currency, &price.Amount, &price.MinQuantity, &price.MaxQuantity,
-			&price.ValidFrom, &price.ValidUntil, &price.IsActive,
-			&price.CreatedAt, &price.UpdatedAt,
-		)
-		if err != nil {
-			return fmt.Errorf("failed to scan product price: %w", err)
-		}
-
-		if price.ProductID != nil {
-			if product, ok := productMap[*price.ProductID]; ok {
-				product.Prices = append(product.Prices, *price)
+	// Fetch product prices
+	if len(productIDs) > 0 {
+		g.Go(func() error {
+			placeholders := make([]string, len(productIDs))
+			args := make([]interface{}, len(productIDs))
+			for i, id := range productIDs {
+				placeholders[i] = fmt.Sprintf("$%d", i+1)
+				args[i] = id
 			}
-		} else if price.ProductVariantID != nil {
-			if variant, ok := variantMap[*price.ProductVariantID]; ok {
-				variant.Prices = append(variant.Prices, *price)
+
+			query := fmt.Sprintf(`
+				SELECT id, product_id, product_variant_id, price_type, currency, amount,
+					   min_quantity, max_quantity, valid_from, valid_until,
+					   is_active, created_at, updated_at
+				FROM product_prices
+				WHERE product_id IN (%s)
+				ORDER BY price_type, min_quantity`, strings.Join(placeholders, ","))
+
+			rows, err := r.db.QueryContext(ctx, query, args...)
+			if err != nil {
+				return fmt.Errorf("failed to query product prices: %w", err)
 			}
-		}
+			defer rows.Close()
+
+			for rows.Next() {
+				price := &domain.ProductPrice{}
+				err := rows.Scan(
+					&price.ID, &price.ProductID, &price.ProductVariantID, &price.PriceType,
+					&price.Currency, &price.Amount, &price.MinQuantity, &price.MaxQuantity,
+					&price.ValidFrom, &price.ValidUntil, &price.IsActive,
+					&price.CreatedAt, &price.UpdatedAt,
+				)
+				if err != nil {
+					return fmt.Errorf("failed to scan product price: %w", err)
+				}
+
+				if price.ProductID != nil {
+					// Safe to access productMap as it's read-only here.
+					// Safe to append to product.Prices as this goroutine exclusively processes product prices,
+					// while the other goroutine processes variant prices on distinct struct instances.
+					if product, ok := productMap[*price.ProductID]; ok {
+						product.Prices = append(product.Prices, *price)
+					}
+				}
+			}
+			return rows.Err()
+		})
 	}
 
-	if err = rows.Err(); err != nil {
-		return fmt.Errorf("failed to iterate product prices: %w", err)
+	// Fetch variant prices
+	if len(variantIDs) > 0 {
+		g.Go(func() error {
+			placeholders := make([]string, len(variantIDs))
+			args := make([]interface{}, len(variantIDs))
+			for i, id := range variantIDs {
+				placeholders[i] = fmt.Sprintf("$%d", i+1)
+				args[i] = id
+			}
+
+			// Ensure we respect the original logic precedence: if both product_id and product_variant_id
+			// are set, the original code treated it as a product price (by checking ProductID != nil first).
+			// So here, we must exclude rows that have a product_id.
+			query := fmt.Sprintf(`
+				SELECT id, product_id, product_variant_id, price_type, currency, amount,
+					   min_quantity, max_quantity, valid_from, valid_until,
+					   is_active, created_at, updated_at
+				FROM product_prices
+				WHERE product_variant_id IN (%s) AND product_id IS NULL
+				ORDER BY price_type, min_quantity`, strings.Join(placeholders, ","))
+
+			rows, err := r.db.QueryContext(ctx, query, args...)
+			if err != nil {
+				return fmt.Errorf("failed to query variant prices: %w", err)
+			}
+			defer rows.Close()
+
+			for rows.Next() {
+				price := &domain.ProductPrice{}
+				err := rows.Scan(
+					&price.ID, &price.ProductID, &price.ProductVariantID, &price.PriceType,
+					&price.Currency, &price.Amount, &price.MinQuantity, &price.MaxQuantity,
+					&price.ValidFrom, &price.ValidUntil, &price.IsActive,
+					&price.CreatedAt, &price.UpdatedAt,
+				)
+				if err != nil {
+					return fmt.Errorf("failed to scan variant price: %w", err)
+				}
+
+				if price.ProductVariantID != nil {
+					// Safe to access variantMap as it's read-only here.
+					// Safe to append to variant.Prices as this goroutine exclusively processes variant prices.
+					if variant, ok := variantMap[*price.ProductVariantID]; ok {
+						variant.Prices = append(variant.Prices, *price)
+					}
+				}
+			}
+			return rows.Err()
+		})
 	}
 
-	return nil
+	return g.Wait()
 }
 
 // buildWhereClause builds the WHERE clause for product filtering
