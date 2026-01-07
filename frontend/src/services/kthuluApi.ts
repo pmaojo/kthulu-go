@@ -1,4 +1,5 @@
 import type {
+  Project,
   ProjectRequest,
   ProjectPlan,
   ModuleInfo,
@@ -64,6 +65,41 @@ export const kthuluApi = {
       body: JSON.stringify(request),
     });
     return handleResponse<ProjectPlan>(response);
+  },
+
+  async listProjects(limit: number = 10, offset: number = 0) {
+    const url = new URL(`${API_BASE_URL}/api/v1/projects`);
+    url.searchParams.set('limit', limit.toString());
+    url.searchParams.set('offset', offset.toString());
+    const response = await fetch(url.toString());
+    return handleResponse<Project[]>(response);
+  },
+
+  async getProject(id: number) {
+    const response = await fetch(`${API_BASE_URL}/api/v1/projects/${id}`);
+    return handleResponse<Project>(response);
+  },
+
+  async updateProject(id: number, request: Partial<ProjectRequest>) {
+    const response = await fetch(`${API_BASE_URL}/api/v1/projects/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
+    return handleResponse<Project>(response);
+  },
+
+  async deleteProject(id: number) {
+    const response = await fetch(`${API_BASE_URL}/api/v1/projects/${id}`, {
+      method: 'DELETE',
+    });
+    // Returns 204 No Content
+    if (!response.ok) {
+        const error: ApiError = await response.json().catch(() => ({
+            error: response.statusText,
+        }));
+        throw new KthuluApiError(response.status, error.error, error.details);
+    }
   },
 
   // Modules
