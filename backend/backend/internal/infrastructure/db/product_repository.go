@@ -9,9 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/sync/errgroup"
-
 	"github.com/pmaojo/kthulu-go/backend/core"
+	"golang.org/x/sync/errgroup"
 	"github.com/pmaojo/kthulu-go/backend/internal/domain"
 	"github.com/pmaojo/kthulu-go/backend/internal/domain/repository"
 )
@@ -185,52 +184,65 @@ func (r *ProductRepository) List(ctx context.Context, organizationID uint, filte
 	// Build WHERE clause
 	whereClause, args := r.buildWhereClause(organizationID, filters)
 
-	// Count query
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM products %s", whereClause)
 	var total int64
-	err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total)
-	if err != nil {
-		r.logger.Error("Failed to count products", "error", err)
-		return nil, 0, fmt.Errorf("failed to count products: %w", err)
-	}
-
-	// Main query with pagination and sorting
-	orderClause := fmt.Sprintf("ORDER BY %s %s", filters.SortBy, strings.ToUpper(filters.SortOrder))
-	limitClause := fmt.Sprintf("LIMIT %d OFFSET %d", filters.PageSize, filters.GetOffset())
-
-	query := fmt.Sprintf(`
-		SELECT id, organization_id, sku, name, description, category, brand,
-			   unit_of_measure, weight, dimensions, barcode, tax_rate,
-			   is_active, is_trackable, created_at, updated_at
-		FROM products %s %s %s`, whereClause, orderClause, limitClause)
-
-	rows, err := r.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		r.logger.Error("Failed to list products", "error", err)
-		return nil, 0, fmt.Errorf("failed to list products: %w", err)
-	}
-	defer rows.Close()
-
 	var products []*domain.Product
-	for rows.Next() {
-		product := &domain.Product{}
-		err := rows.Scan(
-			&product.ID, &product.OrganizationID, &product.SKU, &product.Name,
-			&product.Description, &product.Category, &product.Brand,
-			&product.UnitOfMeasure, &product.Weight, &product.Dimensions,
-			&product.Barcode, &product.TaxRate, &product.IsActive,
-			&product.IsTrackable, &product.CreatedAt, &product.UpdatedAt,
-		)
+
+	// Use errgroup to run count and select queries in parallel
+	g, ctx := errgroup.WithContext(ctx)
+
+	// 1. Count query
+	g.Go(func() error {
+		countQuery := fmt.Sprintf("SELECT COUNT(*) FROM products %s", whereClause)
+		if err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
+			r.logger.Error("Failed to count products", "error", err)
+			return fmt.Errorf("failed to count products: %w", err)
+		}
+		return nil
+	})
+
+	// 2. Main query with pagination and sorting
+	g.Go(func() error {
+		orderClause := fmt.Sprintf("ORDER BY %s %s", filters.SortBy, strings.ToUpper(filters.SortOrder))
+		limitClause := fmt.Sprintf("LIMIT %d OFFSET %d", filters.PageSize, filters.GetOffset())
+
+		query := fmt.Sprintf(`
+			SELECT id, organization_id, sku, name, description, category, brand,
+				   unit_of_measure, weight, dimensions, barcode, tax_rate,
+				   is_active, is_trackable, created_at, updated_at
+			FROM products %s %s %s`, whereClause, orderClause, limitClause)
+
+		rows, err := r.db.QueryContext(ctx, query, args...)
 		if err != nil {
-			r.logger.Error("Failed to scan product", "error", err)
-			return nil, 0, fmt.Errorf("failed to scan product: %w", err)
+			r.logger.Error("Failed to list products", "error", err)
+			return fmt.Errorf("failed to list products: %w", err)
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			product := &domain.Product{}
+			err := rows.Scan(
+				&product.ID, &product.OrganizationID, &product.SKU, &product.Name,
+				&product.Description, &product.Category, &product.Brand,
+				&product.UnitOfMeasure, &product.Weight, &product.Dimensions,
+				&product.Barcode, &product.TaxRate, &product.IsActive,
+				&product.IsTrackable, &product.CreatedAt, &product.UpdatedAt,
+			)
+			if err != nil {
+				r.logger.Error("Failed to scan product", "error", err)
+				return fmt.Errorf("failed to scan product: %w", err)
+			}
+
+			products = append(products, product)
 		}
 
-		products = append(products, product)
-	}
+		if err = rows.Err(); err != nil {
+			return fmt.Errorf("failed to iterate products: %w", err)
+		}
+		return nil
+	})
 
-	if err = rows.Err(); err != nil {
-		return nil, 0, fmt.Errorf("failed to iterate products: %w", err)
+	if err := g.Wait(); err != nil {
+		return nil, 0, err
 	}
 
 	// Bulk load related data if requested
