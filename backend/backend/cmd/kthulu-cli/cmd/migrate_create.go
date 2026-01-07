@@ -24,7 +24,16 @@ func init() {
 }
 
 func createMigrationFile(name, content string) error {
+	// Need to check if we are in a project root or internal
+	// Assuming command is run from project root
 	dir := "migrations"
+	if _, err := os.Stat("go.mod"); os.IsNotExist(err) {
+		// fallback check
+		if _, err := os.Stat("../go.mod"); err == nil {
+			dir = "../migrations"
+		}
+	}
+
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("failed to create migrations directory: %w", err)
 	}

@@ -15,3 +15,18 @@ func exportName(name string) string {
 	}
 	return titleCaser.String(name)
 }
+
+func toSnakeCase(s string) string {
+	var result []rune
+	for i, r := range s {
+		if i > 0 && r >= 'A' && r <= 'Z' {
+			result = append(result, '_')
+		}
+		if r >= 'A' && r <= 'Z' {
+			result = append(result, r+32)
+		} else {
+			result = append(result, r)
+		}
+	}
+	return string(result)
+}

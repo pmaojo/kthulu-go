@@ -24,6 +24,11 @@ type %s struct {
 	// Add your fields here
 }
 
+// TableName overrides the table name used by User to ` + "`%[3]ss`" + `
+func (%[1]s) TableName() string {
+	return "%[3]ss"
+}
+
 // %sRepository defines the repository interface
 type %sRepository interface {
 	Create(entity *%s) error
@@ -42,11 +47,50 @@ type %sService interface {
 	List%s() ([]*%s, error)
 }
 `
+	// Note: We are using Pluralize() which handles simple cases.
+	// For "TableName", we assume pluralName is correct.
+	// But wait, the template string uses `s` hardcoded in `TableName`.
+	// Let's fix that to use the pluralName variable.
+
+	template = `// @kthulu:domain:%[1]s
+package domain
+
+import "time"
+
+// %[2]s represents a %[3]s entity
+type %[2]s struct {
+	ID        uint      ` + "`json:\"id\" gorm:\"primaryKey\"`" + `
+	CreatedAt time.Time ` + "`json:\"created_at\"`" + `
+	UpdatedAt time.Time ` + "`json:\"updated_at\"`" + `
+
+	// Add your fields here
+}
+
+// TableName overrides the table name used by User to ` + "`%[4]s`" + `
+func (%[2]s) TableName() string {
+	return "%[4]s"
+}
+
+// %[2]sRepository defines the repository interface
+type %[2]sRepository interface {
+	Create(entity *%[2]s) error
+	GetByID(id uint) (*%[2]s, error)
+	Update(entity *%[2]s) error
+	Delete(id uint) error
+	List() ([]*%[2]s, error)
+}
+
+// %[2]sService defines the service interface
+type %[2]sService interface {
+	Create%[2]s(entity *%[2]s) error
+	Get%[2]sByID(id uint) (*%[2]s, error)
+	Update%[2]s(entity *%[2]s) error
+	Delete%[2]s(id uint) error
+	List%[4]s() ([]*%[2]s, error)
+}
+`
 	return fmt.Sprintf(template,
-		name, capName, name, capName,
-		capName, capName, capName, capName, capName, capName,
-		capName, capName, capName, capName, capName, capName,
-		capName, capName, capName, pluralName, capName)
+		name, capName, name, pluralName)
 }
 
 func (g *TemplateGenerator) generateRepositoryFileFixed(name string, info *resolver.ModuleInfo) string {
