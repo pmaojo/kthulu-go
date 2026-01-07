@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -10,6 +11,7 @@ import (
 
 	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/generator"
 	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/resolver"
+	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/templates"
 	"github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/parser"
 )
 
@@ -39,6 +41,14 @@ var addModuleCmd = &cobra.Command{
 		force, _ := cmd.Flags().GetBool("force")
 
 		return runAddModule(module, fields, withIntegrations, compliance, force)
+	},
+}
+
+var addAuthCmd = &cobra.Command{
+	Use:   "auth",
+	Short: "Add authentication module (JWT)",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return runAddAuthModule()
 	},
 }
 
@@ -78,6 +88,71 @@ func init() {
 	// Add subcommands
 	addCmd.AddCommand(addModuleCmd)
 	addCmd.AddCommand(addComponentCmd)
+	addCmd.AddCommand(addAuthCmd)
+}
+
+func runAddAuthModule() error {
+	fmt.Println("🔐 Adding Authentication Module (JWT)...")
+
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	if !isKthuluProject(currentDir) {
+		return fmt.Errorf("not in a Kthulu project")
+	}
+
+	projectModule, _ := getProjectModule(currentDir)
+
+	data := map[string]any{
+		"ModuleName": projectModule,
+	}
+
+	base := currentDir
+
+	// Copy auth templates to internal/modules/auth
+	err = copyAuthFiles(base, data)
+	if err != nil {
+		return err
+	}
+
+	// Auto register in main.go
+	if err := generator.InjectModuleRegistration(base, "auth", projectModule); err != nil {
+		fmt.Printf("⚠️  Failed to register auth module: %v\n", err)
+	} else {
+		fmt.Println("🔌 Registered auth module in main.go")
+	}
+
+	// Add dependencies
+	fmt.Println("📦 Adding dependencies...")
+	dependencies := []string{
+		"golang.org/x/crypto/bcrypt",
+		"github.com/golang-jwt/jwt/v5",
+	}
+
+	for _, dep := range dependencies {
+		if err := installDependency(dep); err != nil {
+			fmt.Printf("⚠️  Failed to install %s: %v\n", dep, err)
+		} else {
+			fmt.Printf("   installed %s\n", dep)
+		}
+	}
+
+	fmt.Println("✅ Auth module added successfully!")
+	return nil
+}
+
+func copyAuthFiles(base string, data map[string]any) error {
+	// Copy templates from backend/internal/modules/auth to the project's internal/modules/auth
+	return copyTemplateTree(templates.Templates, "backend/internal/modules/auth", filepath.Join(base, "internal/modules/auth"), data, false)
+}
+
+func installDependency(pkg string) error {
+	cmd := exec.Command("go", "get", pkg)
+	cmd.Stdout = nil // Silence output unless needed
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 func runAddModule(module string, fields []string, integrations []string, compliance string, force bool) error {
@@ -196,6 +271,20 @@ func runAddModule(module string, fields []string, integrations []string, complia
 	// Generate only the specific module
 	if err := generateSpecificModule(config, module, fields, templateGenerator); err != nil {
 		return fmt.Errorf("error generating module: %w", err)
+	}
+
+	// Register module in main.go
+	projectModule, err := getProjectModule(config.OutputPath)
+	if err != nil {
+		fmt.Printf("   ⚠️  Warning: Could not detect project module from go.mod: %v\n", err)
+		// Fallback to trying the framework path only if we are seemingly running tests in the framework itself
+		// but typically we should just fail gracefully.
+	} else {
+		if err := generator.InjectModuleRegistration(config.OutputPath, module, projectModule); err != nil {
+			fmt.Printf("   ⚠️  Warning: Failed to auto-register module in main.go: %v\n", err)
+		} else {
+			fmt.Printf("   🔌 Auto-registered module '%s' in main.go\n", module)
+		}
 	}
 
 	// Step 8b: Generate frontend module if frontend exists
@@ -417,8 +506,8 @@ func displayDependencyPlan(moduleName string, plan *resolver.ResolutionPlan) {
 func generateSpecificModule(config *generator.GeneratorConfig, moduleName string, fields []string, gen *generator.TemplateGenerator) error {
 	fmt.Printf("   📁 Creating module structure for '%s'\n", moduleName)
 
-	// Create module directory
-	moduleDir := filepath.Join(config.OutputPath, "internal", "adapters", "http", "modules", moduleName)
+	// Create module directory - Standardized to internal/modules for consistency
+	moduleDir := filepath.Join(config.OutputPath, "internal", "modules", moduleName)
 	if err := os.MkdirAll(moduleDir, 0755); err != nil {
 		return fmt.Errorf("failed to create module directory: %w", err)
 	}
