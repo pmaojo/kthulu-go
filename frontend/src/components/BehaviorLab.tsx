@@ -1,102 +1,23 @@
-import { useState, useEffect } from 'react';
-import { kthuluApi } from '@/services/kthuluApi';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Play, FileText, FlaskConical, CheckCircle, XCircle, Clock } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-
-interface FeatureFile {
-  path: string;
-  name: string;
-  scenarios: string[];
-}
+import { useBehaviorLab } from '@/hooks/useBehaviorLab';
 
 export function BehaviorLab() {
-  const [features, setFeatures] = useState<FeatureFile[]>([]);
-  const [selectedFeature, setSelectedFeature] = useState<FeatureFile | null>(null);
-  const [testResults, setTestResults] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isRunning, setIsRunning] = useState(false);
-  const { toast } = useToast();
-
-  useEffect(() => {
-    loadFeatures();
-  }, []);
-
-  const loadFeatures = async () => {
-    try {
-      setIsLoading(true);
-      const result = await kthuluApi.listFeatures();
-
-      if (result.output && result.output.length > 0) {
-        // Parsing logic based on CLI output structure
-        // Assuming line-separated paths for now
-        const rawOutput = result.output.join('\n');
-        // Simple heuristic: split by newlines and look for .feature files
-        const paths = rawOutput.split('\n')
-            .map(s => s.trim())
-            .filter(s => s.endsWith('.feature'));
-
-        const featureList = paths.map(p => ({
-          path: p,
-          name: p.split('/').pop() || p,
-          scenarios: ['Scenario 1', 'Scenario 2'] // detailed parsing would go here
-        }));
-        setFeatures(featureList);
-      }
-    } catch (e) {
-      console.error("Failed to load features", e);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar los archivos de features.",
-        variant: "destructive",
-      });
-      // Fallback mock data for demo purposes if backend fails
-      setFeatures([
-        { path: 'features/auth.feature', name: 'auth.feature', scenarios: ['Login', 'Logout'] },
-        { path: 'features/products.feature', name: 'products.feature', scenarios: ['List Products', 'Get Product'] },
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const runTests = async (filter: string = '') => {
-    setIsRunning(true);
-    setTestResults('Ejecutando tests...');
-    try {
-      const result = await kthuluApi.runScenario(filter);
-      setTestResults(result.output.join('\n'));
-
-      if (result.status === 'success' || (result.metadata?.exitCode === 0)) {
-        toast({
-          title: "Tests Pasaron",
-          description: "La ejecución de features fue exitosa.",
-          variant: "default",
-          className: "bg-green-500/10 border-green-500/50 text-green-500",
-        });
-      } else {
-        toast({
-          title: "Tests Fallaron",
-          description: "Hubo errores en la ejecución de features.",
-          variant: "destructive",
-        });
-      }
-    } catch (e) {
-      setTestResults('Error al ejecutar tests.');
-      toast({
-        title: "Error",
-        description: "Fallo al invocar el comando de tests.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsRunning(false);
-    }
-  };
+  const {
+    features,
+    selectedFeature,
+    setSelectedFeature,
+    testResults,
+    isLoading,
+    isRunning,
+    loadFeatures,
+    runTests
+  } = useBehaviorLab();
 
   return (
     <div className="h-full flex flex-col bg-kthulu-surface1 p-6 space-y-6">

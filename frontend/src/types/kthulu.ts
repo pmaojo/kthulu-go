@@ -1,5 +1,23 @@
 // Kthulu API Types based on OpenAPI 3.1 schema
 
+export interface Project {
+  id: number;
+  name: string;
+  path: string;
+  description?: string;
+  author?: string;
+  license?: string;
+  version?: string;
+  backendPackage?: string;
+  frontendFramework?: string;
+  databaseType?: string;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  modules?: string[];
+  config?: Record<string, any>;
+}
+
 export interface ProjectRequest {
   name: string;
   modules?: string[];

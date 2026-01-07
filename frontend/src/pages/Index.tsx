@@ -7,7 +7,8 @@ import { PropertiesPanel } from "@/components/PropertiesPanel";
 import { Terminal } from "@/components/Terminal";
 import { CodeEditor } from "@/components/CodeEditor";
 import { Dashboard } from "@/components/Dashboard";
-import { BehaviorLab } from "@/components/BehaviorLab"; // New import
+import { BehaviorLab } from "@/components/BehaviorLab";
+import { Projects } from "@/components/Projects"; // New import
 import { ProjectGeneratorDialog } from "@/components/ProjectGeneratorDialog";
 import { ModuleCatalog } from "@/components/ModuleCatalog";
 import { ComponentScaffolder } from "@/components/ComponentScaffolder";
@@ -68,6 +69,9 @@ const Index = () => {
 
       case "behavior-lab": // New section
         return <BehaviorLab />;
+
+      case "projects": // New section
+        return <Projects onCreateProject={() => setShowGenerator(true)} />;
 
       case "services":
       case "entities":
