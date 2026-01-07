@@ -3,21 +3,36 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
+	"text/tabwriter"
+	"time"
 
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
 
+// Requirement represents a high-level project requirement
+type Requirement struct {
+	ID          string `yaml:"id"`
+	Title       string `yaml:"title"`
+	Description string `yaml:"description,omitempty"`
+	Priority    string `yaml:"priority"` // High, Medium, Low
+	Status      string `yaml:"status"`   // Pending, InProgress, Done
+	Created     string `yaml:"created"`
+}
+
 // ProjectBlueprint represents the desired state of a project
 type ProjectBlueprint struct {
-	Name        string   `yaml:"name"`
-	Description string   `yaml:"description"`
-	Template    string   `yaml:"template"`
-	Features    []string `yaml:"features"`
-	Database    string   `yaml:"database"`
-	Frontend    string   `yaml:"frontend"`
-	Auth        string   `yaml:"auth"`
-	Modules     []string `yaml:"modules,omitempty"`
+	Name         string        `yaml:"name"`
+	Description  string        `yaml:"description"`
+	Template     string        `yaml:"template"`
+	Features     []string      `yaml:"features"`
+	Database     string        `yaml:"database"`
+	Frontend     string        `yaml:"frontend"`
+	Auth         string        `yaml:"auth"`
+	Modules      []string      `yaml:"modules,omitempty"`
+	Requirements []Requirement `yaml:"requirements,omitempty"`
 }
 
 func newPlanCmd() *cobra.Command {
@@ -36,8 +51,11 @@ This blueprint can be reviewed, modified, and then used to create the project.
 Examples:
   kthulu plan my-app --template=microservice
   kthulu plan my-store --template=ecommerce --features=payment,inventory`,
-		Args: cobra.ExactArgs(1),
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				return cmd.Help()
+			}
 			return runPlanProject(cmd, args, planTemplate, planFeatures, planOutput)
 		},
 	}
@@ -51,11 +69,43 @@ Examples:
 
 var planCmd = newPlanCmd()
 
+// Requirements subcommands
+var planReqCmd = &cobra.Command{
+	Use:   "req",
+	Short: "Manage project requirements",
+}
+
+var planReqAddCmd = &cobra.Command{
+	Use:   "add [title]",
+	Short: "Add a new requirement",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return runPlanReqAdd(cmd, args)
+	},
+}
+
+var planReqListCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List all requirements",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return runPlanReqList(cmd, args)
+	},
+}
+
 func init() {
-	// Note: We don't add this to rootCmd in init() because we want to keep it experimental/optional for now
-	// or user can manually enable it. But to fulfill the request of "Intelligent Flow",
-	// we should probably expose it.
+	// Plan command
 	rootCmd.AddCommand(planCmd)
+
+	// Requirement subcommands
+	planCmd.AddCommand(planReqCmd)
+	planReqCmd.AddCommand(planReqAddCmd)
+	planReqCmd.AddCommand(planReqListCmd)
+
+	// Flags for req commands
+	planReqCmd.PersistentFlags().StringP("file", "f", "kthulu-plan.yaml", "Plan file to modify")
+
+	planReqAddCmd.Flags().String("desc", "", "Description of the requirement")
+	planReqAddCmd.Flags().String("priority", "Medium", "Priority (High, Medium, Low)")
 }
 
 func runPlanProject(cmd *cobra.Command, args []string, template string, features []string, output string) error {
@@ -87,15 +137,12 @@ func runPlanProject(cmd *cobra.Command, args []string, template string, features
 	blueprint.Features = uniqueStrings(blueprint.Features)
 
 	// Serialize to YAML
-	data, err := yaml.Marshal(&blueprint)
-	if err != nil {
-		return fmt.Errorf("failed to marshal plan: %w", err)
+	if err := saveBlueprint(output, &blueprint); err != nil {
+		return err
 	}
 
-	// Write to file
-	if err := os.WriteFile(output, data, 0644); err != nil {
-		return fmt.Errorf("failed to write plan file: %w", err)
-	}
+	// Read content back to display (or just marshal again)
+	data, _ := yaml.Marshal(&blueprint)
 
 	fmt.Printf("\n✅ Plan generated at %s\n", output)
 	fmt.Println("\n📄 Content:")
@@ -103,6 +150,119 @@ func runPlanProject(cmd *cobra.Command, args []string, template string, features
 	fmt.Println("\n🚀 Next steps:")
 	fmt.Printf("   1. Review and edit %s\n", output)
 	fmt.Printf("   2. Run 'kthulu create %s --from-plan=%s' (Coming soon)\n", projectName, output)
+
+	return nil
+}
+
+func runPlanReqAdd(cmd *cobra.Command, args []string) error {
+	file, _ := cmd.Flags().GetString("file")
+	desc, _ := cmd.Flags().GetString("desc")
+	priority, _ := cmd.Flags().GetString("priority")
+	title := args[0]
+
+	// Validate priority
+	validPriorities := map[string]bool{
+		"High":   true,
+		"Medium": true,
+		"Low":    true,
+	}
+
+	// Normalize priority
+	normalizedPriority := strings.Title(strings.ToLower(priority))
+	if !validPriorities[normalizedPriority] {
+		return fmt.Errorf("invalid priority: %s. Must be High, Medium, or Low", priority)
+	}
+
+	blueprint, err := loadBlueprint(file)
+	if err != nil {
+		return err
+	}
+
+	// Calculate next ID
+	nextID := 1
+	for _, r := range blueprint.Requirements {
+		if strings.HasPrefix(r.ID, "REQ-") {
+			idNum, err := strconv.Atoi(strings.TrimPrefix(r.ID, "REQ-"))
+			if err == nil && idNum >= nextID {
+				nextID = idNum + 1
+			}
+		}
+	}
+
+	req := Requirement{
+		ID:          fmt.Sprintf("REQ-%d", nextID),
+		Title:       title,
+		Description: desc,
+		Priority:    normalizedPriority,
+		Status:      "Pending",
+		Created:     time.Now().Format(time.RFC3339),
+	}
+
+	blueprint.Requirements = append(blueprint.Requirements, req)
+
+	if err := saveBlueprint(file, blueprint); err != nil {
+		return err
+	}
+
+	fmt.Printf("✅ Requirement added: %s (%s)\n", req.ID, req.Title)
+	return nil
+}
+
+func runPlanReqList(cmd *cobra.Command, args []string) error {
+	file, _ := cmd.Flags().GetString("file")
+
+	blueprint, err := loadBlueprint(file)
+	if err != nil {
+		return err
+	}
+
+	if len(blueprint.Requirements) == 0 {
+		fmt.Println("No requirements found.")
+		return nil
+	}
+
+	fmt.Printf("📋 Requirements for %s:\n", blueprint.Name)
+
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "ID\tTitle\tPriority\tStatus")
+	fmt.Fprintln(w, "--\t-----\t--------\t------")
+
+	for _, req := range blueprint.Requirements {
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", req.ID, req.Title, req.Priority, req.Status)
+	}
+	w.Flush()
+
+	return nil
+}
+
+// Helpers
+
+func loadBlueprint(filename string) (*ProjectBlueprint, error) {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("plan file '%s' not found. Run 'kthulu plan [name]' first", filename)
+		}
+		return nil, fmt.Errorf("failed to read plan file: %w", err)
+	}
+
+	var blueprint ProjectBlueprint
+	if err := yaml.Unmarshal(data, &blueprint); err != nil {
+		return nil, fmt.Errorf("failed to parse plan file: %w", err)
+	}
+
+	return &blueprint, nil
+}
+
+func saveBlueprint(filename string, blueprint *ProjectBlueprint) error {
+	data, err := yaml.Marshal(blueprint)
+	if err != nil {
+		return fmt.Errorf("failed to marshal plan: %w", err)
+	}
+
+	if err := os.WriteFile(filename, data, 0644); err != nil {
+		return fmt.Errorf("failed to write plan file: %w", err)
+	}
 
 	return nil
 }
