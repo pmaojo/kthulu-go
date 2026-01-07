@@ -39,8 +39,19 @@ var addModuleCmd = &cobra.Command{
 		withIntegrations, _ := cmd.Flags().GetStringSlice("with")
 		compliance, _ := cmd.Flags().GetString("compliance")
 		force, _ := cmd.Flags().GetBool("force")
+		yes, _ := cmd.Flags().GetBool("yes")
 
-		return runAddModule(module, fields, withIntegrations, compliance, force)
+		// Prioritize yes flag over force or assume force if yes is set (or treat them independently)
+		// Usually yes implies skipping prompts/confirmation.
+		// For now we pass 'yes' to handle non-interactive mode if needed.
+		// Note: The original code used 'force' to override conflicts. We can treat 'yes' as confirming actions.
+
+		if yes {
+			// If yes is passed, we might want to auto-confirm conflicts if that's the intention,
+			// but force is specifically for conflicts. Let's keep them separate but allow yes to be used.
+		}
+
+		return runAddModule(module, fields, withIntegrations, compliance, force, yes)
 	},
 }
 
@@ -79,6 +90,7 @@ func init() {
 	addModuleCmd.Flags().StringSlice("with", []string{}, "Integration packages (stripe, oauth, etc)")
 	addModuleCmd.Flags().String("compliance", "", "Compliance requirements (pci, sox, gdpr)")
 	addModuleCmd.Flags().Bool("force", false, "Force add even if conflicts exist")
+	addModuleCmd.Flags().BoolP("yes", "y", false, "Skip confirmation prompts")
 
 	// Add component flags
 	addComponentCmd.Flags().Bool("with-tests", true, "Generate tests")
@@ -118,7 +130,7 @@ func runAddAuthModule() error {
 	}
 
 	// Auto register in main.go
-	if err := generator.InjectModuleRegistration(base, "auth", projectModule); err != nil {
+	if err := generator.InjectModuleRegistration(base, "auth", projectModule, "internal/modules"); err != nil {
 		fmt.Printf("⚠️  Failed to register auth module: %v\n", err)
 	} else {
 		fmt.Println("🔌 Registered auth module in main.go")
@@ -155,7 +167,7 @@ func installDependency(pkg string) error {
 	return cmd.Run()
 }
 
-func runAddModule(module string, fields []string, integrations []string, compliance string, force bool) error {
+func runAddModule(module string, fields []string, integrations []string, compliance string, force, yes bool) error {
 	fmt.Printf("🧠 Intelligently adding module: %s\n", module)
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
@@ -269,7 +281,8 @@ func runAddModule(module string, fields []string, integrations []string, complia
 	}
 
 	// Generate only the specific module
-	if err := generateSpecificModule(config, module, fields, templateGenerator); err != nil {
+	moduleRelPath := detectModuleLocation(config.OutputPath)
+	if err := generateSpecificModule(config, module, fields, templateGenerator, moduleRelPath); err != nil {
 		return fmt.Errorf("error generating module: %w", err)
 	}
 
@@ -280,7 +293,7 @@ func runAddModule(module string, fields []string, integrations []string, complia
 		// Fallback to trying the framework path only if we are seemingly running tests in the framework itself
 		// but typically we should just fail gracefully.
 	} else {
-		if err := generator.InjectModuleRegistration(config.OutputPath, module, projectModule); err != nil {
+		if err := generator.InjectModuleRegistration(config.OutputPath, module, projectModule, moduleRelPath); err != nil {
 			fmt.Printf("   ⚠️  Warning: Failed to auto-register module in main.go: %v\n", err)
 		} else {
 			fmt.Printf("   🔌 Auto-registered module '%s' in main.go\n", module)
@@ -340,9 +353,14 @@ func runAddComponent(componentType, name, module string, withTests, withMigratio
 	}
 
 	// Verify module existence
+	// We need to check both possible locations
 	modulePath := filepath.Join(currentDir, "internal", "adapters", "http", "modules", module)
 	if _, err := os.Stat(modulePath); os.IsNotExist(err) {
-		return fmt.Errorf("module '%s' does not exist at %s", module, modulePath)
+		// Check alternate location
+		modulePath = filepath.Join(currentDir, "internal", "modules", module)
+		if _, err := os.Stat(modulePath); os.IsNotExist(err) {
+			return fmt.Errorf("module '%s' does not exist", module)
+		}
 	}
 
 	fmt.Printf("Adding %s '%s' to module '%s'...\n", componentType, name, module)
@@ -357,17 +375,23 @@ func runAddComponent(componentType, name, module string, withTests, withMigratio
 		projectModule = "github.com/pmaojo/kthulu-go/backend" // Fallback
 	}
 
+	// Determine module relative path
+	moduleRelPath := "internal/modules"
+	if strings.Contains(modulePath, "adapters/http/modules") {
+		moduleRelPath = "internal/adapters/http/modules"
+	}
+
 	switch componentType {
 	case "handler":
-		content = generateHandlerFile(name, projectModule)
+		content = generateHandlerFile(name, projectModule, moduleRelPath)
 		subdir = "handlers"
 		filename = fmt.Sprintf("%s_handler.go", strings.ToLower(name))
 	case "service":
-		content = generateServiceFile(name, projectModule)
+		content = generateServiceFile(name, projectModule, moduleRelPath)
 		subdir = "service"
 		filename = fmt.Sprintf("%s_service.go", strings.ToLower(name))
 	case "repository":
-		content = generateRepositoryFile(name, projectModule)
+		content = generateRepositoryFile(name, projectModule, moduleRelPath)
 		subdir = "repository"
 		filename = fmt.Sprintf("%s_repository.go", strings.ToLower(name))
 	case "domain":
@@ -484,6 +508,15 @@ func detectModuleFromDir(dir string) string {
 	return ""
 }
 
+func detectModuleLocation(projectRoot string) string {
+	// Check if internal/adapters/http/modules exists
+	if _, err := os.Stat(filepath.Join(projectRoot, "internal", "adapters", "http", "modules")); err == nil {
+		return "internal/adapters/http/modules"
+	}
+	// Fallback to internal/modules
+	return "internal/modules"
+}
+
 func displayDependencyPlan(moduleName string, plan *resolver.ResolutionPlan) {
 	fmt.Printf("\n📊 Dependency Resolution Plan:\n")
 	fmt.Printf("   Primary module:    %s\n", moduleName)
@@ -503,11 +536,11 @@ func displayDependencyPlan(moduleName string, plan *resolver.ResolutionPlan) {
 	}
 }
 
-func generateSpecificModule(config *generator.GeneratorConfig, moduleName string, fields []string, gen *generator.TemplateGenerator) error {
-	fmt.Printf("   📁 Creating module structure for '%s'\n", moduleName)
+func generateSpecificModule(config *generator.GeneratorConfig, moduleName string, fields []string, gen *generator.TemplateGenerator, moduleRelPath string) error {
+	fmt.Printf("   📁 Creating module structure for '%s' in %s\n", moduleName, moduleRelPath)
 
-	// Create module directory - Standardized to internal/modules for consistency
-	moduleDir := filepath.Join(config.OutputPath, "internal", "modules", moduleName)
+	// Create module directory based on detected location
+	moduleDir := filepath.Join(config.OutputPath, moduleRelPath, moduleName)
 	if err := os.MkdirAll(moduleDir, 0755); err != nil {
 		return fmt.Errorf("failed to create module directory: %w", err)
 	}
@@ -533,11 +566,11 @@ func generateSpecificModule(config *generator.GeneratorConfig, moduleName string
 	// Generate basic module files using the generator
 	// This is a simplified version - the full generator.GenerateProject would handle this
 	files := map[string]string{
-		"module.go":                             generateModuleFile(moduleName),
+		"module.go":                             generateModuleFile(moduleName, projectModule, moduleRelPath),
 		fmt.Sprintf("domain/%s.go", moduleName): generateDomainFile(moduleName, fields),
-		fmt.Sprintf("repository/%s_repository.go", moduleName): generateRepositoryFile(moduleName, projectModule),
-		fmt.Sprintf("service/%s_service.go", moduleName):       generateServiceFile(moduleName, projectModule),
-		fmt.Sprintf("handlers/%s_handler.go", moduleName):      generateHandlerFile(moduleName, projectModule),
+		fmt.Sprintf("repository/%s_repository.go", moduleName): generateRepositoryFile(moduleName, projectModule, moduleRelPath),
+		fmt.Sprintf("service/%s_service.go", moduleName):       generateServiceFile(moduleName, projectModule, moduleRelPath),
+		fmt.Sprintf("handlers/%s_handler.go", moduleName):      generateHandlerFile(moduleName, projectModule, moduleRelPath),
 	}
 
 	for filename, content := range files {

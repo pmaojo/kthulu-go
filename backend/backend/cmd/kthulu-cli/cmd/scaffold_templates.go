@@ -15,20 +15,22 @@ type Field struct {
 }
 
 type moduleTemplateData struct {
-	Name        string
-	Title       string
-	Fields      []Field
-	Database    string
+	Name          string
+	Title         string
+	Fields        []Field
+	Database      string
 	ProjectModule string
+	ModuleRelPath string
 }
 
-func newModuleTemplateData(name string, fields []string, database, projectModule string) moduleTemplateData {
+func newModuleTemplateData(name string, fields []string, database, projectModule, moduleRelPath string) moduleTemplateData {
 	return moduleTemplateData{
 		Name:          name,
 		Title:         exportName(name),
 		Fields:        parseFields(fields),
 		Database:      database,
 		ProjectModule: projectModule,
+		ModuleRelPath: moduleRelPath,
 	}
 }
 
@@ -89,17 +91,21 @@ package {{.Name}}
 import (
 	"go.uber.org/fx"
 	"github.com/gorilla/mux"
+
+	"{{.ProjectModule}}/{{.ModuleRelPath}}/{{.Name}}/handlers"
+	"{{.ProjectModule}}/{{.ModuleRelPath}}/{{.Name}}/repository"
+	"{{.ProjectModule}}/{{.ModuleRelPath}}/{{.Name}}/service"
 )
 
 // Providers returns the Fx providers for the {{.Name}} module
 func Providers() fx.Option {
         return fx.Options(
                 fx.Provide(
-                        New{{.Title}}Repository,
-                        New{{.Title}}Service,
-                        New{{.Title}}Handler,
+                        repository.New{{.Title}}Repository,
+                        service.New{{.Title}}Service,
+                        handlers.New{{.Title}}Handler,
                 ),
-                fx.Invoke(func(r *mux.Router, h *{{.Title}}Handler) {
+                fx.Invoke(func(r *mux.Router, h *handlers.{{.Title}}Handler) {
                         h.RegisterRoutes(r)
                 }),
         )
@@ -158,7 +164,7 @@ package repository
 import (
         "gorm.io/gorm"
 
-        "{{.ProjectModule}}/internal/adapters/http/modules/{{.Name}}/domain"
+        "{{.ProjectModule}}/{{.ModuleRelPath}}/{{.Name}}/domain"
 )
 
 type {{.Title}}Repository struct {
@@ -213,7 +219,7 @@ func (r *{{.Title}}Repository) List(filter domain.SearchFilter) ([]*domain.{{.Ti
 package service
 
 import (
-        "{{.ProjectModule}}/internal/adapters/http/modules/{{.Name}}/domain"
+        "{{.ProjectModule}}/{{.ModuleRelPath}}/{{.Name}}/domain"
 )
 
 type {{.Title}}Service struct {
@@ -257,7 +263,7 @@ import (
         "strconv"
 
         "github.com/gorilla/mux"
-        "{{.ProjectModule}}/internal/adapters/http/modules/{{.Name}}/domain"
+        "{{.ProjectModule}}/{{.ModuleRelPath}}/{{.Name}}/domain"
 )
 
 type {{.Title}}Handler struct {
@@ -376,32 +382,32 @@ DROP TABLE IF EXISTS {{.Name}}s;
 `))
 )
 
-func generateModuleFile(name string) string {
-	data := newModuleTemplateData(name, nil, "", "")
+func generateModuleFile(name, projectModule, moduleRelPath string) string {
+	data := newModuleTemplateData(name, nil, "", projectModule, moduleRelPath)
 	return renderModuleTemplate(moduleFileTemplate, data)
 }
 
 func generateDomainFile(name string, fields []string) string {
-	data := newModuleTemplateData(name, fields, "", "")
+	data := newModuleTemplateData(name, fields, "", "", "")
 	return renderModuleTemplate(domainFileTemplate, data)
 }
 
-func generateRepositoryFile(name, projectModule string) string {
-	data := newModuleTemplateData(name, nil, "", projectModule)
+func generateRepositoryFile(name, projectModule, moduleRelPath string) string {
+	data := newModuleTemplateData(name, nil, "", projectModule, moduleRelPath)
 	return renderModuleTemplate(repositoryFileTemplate, data)
 }
 
-func generateServiceFile(name, projectModule string) string {
-	data := newModuleTemplateData(name, nil, "", projectModule)
+func generateServiceFile(name, projectModule, moduleRelPath string) string {
+	data := newModuleTemplateData(name, nil, "", projectModule, moduleRelPath)
 	return renderModuleTemplate(serviceFileTemplate, data)
 }
 
-func generateHandlerFile(name, projectModule string) string {
-	data := newModuleTemplateData(name, nil, "", projectModule)
+func generateHandlerFile(name, projectModule, moduleRelPath string) string {
+	data := newModuleTemplateData(name, nil, "", projectModule, moduleRelPath)
 	return renderModuleTemplate(handlerFileTemplate, data)
 }
 
 func generateMigrationContent(name string, fields []string, database string) string {
-	data := newModuleTemplateData(name, fields, database, "")
+	data := newModuleTemplateData(name, fields, database, "", "")
 	return renderModuleTemplate(migrationFileTemplate, data)
 }
