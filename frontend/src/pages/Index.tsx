@@ -7,15 +7,15 @@ import { PropertiesPanel } from "@/components/PropertiesPanel";
 import { Terminal } from "@/components/Terminal";
 import { CodeEditor } from "@/components/CodeEditor";
 import { Dashboard } from "@/components/Dashboard";
+import { BehaviorLab } from "@/components/BehaviorLab"; // New import
 import { ProjectGeneratorDialog } from "@/components/ProjectGeneratorDialog";
 import { ModuleCatalog } from "@/components/ModuleCatalog";
 import { ComponentScaffolder } from "@/components/ComponentScaffolder";
 import { TemplateManager } from "@/components/TemplateManager";
 import { AuditWorkbench } from "@/components/AuditWorkbench";
-import { AIAssistant } from "@/components/AIAssistant";
 import { AIChat } from "@/components/AIChat";
 import { SecurityPanel } from "@/components/SecurityPanel";
-import { Terminal as TerminalIcon, Layers, Code2, Eye, Zap, WifiOff, Wifi, Command } from "lucide-react";
+import { Layers, Zap, WifiOff, Wifi, Command } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useKthuluConnection } from "@/hooks/useKthuluConnection";
@@ -23,7 +23,7 @@ import { ElementProperties, ElementType } from "@/types/properties";
 import CommandPalette from "@/components/CommandPalette";
 
 const Index = () => {
-  const [activeSection, setActiveSection] = useState("services");
+  const [activeSection, setActiveSection] = useState("dashboard"); // Changed default to dashboard
   const [showProperties, setShowProperties] = useState(false);
   const [showGenerator, setShowGenerator] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -62,6 +62,13 @@ const Index = () => {
 
   const renderMainContent = () => {
     switch (activeSection) {
+      case "dashboard": // Handled Dashboard ID
+      case "preview": // Keep backward compatibility just in case
+        return <Dashboard />;
+
+      case "behavior-lab": // New section
+        return <BehaviorLab />;
+
       case "services":
       case "entities":
       case "architecture":
@@ -73,9 +80,6 @@ const Index = () => {
       case "generate":
       case "code":
         return <CodeEditor className="flex-1" />;
-
-      case "preview":
-        return <Dashboard />;
 
       case "modules":
         return <ModuleCatalog />;
@@ -100,7 +104,10 @@ const Index = () => {
         return <SecurityPanel />;
       
       default:
-        return <ServiceCanvas className="flex-1" onNodeSelect={handleNodeSelect} />;
+        // Fallback to Dashboard if unknown section, or keep ServiceCanvas?
+        // Let's keep ServiceCanvas as fallback for now, or Dashboard.
+        // Given Dashboard is the main entry, Dashboard makes sense, but ServiceCanvas was original default.
+        return <Dashboard />;
     }
   };
 
