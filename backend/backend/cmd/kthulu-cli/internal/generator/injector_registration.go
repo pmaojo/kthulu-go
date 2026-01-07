@@ -15,7 +15,7 @@ import (
 )
 
 // InjectModuleRegistration finds cmd/server/main.go and registers the new module.
-func InjectModuleRegistration(projectRoot, moduleName, projectModule string) error {
+func InjectModuleRegistration(projectRoot, moduleName, projectModule, moduleRelPath string) error {
 	mainPath := filepath.Join(projectRoot, "cmd", "server", "main.go")
 	if _, err := os.Stat(mainPath); os.IsNotExist(err) {
 		// Fallback to service if server not found (backward compatibility)
@@ -40,7 +40,7 @@ func InjectModuleRegistration(projectRoot, moduleName, projectModule string) err
 	safeModuleName := strings.ToLower(strings.ReplaceAll(moduleName, "-", ""))
 
 	// 1. Add Import
-	moduleImportPath := fmt.Sprintf("%s/internal/modules/%s", projectModule, moduleName)
+	moduleImportPath := fmt.Sprintf("%s/%s/%s", projectModule, moduleRelPath, moduleName)
 	// We need to use a named import if the package name (sanitized) differs from the last path element
 	// or just to be safe if moduleName has hyphens.
 	// However, astutil.AddNamedImport is not available in all versions, or we can just rely on AddImport
