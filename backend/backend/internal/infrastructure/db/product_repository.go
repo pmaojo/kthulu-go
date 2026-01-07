@@ -870,6 +870,11 @@ func (r *ProductRepository) GetPricesByVariantIDs(ctx context.Context, variantID
 	return prices, nil
 }
 
+// GetPricesForProductIDs retrieves all prices (product and variant) for a list of product IDs
+func (r *ProductRepository) GetPricesForProductIDs(ctx context.Context, productIDs []uint) ([]*domain.ProductPrice, error) {
+	return r.fetchPricesForProducts(ctx, productIDs)
+}
+
 // GetEffectivePrice retrieves the effective price for a product or variant
 func (r *ProductRepository) GetEffectivePrice(ctx context.Context, productID *uint, variantID *uint, priceType domain.PriceType, quantity int, at time.Time) (*domain.ProductPrice, error) {
 	var query string
