@@ -86,7 +86,10 @@ var (
 // @kthulu:generated:true
 package {{.Name}}
 
-import "go.uber.org/fx"
+import (
+	"go.uber.org/fx"
+	"github.com/gorilla/mux"
+)
 
 // Providers returns the Fx providers for the {{.Name}} module
 func Providers() fx.Option {
@@ -96,6 +99,9 @@ func Providers() fx.Option {
                         New{{.Title}}Service,
                         New{{.Title}}Handler,
                 ),
+                fx.Invoke(func(r *mux.Router, h *{{.Title}}Handler) {
+                        h.RegisterRoutes(r)
+                }),
         )
 }
 `))
@@ -260,6 +266,12 @@ type {{.Title}}Handler struct {
 
 func New{{.Title}}Handler(service domain.{{.Title}}Service) *{{.Title}}Handler {
         return &{{.Title}}Handler{service: service}
+}
+
+func (h *{{.Title}}Handler) RegisterRoutes(r *mux.Router) {
+        r.HandleFunc("/{{.Name}}s", h.List).Methods("GET")
+        r.HandleFunc("/{{.Name}}s", h.Create).Methods("POST")
+        r.HandleFunc("/{{.Name}}s/{id}", h.GetByID).Methods("GET")
 }
 
 // Create handles the creation of a new {{.Name}}
