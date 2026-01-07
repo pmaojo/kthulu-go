@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"os/exec"
@@ -40,16 +41,6 @@ var addModuleCmd = &cobra.Command{
 		compliance, _ := cmd.Flags().GetString("compliance")
 		force, _ := cmd.Flags().GetBool("force")
 		yes, _ := cmd.Flags().GetBool("yes")
-
-		// Prioritize yes flag over force or assume force if yes is set (or treat them independently)
-		// Usually yes implies skipping prompts/confirmation.
-		// For now we pass 'yes' to handle non-interactive mode if needed.
-		// Note: The original code used 'force' to override conflicts. We can treat 'yes' as confirming actions.
-
-		if yes {
-			// If yes is passed, we might want to auto-confirm conflicts if that's the intention,
-			// but force is specifically for conflicts. Let's keep them separate but allow yes to be used.
-		}
 
 		return runAddModule(module, fields, withIntegrations, compliance, force, yes)
 	},
@@ -236,7 +227,32 @@ func runAddModule(module string, fields []string, integrations []string, complia
 		}
 	}
 
-	// Step 7: Show recommendations
+	// Step 7: Confirmation prompt
+	if !yes {
+		fmt.Printf("\n❓ Do you want to proceed with adding module '%s'? [y/N] ", module)
+		reader := bufio.NewReader(os.Stdin)
+		response, err := reader.ReadString('\n')
+		if err != nil {
+			return fmt.Errorf("failed to read input: %w", err)
+		}
+
+		response = strings.ToLower(strings.TrimSpace(response))
+		if response != "y" && response != "yes" {
+			fmt.Println("❌ Aborted by user")
+			return nil
+		}
+	} else {
+		fmt.Println("\n⏩ Skipping confirmation due to --yes flag")
+	}
+
+	// Step 8: Show recommendations (Optional, moved after prompt if we want prompt to be the gate,
+	// but maybe recommendations should be seen before prompt?
+	// The original code had recs after conflicts. Let's keep recs before generation but after prompt?
+	// Or maybe before prompt?
+	// Let's show recommendations BEFORE prompt so user knows what's happening.
+	// But wait, my code block above put prompt at Step 7. Recs were Step 7 in original code.
+	// I'll show Recs then Prompt.
+
 	if len(plan.Recommendations) > 0 {
 		fmt.Printf("\n💡 Recommendations:\n")
 		for _, rec := range plan.Recommendations {
@@ -253,7 +269,7 @@ func runAddModule(module string, fields []string, integrations []string, complia
 		}
 	}
 
-	// Step 8: Generate module files
+	// Step 9: Generate module files
 	fmt.Printf("\n📦 Generating module files...\n")
 	templateGenerator := generator.NewTemplateGenerator(dependencyResolver)
 
