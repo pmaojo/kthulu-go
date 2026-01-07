@@ -41,8 +41,10 @@ var addModuleCmd = &cobra.Command{
 		compliance, _ := cmd.Flags().GetString("compliance")
 		force, _ := cmd.Flags().GetBool("force")
 		yes, _ := cmd.Flags().GetBool("yes")
+		prefix, _ := cmd.Flags().GetString("prefix")
+		protected, _ := cmd.Flags().GetBool("protected")
 
-		return runAddModule(module, fields, withIntegrations, compliance, force, yes)
+		return runAddModule(module, fields, withIntegrations, compliance, force, yes, prefix, protected)
 	},
 }
 
@@ -82,6 +84,8 @@ func init() {
 	addModuleCmd.Flags().String("compliance", "", "Compliance requirements (pci, sox, gdpr)")
 	addModuleCmd.Flags().Bool("force", false, "Force add even if conflicts exist")
 	addModuleCmd.Flags().BoolP("yes", "y", false, "Skip confirmation prompts")
+	addModuleCmd.Flags().String("prefix", "", "Route prefix (e.g. /api/v1)")
+	addModuleCmd.Flags().Bool("protected", false, "Protect routes with authentication middleware")
 
 	// Add component flags
 	addComponentCmd.Flags().Bool("with-tests", true, "Generate tests")
@@ -158,7 +162,7 @@ func installDependency(pkg string) error {
 	return cmd.Run()
 }
 
-func runAddModule(module string, fields []string, integrations []string, compliance string, force, yes bool) error {
+func runAddModule(module string, fields []string, integrations []string, compliance string, force, yes bool, prefix string, protected bool) error {
 	fmt.Printf("🧠 Intelligently adding module: %s\n", module)
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
@@ -283,6 +287,18 @@ func runAddModule(module string, fields []string, integrations []string, complia
 		Frontend:     detectFrontend(currentDir),
 		Auth:         detectAuth(currentDir),
 		CustomValues: make(map[string]string),
+	}
+
+	if prefix != "" {
+		config.CustomValues["route_prefix"] = prefix
+	} else {
+		// Default prefix logic
+		// We can check if main.go has /api/v1 and use it, or default to root
+		// For now let's leave it empty to default to what the generator does
+	}
+
+	if protected {
+		config.CustomValues["protected"] = "true"
 	}
 
 	// Add compliance configuration
@@ -586,7 +602,7 @@ func generateSpecificModule(config *generator.GeneratorConfig, moduleName string
 		fmt.Sprintf("domain/%s.go", moduleName): generateDomainFile(moduleName, fields),
 		fmt.Sprintf("repository/%s_repository.go", moduleName): generateRepositoryFile(moduleName, projectModule, moduleRelPath),
 		fmt.Sprintf("service/%s_service.go", moduleName):       generateServiceFile(moduleName, projectModule, moduleRelPath),
-		fmt.Sprintf("handlers/%s_handler.go", moduleName):      generateHandlerFile(moduleName, projectModule, moduleRelPath),
+		fmt.Sprintf("handlers/%s_handler.go", moduleName):      generateHandlerFileWithConfig(moduleName, projectModule, moduleRelPath, config.CustomValues["route_prefix"], config.CustomValues["protected"] == "true"),
 	}
 
 	for filename, content := range files {

@@ -236,6 +236,13 @@ func (g *TemplateGenerator) generateBaseStructure(structure *ProjectStructure) e
 	}
 	structure.Files = append(structure.Files, coreProvidersTest)
 
+	// Generate cmd/migrate/main.go
+	migrateMain := GeneratedFile{
+		Path:    "cmd/migrate/main.go",
+		Content: g.generateMigrateMainFile(),
+	}
+	structure.Files = append(structure.Files, migrateMain)
+
 	return nil
 }
 
@@ -405,12 +412,12 @@ defer stop()
 app := fx.New(
 // Core providers
 core.CoreRepositoryProviders(),
+fx.Provide(NewRouter),
 
 // Module providers
 %s
 
-fx.Invoke(func(lc fx.Lifecycle, %s) {
-router := setupRoutes()
+fx.Invoke(func(lc fx.Lifecycle, router *mux.Router, %s) {
 apiRouter := router.PathPrefix("/api/v1").Subrouter()
 
 %s
@@ -445,7 +452,7 @@ defer cancel()
 return app.Stop(shutdownCtx)
 }
 
-func setupRoutes() *mux.Router {
+func NewRouter() *mux.Router {
 router := mux.NewRouter()
 
 router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -487,6 +494,7 @@ func (g *TemplateGenerator) generateGoMod() string {
 	addDep(fmt.Sprintf("gorm.io/driver/%s v1.5.4", g.config.Database))
 	addDep("gorm.io/driver/sqlite v1.5.4")
 	addDep("github.com/golang-jwt/jwt/v5 v5.2.0")
+	addDep("github.com/pressly/goose/v3 v3.24.3")
 
 	if extra := strings.Split(strings.TrimSpace(g.generateDependencies()), "\n"); len(extra) > 0 {
 		for _, dep := range extra {
@@ -1227,6 +1235,65 @@ t.Fatalf("expected OK body got %s", body)
 }
 }
 `
+}
+
+func (g *TemplateGenerator) generateMigrateMainFile() string {
+	// Need to determine appropriate driver import based on config
+	driverImport := `_ "github.com/mattn/go-sqlite3"`
+	openDriver := "sqlite3"
+	openDSN := "app.db"
+
+	switch g.config.Database {
+	case "postgres":
+		driverImport = `_ "github.com/jackc/pgx/v5/stdlib"`
+		openDriver = "pgx"
+		openDSN = "postgres://user:password@localhost:5432/dbname?sslmode=disable" // simplified
+	case "mysql":
+		driverImport = `_ "github.com/go-sql-driver/mysql"`
+		openDriver = "mysql"
+		openDSN = "user:password@tcp(localhost:3306)/dbname?parseTime=true"
+	}
+
+	return fmt.Sprintf(`package main
+
+import (
+	"log"
+	"os"
+
+	%s
+	"github.com/pressly/goose/v3"
+)
+
+func main() {
+	if len(os.Args) < 2 {
+		log.Fatal("usage: migrate [command]")
+	}
+
+	command := os.Args[1]
+	dir := "migrations"
+
+	// TODO: Load configuration for DSN
+	db, err := goose.OpenDBWithDriver("%s", "%s")
+	if err != nil {
+		log.Fatalf("goose: failed to open DB: %%v\n", err)
+	}
+
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Fatalf("goose: failed to close DB: %%v\n", err)
+		}
+	}()
+
+	arguments := []string{}
+	if len(os.Args) > 2 {
+		arguments = os.Args[2:]
+	}
+
+	if err := goose.Run(command, db, dir, arguments...); err != nil {
+		log.Fatalf("goose %%v: %%v", command, err)
+	}
+}
+`, driverImport, openDriver, openDSN)
 }
 
 func (g *TemplateGenerator) generateCoreProvidersTest() string {
