@@ -242,15 +242,56 @@ func (r *ProductRepository) List(ctx context.Context, organizationID uint, filte
 			productMap[p.ID] = p
 		}
 
+		g, ctx := errgroup.WithContext(ctx)
+
 		if filters.IncludeVariants {
-			if err := r.loadVariantsForProducts(ctx, productIDs, productMap); err != nil {
-				r.logger.Error("Failed to bulk load product variants", "error", err)
-			}
+			g.Go(func() error {
+				if err := r.loadVariantsForProducts(ctx, productIDs, productMap); err != nil {
+					r.logger.Error("Failed to bulk load product variants", "error", err)
+				}
+				return nil
+			})
 		}
 
+		var prices []*domain.ProductPrice
 		if filters.IncludePrices {
-			if err := r.loadPricesForProducts(ctx, productIDs, productMap); err != nil {
-				r.logger.Error("Failed to bulk load product prices", "error", err)
+			g.Go(func() error {
+				var err error
+				prices, err = r.fetchPricesForProducts(ctx, productIDs)
+				if err != nil {
+					r.logger.Error("Failed to bulk load product prices", "error", err)
+				}
+				return nil
+			})
+		}
+
+		if err := g.Wait(); err != nil {
+			// This should not happen as we are not returning errors from the goroutines
+			r.logger.Error("Error waiting for product relation loading", "error", err)
+		}
+
+		// Attach prices after parallel loading is done
+		if len(prices) > 0 {
+			// Map variant IDs to pointers of the variants in the product structs.
+			// This is now safe because loadVariantsForProducts has completed.
+			variantMap := make(map[uint]*domain.ProductVariant)
+			for _, product := range productMap {
+				for i := range product.Variants {
+					v := &product.Variants[i]
+					variantMap[v.ID] = v
+				}
+			}
+
+			for _, price := range prices {
+				if price.ProductID != nil {
+					if product, ok := productMap[*price.ProductID]; ok {
+						product.Prices = append(product.Prices, *price)
+					}
+				} else if price.ProductVariantID != nil {
+					if variant, ok := variantMap[*price.ProductVariantID]; ok {
+						variant.Prices = append(variant.Prices, *price)
+					}
+				}
 			}
 		}
 	}
@@ -315,63 +356,44 @@ func (r *ProductRepository) loadVariantsForProducts(ctx context.Context, product
 	return nil
 }
 
-// loadPricesForProducts loads prices for a list of product IDs and assigns them to the products
-func (r *ProductRepository) loadPricesForProducts(ctx context.Context, productIDs []uint, productMap map[uint]*domain.Product) error {
-	// Map variant IDs to pointers of the variants in the product structs.
-	// This allows O(1) lookup when assigning prices to variants.
-	variantMap := make(map[uint]*domain.ProductVariant)
-	var variantIDs []uint
-
-	for _, product := range productMap {
-		// Use index iteration to get pointers to the actual slice elements.
-		// These pointers are safe to store because product.Variants slice capacity
-		// is fixed for this operation and no appending happens here.
-		for i := range product.Variants {
-			v := &product.Variants[i]
-			variantMap[v.ID] = v
-			variantIDs = append(variantIDs, v.ID)
-		}
+// fetchPricesForProducts fetches all prices (product and variant) for a list of product IDs.
+// It uses a subquery to find variant IDs associated with the products, allowing it to run
+// independently of variant loading.
+func (r *ProductRepository) fetchPricesForProducts(ctx context.Context, productIDs []uint) ([]*domain.ProductPrice, error) {
+	if len(productIDs) == 0 {
+		return nil, nil
 	}
 
-	args := make([]interface{}, 0, len(productIDs)+len(variantIDs))
-	var whereConditions []string
-
-	if len(productIDs) > 0 {
-		placeholders := make([]string, len(productIDs))
-		for i, id := range productIDs {
-			placeholders[i] = fmt.Sprintf("$%d", len(args)+1)
-			args = append(args, id)
-		}
-		whereConditions = append(whereConditions, fmt.Sprintf("product_id IN (%s)", strings.Join(placeholders, ",")))
+	placeholders := make([]string, len(productIDs))
+	args := make([]interface{}, len(productIDs))
+	for i, id := range productIDs {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
 	}
-
-	if len(variantIDs) > 0 {
-		placeholders := make([]string, len(variantIDs))
-		for i, id := range variantIDs {
-			placeholders[i] = fmt.Sprintf("$%d", len(args)+1)
-			args = append(args, id)
-		}
-		whereConditions = append(whereConditions, fmt.Sprintf("product_variant_id IN (%s)", strings.Join(placeholders, ",")))
-	}
-
-	if len(whereConditions) == 0 {
-		return nil
-	}
+	idsStr := strings.Join(placeholders, ",")
 
 	query := fmt.Sprintf(`
 		SELECT id, product_id, product_variant_id, price_type, currency, amount,
 			   min_quantity, max_quantity, valid_from, valid_until,
 			   is_active, created_at, updated_at
 		FROM product_prices
-		WHERE %s
-		ORDER BY price_type, min_quantity`, strings.Join(whereConditions, " OR "))
+		WHERE product_id IN (%s)
+		   OR product_variant_id IN (
+		       SELECT id FROM product_variants WHERE product_id IN (%s)
+		   )
+		ORDER BY price_type, min_quantity`, idsStr, idsStr)
+
+	// Since we are using positional placeholders $1..$N in both IN clauses, and they refer to the same set of IDs
+	// which are mapped to the first N arguments, we only need to pass args once.
+	// The database driver will map $1 to args[0] in both places.
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return fmt.Errorf("failed to query product prices: %w", err)
+		return nil, fmt.Errorf("failed to query product prices: %w", err)
 	}
 	defer rows.Close()
 
+	var prices []*domain.ProductPrice
 	for rows.Next() {
 		price := &domain.ProductPrice{}
 		err := rows.Scan(
@@ -381,9 +403,41 @@ func (r *ProductRepository) loadPricesForProducts(ctx context.Context, productID
 			&price.CreatedAt, &price.UpdatedAt,
 		)
 		if err != nil {
-			return fmt.Errorf("failed to scan product price: %w", err)
+			return nil, fmt.Errorf("failed to scan product price: %w", err)
 		}
+		prices = append(prices, price)
+	}
 
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate product prices: %w", err)
+	}
+
+	return prices, nil
+}
+
+// loadPricesForProducts loads prices for a list of product IDs and assigns them to the products
+func (r *ProductRepository) loadPricesForProducts(ctx context.Context, productIDs []uint, productMap map[uint]*domain.Product) error {
+	// This legacy method is kept for compatibility if needed, but List() now uses fetchPricesForProducts
+	// alongside manual attachment to support parallelism.
+	// Re-implementing it using the new fetch method to reduce code duplication,
+	// BUT this method assumes variants are already loaded if it wants to attach to them.
+	// Since List() now handles attachment manually, this might be unused in List() path.
+
+	prices, err := r.fetchPricesForProducts(ctx, productIDs)
+	if err != nil {
+		return err
+	}
+
+	// Map variant IDs to pointers of the variants in the product structs.
+	variantMap := make(map[uint]*domain.ProductVariant)
+	for _, product := range productMap {
+		for i := range product.Variants {
+			v := &product.Variants[i]
+			variantMap[v.ID] = v
+		}
+	}
+
+	for _, price := range prices {
 		if price.ProductID != nil {
 			if product, ok := productMap[*price.ProductID]; ok {
 				product.Prices = append(product.Prices, *price)
@@ -393,10 +447,6 @@ func (r *ProductRepository) loadPricesForProducts(ctx context.Context, productID
 				variant.Prices = append(variant.Prices, *price)
 			}
 		}
-	}
-
-	if err = rows.Err(); err != nil {
-		return fmt.Errorf("failed to iterate product prices: %w", err)
 	}
 
 	return nil
