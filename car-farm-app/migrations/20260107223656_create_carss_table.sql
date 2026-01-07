@@ -1,0 +1,16 @@
+-- +goose Up
+-- SQL in section 'Up' is executed when this migration is applied
+CREATE TABLE IF NOT EXISTS Cars (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    make TEXT,
+    model TEXT,
+    year INTEGER,
+    vin TEXT,
+    status TEXT
+);
+
+-- +goose Down
+-- SQL section 'Down' is executed when this migration is rolled back
+DROP TABLE IF EXISTS Cars;

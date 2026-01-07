@@ -1,163 +1,114 @@
-# Building a Car Workshop API with Kthulu
+# Tutorial: Building a Car Farm Management App with Kthulu CLI
 
-This tutorial demonstrates how to build a production-ready Car Workshop Management API using the Kthulu CLI. We will create a new project, add modules for customers, cars, services, and bookings, and address some initial frictions to get the application running.
+This tutorial describes the process of creating a "Car Farm Management" application using the `kthulu-cli`. The application is designed to manage cars, farms, and maintenance records.
 
 ## Prerequisites
 
-- Go 1.22+
-- Docker (optional, for running the generated Dockerfile)
-- Kthulu CLI installed
+- **Go**: Ensure Go 1.24+ is installed.
+- **Kthulu CLI**: The CLI must be built and available.
 
-### Installing Kthulu CLI
+## Steps
 
-If you haven't installed the CLI yet, you can build it from source:
+### 1. Build the CLI
+
+First, we need to build the `kthulu-cli` tool from the source code.
 
 ```bash
 cd backend/backend
 go build -o ../../bin/kthulu-cli ./cmd/kthulu-cli
 ```
 
-*Note: Adjust the paths based on your current directory structure.*
+### 2. Create the Project
 
-## Step 1: Initialize the Project
-
-We will start by creating a new project named `workshop-api`. We'll use the `monolith` template, `postgres` as the database, and include the `users` feature (for future authentication).
+We create a new project named `car-farm-app` using the `microservice` template (default) with SQLite database and observability features enabled.
 
 ```bash
-kthulu-cli create workshop-api \
-  --template=monolith \
-  --database=postgres \
-  --features=users \
-  --module-path=github.com/example/workshop-api
+bin/kthulu-cli create car-farm-app --database sqlite --observability
 ```
 
-This command generates a complete project structure with Clean Architecture, dependency injection (Uber Fx), and configured tooling (Makefile, Dockerfile, etc.).
+This command generates the project structure, including:
+- `cmd/server/main.go`: The entry point.
+- `internal/`: Core logic and modules.
+- `go.mod`: Dependency management.
+- `Dockerfile`, `Makefile`: Build and deployment configurations.
 
-## Step 2: Add Modules
+### 3. Add Core Modules
 
-Now we will add the core entities for our Car Workshop application using the `add module` command.
+We add three modules to the application: `cars`, `farms`, and `maintenance`.
 
-### 2.1 Customers Module
+#### Add `cars` module
+The `cars` module tracks vehicle details.
 
 ```bash
-cd workshop-api
-kthulu-cli add module customers name:string email:string phone:string address:string -y
+cd car-farm-app
+../bin/kthulu-cli add module cars make:string model:string year:int vin:string status:string -y
 ```
 
-### 2.2 Cars Module
+#### Add `farms` module
+The `farms` module tracks farm locations and capacity.
 
 ```bash
-kthulu-cli add module cars \
-  make:string \
-  model:string \
-  year:int \
-  plate:string \
-  vin:string \
-  customer_id:int \
-  -y
+../bin/kthulu-cli add module farms name:string location:string capacity:int -y
 ```
 
-### 2.3 Services Module
+#### Add `maintenance` module
+The `maintenance` module tracks repairs and costs, linked to a specific car. Note the relationship syntax `car:belongs_to:cars`.
 
 ```bash
-kthulu-cli add module services \
-  name:string \
-  description:string \
-  price:float \
-  duration:int \
-  -y
+../bin/kthulu-cli add module maintenance description:string cost:float date:time car:belongs_to:cars -y
 ```
 
-### 2.4 Bookings Module
+### 4. Verify the Project
 
-```bash
-kthulu-cli add module bookings \
-  car_id:int \
-  service_id:int \
-  booking_date:time \
-  status:string \
-  -y
-```
-
-## Step 3: Fix Generated Code
-
-During this process, we encountered a few bugs in the generated code that prevent immediate compilation and startup. We need to fix them manually:
-
-1.  **Fix Missing Import:** Open `internal/core/providers.go` and add `"gorm.io/driver/sqlite"` to the imports. This is required for the test mode configuration generated in that file.
-2.  **Fix Dependency Injection:** Open `cmd/server/main.go`. The `setupRoutes` function creates the router, but it is not provided to the Fx container.
-    -   Change `users.Providers(), ...` block to explicitly provide the router:
-        ```go
-        // Core providers
-        fx.Provide(setupRoutes),
-
-        // Module providers
-        users.Providers(), ...
-        ```
-    -   Update the `fx.Invoke` signature to accept `router *mux.Router` so it can be used to register routes.
-3.  **Missing Files:**
-    -   Create `cmd/migrate/main.go` (referenced by `make migrate`) if it's missing.
-    -   Create a migration for the `users` table if not automatically generated.
-
-## Generated Code Overview
-
-The CLI has generated a fully functional backend structure:
-
-- **Domain (`internal/adapters/http/modules/bookings/domain/bookings.go`)**: Defines the `Bookings` struct and interfaces.
-- **Repository (`.../repository/bookings_repository.go`)**: Implements database access using GORM.
-- **Service (`.../service/bookings_service.go`)**: Contains business logic.
-- **Handler (`.../handlers/bookings_handler.go`)**: HTTP handlers for REST API endpoints.
-
-## Running the Application
-
-You can now run the application:
+Run tests to ensure everything is wired correctly.
 
 ```bash
 go mod tidy
+go test ./...
+```
+
+Run the application:
+
+```bash
 go run cmd/server/main.go
 ```
 
-### API Endpoints
+### 5. Generate Documentation
 
-Due to current generation logic, there is a mix of routing paths:
+Generate Swagger API documentation.
 
--   **Users:** `GET /api/v1/users` (Configured manually in `main.go`)
--   **Bookings:** `GET /bookingss` (Auto-registered at root)
--   **Customers:** `GET /customerss`
--   **Cars:** `GET /carss`
--   **Services:** `GET /servicess`
+```bash
+../bin/kthulu-cli doc
+```
 
----
+## Roadmap & Frictions
 
-## Roadmap: Fixing Frictions
+During the process, several frictions were encountered. Below is a roadmap to address them.
 
-To streamline the developer experience, the following improvements are planned for the Kthulu CLI:
+### Frictions Encountered
 
-### 1. Fix Broken Code Generation
-**Issue:** The generated project failed to compile (missing imports) and crash on startup (missing DI wiring).
-**Solution:**
-- Update the `monolith` template to correctly include `gorm.io/driver/sqlite` when generating `providers.go`.
-- Ensure `cmd/server/main.go` correctly exports `*mux.Router` via `fx.Provide` so that dynamically added modules can consume it.
+1.  **Broken Test in Template**: The generated `cmd/server/main_test.go` called `setupRoutes()`, but the actual function in `main.go` was named `NewRouter()`. This required manual intervention to fix before tests could pass.
+2.  **Incorrect Import in Generated Module**: When adding the `maintenance` module with a relationship to `cars`, the generated import path in `domain/maintenance.go` was malformed (`"carsDomain "//cars/domain""`). It should have been a valid Go import path.
+3.  **Type Name Mismatch**: The generated code assumed the struct name for the `cars` module was `Car` (singular), but it was generated as `Cars` (plural/module name). This caused compilation errors in the `maintenance` module which referenced `carsDomain.Car`.
+4.  **CLI Flag Confusion**: The `--fields` flag mentioned in some contexts (or assumed) does not exist; fields are passed as positional arguments.
+5.  **Interactive Mode EOF**: Running the CLI in a non-interactive environment without `-y` caused an EOF error on prompt, which is expected but worth noting for automation scripts.
+6.  **`swag` Tool Dependency**: `kthulu-cli doc` failed initially because `swag` was not installed, though it attempted to install it.
 
-### 2. Consistent Route Prefixes
-**Issue:** Core modules use `/api/v1` while added modules default to the root `/`.
-**Solution:**
-- Update `add module` to check for a global route prefix configuration or detect the existing router setup in `main.go`.
-- Allow passing a `--prefix` flag to `add module` (e.g., `kthulu add module customers --prefix=/api/v1`).
+### Roadmap to Fix
 
-### 3. Smart Pluralization
-**Issue:** Tables and routes are double-pluralized (e.g., `bookingss`, `customerss`).
-**Solution:** Integrate a linguistic pluralization library to handle names correctly (e.g., `bookings` -> `bookings` table, not `bookingss`).
+1.  **Fix Project Template**:
+    - Update `templates/backend/cmd/server/main_test.go.tmpl` (or equivalent) to use the correct function name `NewRouter` instead of `setupRoutes`.
 
-### 4. Relationship Awareness
-**Issue:** Foreign keys (`customer_id`, `car_id`) are treated as simple integers without database constraints or ORM relationships.
-**Solution:** Support relationship syntax in the CLI, e.g., `kthulu add module bookings car:belongs_to:cars`, to generate proper FK constraints and GORM tags.
+2.  **Improve Import Generation**:
+    - Review the `add module` logic in `backend/backend/cmd/kthulu-cli/cmd/add.go` (or `internal/generator`) to ensure it generates valid, absolute import paths for cross-module dependencies, avoiding double quotes or comments in the import string.
 
-### 5. Automatic Auth Integration
-**Issue:** New modules are not protected by authentication by default.
-**Solution:** Add a `--protected` flag to inject middleware into the generated handler registration logic.
+3.  **Standardize Naming Conventions**:
+    - Ensure the generator correctly singularizes struct names (e.g., module `cars` -> struct `Car`, table `cars`) or consistently uses the module name. The `inflection` library usage should be verified.
+    - Fix the relationship generation to reference the correct struct name (e.g., check if the target module's struct is `Car` or `Cars`).
 
-### 6. Missing Migrations & Entry Points
-**Issue:** The `users` feature didn't generate a migration, and `cmd/migrate/main.go` was missing despite being in the Makefile.
-**Solution:** Ensure all feature flags trigger the necessary file generation, including database migrations and auxiliary command entry points.
+4.  **Enhance CLI UX**:
+    - Update help text to clearly show usage of positional arguments for fields vs flags.
+    - Improve error handling for interactive prompts in non-interactive shells.
 
-By addressing these items, we will achieve a truly "zero-config" experience where the generated code is immediately deployable.
+5.  **Robust Tool Management**:
+    - Ensure `kthulu-cli doc` checks for `swag` in `GOPATH/bin` correctly and handles installation failures gracefully, or instructs the user clearly.

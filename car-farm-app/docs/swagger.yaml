@@ -1,0 +1,308 @@
+definitions:
+  car-farm-app_internal_adapters_http_modules_cars_domain.Cars:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      make:
+        type: string
+      model:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+      vin:
+        type: string
+      year:
+        type: integer
+    type: object
+  car-farm-app_internal_adapters_http_modules_farms_domain.Farms:
+    properties:
+      capacity:
+        type: integer
+      created_at:
+        type: string
+      id:
+        type: integer
+      location:
+        type: string
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  car-farm-app_internal_adapters_http_modules_maintenance_domain.Maintenance:
+    type: object
+info:
+  contact: {}
+paths:
+  /carss:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all carss
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/car-farm-app_internal_adapters_http_modules_cars_domain.Cars'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List carss
+      tags:
+      - carss
+    post:
+      consumes:
+      - application/json
+      description: Creates a new cars with the provided data
+      parameters:
+      - description: Cars object
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/car-farm-app_internal_adapters_http_modules_cars_domain.Cars'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/car-farm-app_internal_adapters_http_modules_cars_domain.Cars'
+        "400":
+          description: Invalid input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a new cars
+      tags:
+      - carss
+  /carss/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a cars by its ID
+      parameters:
+      - description: Cars ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/car-farm-app_internal_adapters_http_modules_cars_domain.Cars'
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Cars not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get cars
+      tags:
+      - carss
+  /farmss:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all farmss
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/car-farm-app_internal_adapters_http_modules_farms_domain.Farms'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List farmss
+      tags:
+      - farmss
+    post:
+      consumes:
+      - application/json
+      description: Creates a new farms with the provided data
+      parameters:
+      - description: Farms object
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/car-farm-app_internal_adapters_http_modules_farms_domain.Farms'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/car-farm-app_internal_adapters_http_modules_farms_domain.Farms'
+        "400":
+          description: Invalid input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a new farms
+      tags:
+      - farmss
+  /farmss/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a farms by its ID
+      parameters:
+      - description: Farms ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/car-farm-app_internal_adapters_http_modules_farms_domain.Farms'
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Farms not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get farms
+      tags:
+      - farmss
+  /maintenances:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all maintenances
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/car-farm-app_internal_adapters_http_modules_maintenance_domain.Maintenance'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List maintenances
+      tags:
+      - maintenances
+    post:
+      consumes:
+      - application/json
+      description: Creates a new maintenance with the provided data
+      parameters:
+      - description: Maintenance object
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/car-farm-app_internal_adapters_http_modules_maintenance_domain.Maintenance'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/car-farm-app_internal_adapters_http_modules_maintenance_domain.Maintenance'
+        "400":
+          description: Invalid input
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a new maintenance
+      tags:
+      - maintenances
+  /maintenances/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a maintenance by its ID
+      parameters:
+      - description: Maintenance ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/car-farm-app_internal_adapters_http_modules_maintenance_domain.Maintenance'
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Maintenance not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get maintenance
+      tags:
+      - maintenances
+swagger: "2.0"
