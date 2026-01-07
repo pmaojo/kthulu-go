@@ -8,12 +8,13 @@ import {
   Plus,
   Layers,
   Code,
-  Eye,
+  LayoutDashboard, // Changed from Eye
   PackageSearch,
   Puzzle,
   FileStack,
   ShieldCheck,
-  Sparkles
+  Sparkles,
+  FlaskConical
 } from "lucide-react";
 
 import {
@@ -25,13 +26,13 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 
 import { Button } from "@/components/ui/button";
 
 const mainItems = [
+  { title: "Dashboard", icon: LayoutDashboard, id: "dashboard" }, // Renamed and moved
   { title: "Servicios", icon: Box, id: "services" },
   { title: "Entidades", icon: Database, id: "entities" },
   { title: "Arquitectura", icon: GitBranch, id: "architecture" },
@@ -39,13 +40,14 @@ const mainItems = [
 ];
 
 const toolsItems = [
+  { title: "Laboratorio BDD", icon: FlaskConical, id: "behavior-lab" }, // Added
   { title: "Catálogo", icon: PackageSearch, id: "modules" },
   { title: "Componentes", icon: Puzzle, id: "components" },
   { title: "Templates", icon: FileStack, id: "templates" },
   { title: "Auditoría", icon: ShieldCheck, id: "audit" },
   { title: "IA Asistente", icon: Sparkles, id: "ai" },
   { title: "Generar", icon: Zap, id: "generate" },
-  { title: "Vista Previa", icon: Eye, id: "preview" },
+  // { title: "Vista Previa", icon: Eye, id: "preview" }, // Removed/Renamed to Dashboard
   { title: "Código", icon: Code, id: "code" },
   { title: "Configuración", icon: Settings, id: "settings" },
 ];
