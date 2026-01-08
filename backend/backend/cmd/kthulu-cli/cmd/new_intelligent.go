@@ -85,8 +85,9 @@ var projectTemplates = map[string]ProjectTemplate{
 }
 
 var newCmd = &cobra.Command{
-	Use:   "create [name]",
-	Short: "🚀 Create a new enterprise-ready Kthulu project with intelligent dependency resolution",
+	Use:     "create [name]",
+	Aliases: []string{"new"},
+	Short:   "🚀 Create a new enterprise-ready Kthulu project with intelligent dependency resolution",
 	Long: `Create a production-ready Go application with enterprise features and smart module selection.
 
 The create command uses intelligent dependency resolution to analyze your requirements and automatically

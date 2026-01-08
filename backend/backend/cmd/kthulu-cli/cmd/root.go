@@ -64,4 +64,10 @@ func init() {
 
 	// Other commands
 	rootCmd.AddCommand(migrateCmd) // kthulu migrate
+
+	// Aliases
+	generateCmd := *addComponentCmd
+	generateCmd.Use = "generate [type] [name]"
+	generateCmd.Short = "Generates code artifacts (alias for add component)"
+	rootCmd.AddCommand(&generateCmd)
 }

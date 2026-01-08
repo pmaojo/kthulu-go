@@ -1,4 +1,5 @@
 # Kthulu Go — AI-assisted Software Foundry
+
 <img width="1280" height="776" alt="17632490833207369194639774853762" src="https://github.com/user-attachments/assets/231fe84d-9dab-4485-8733-4791168ad931" />
 
 Kthulu Forge packages an AI-ready **Go backend** with a **React/Bun frontend** to help teams plan, model, and generate modular software projects. The platform exposes two primary interfaces:
@@ -46,6 +47,7 @@ docker compose up --build
 ```
 
 This runs:
+
 - PostgreSQL database on `${DB_PORT}`
 - Go API server on `${API_PORT}`
 - Vite dev server (via Bun) on `${WEB_PORT}` (default 5173)
@@ -99,6 +101,7 @@ make db-ping         # Test connection
 ## Technology Stack
 
 ### Frontend
+
 - **Vite** — Fast build tool
 - **React 18** — UI library
 - **TypeScript** — Type safety
@@ -108,6 +111,7 @@ make db-ping         # Test connection
 - **Bun** — Runtime & package manager
 
 ### Backend
+
 - **Go 1.22** — Server language
 - **PostgreSQL** — Database
 - **Chi** — HTTP router
@@ -115,6 +119,7 @@ make db-ping         # Test connection
 - **JWT** — Authentication
 
 ### DevOps
+
 - **Docker** — Containerization
 - **Docker Compose** — Local orchestration
 - **Kustomize** — Kubernetes configs
@@ -242,15 +247,20 @@ go install github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli@latest
 
 ### Core commands
 
-| Command | Purpose | Example |
-| --- | --- | --- |
-| `kthulu create <name>` | Scaffolds an intelligent project from curated templates with optional feature toggles, database/front-end choices, and enterprise add-ons. | `kthulu create my-app --template=saas --features=user,invoice --enterprise` |
-| `kthulu add module <name>` / `kthulu add component <type> <name>` | Adds new modules or components to an existing project, resolving dependencies, integrations, and optional tests/migrations. | `kthulu add module payment --with=stripe`<br>`kthulu add component handler User --with-tests` |
-| `kthulu generate <type> <name>` | Generates production-ready code artifacts (handlers, use cases, entities, migrations, tests, etc.) with security, validation, and metrics toggles. | `kthulu generate handler Order --crud --auth` |
-| `kthulu ai "<prompt>"` | Invokes the AI assistant to propose or apply code updates. Subcommands like `kthulu ai review` and `kthulu ai optimize` offer code review and performance tuning workflows. | `kthulu ai "Add rate limiting to the API" --provider=openai --model=gpt-4` |
-| `kthulu audit` / `kthulu deploy` / `kthulu status` / `kthulu upgrade` | Enterprise tooling for auditing security & compliance, cloud deployment orchestration, project health checks, and framework upgrades. | `kthulu deploy --cloud=gcp --region=us-central1` |
-| `kthulu secure` | Scans dependencies for vulnerabilities and optionally patches them (auto-committing on CI when enabled). | `kthulu secure --patch` |
-| `kthulu migrate <subcommand>` | Manages database migrations (`up`, `down`, `reset`, `status`, `version`, `validate`) using the shared backend configuration. | `kthulu migrate up` |
+| Command                                                               | Purpose                                                                                                                                              | Example                                                                     |
+| --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `kthulu create <name>`                                                | Scaffolds an intelligent project from curated templates with optional feature toggles, database/front-end choices, and enterprise add-ons.           | `kthulu create my-app --template=saas --features=user,invoice --enterprise` |
+| `kthulu plan [name]`                                                  | Generates a project blueprint architecture that can be reviewed and modified before generation. Includes requirement management.                     | `kthulu plan my-store --template=ecommerce --features=payment,inventory`    |
+| `kthulu add module <name>`                                            | Adds a complete new module (domain, repository, service, handlers) to an existing project, resolving dependencies and integrations.                  | `kthulu add module payment --with=stripe`                                   |
+| `kthulu add component <type>`                                         | Adds a specific component (handler, service, repository, domain) to an existing module.                                                              | `kthulu add component handler User --module users --with-tests`             |
+| `kthulu generate <type> <name>`                                       | Alias for adding components (handlers, use cases, entities, migrations, tests, etc.) with security, validation, and metrics toggles.                 | `kthulu generate handler Order --crud --auth`                               |
+| `kthulu ai "<prompt>"`                                                | Invokes the AI assistant to propose or apply code updates. Subcommands like `kthulu ai review` and `kthulu ai optimize` offer specialized workflows. | `kthulu ai "Add rate limiting to the API"`                                  |
+| `kthulu doctor`                                                       | Diagnoses your development environment and project configuration for prerequisites (Go, Git, Docker, Bun, etc.).                                     | `kthulu doctor --verbose`                                                   |
+| `kthulu analyze`                                                      | Analyzes project structure, identifies 'overrides' and 'extends' annotations, and verifies dependency consistency.                                   | `kthulu analyze . --graph`                                                  |
+| `kthulu doc`                                                          | Generates Swagger/OpenAPI documentation for the project. Automatically installs prerequisites if needed.                                             | `kthulu doc`                                                                |
+| `kthulu secure`                                                       | Scans dependencies for vulnerabilities and optionally patches them (auto-committing on CI when enabled).                                             | `kthulu secure --patch`                                                     |
+| `kthulu audit` / `kthulu deploy` / `kthulu status` / `kthulu upgrade` | Enterprise tooling for auditing compliance, cloud deployment orchestration, health checks, and framework upgrades.                                   | `kthulu deploy --cloud=gcp --region=us-central1`                            |
+| `kthulu migrate <subcommand>`                                         | Manages database migrations (`up`, `down`, `reset`, `status`, `version`, `validate`) using the shared configuration.                                 | `kthulu migrate up`                                                         |
 
 ### Templates & advanced guidance
 
