@@ -1,0 +1,39 @@
+package main
+
+import (
+	"log"
+	"os"
+
+	{{if .DriverImport}}{{.DriverImport}}{{end}}
+	"github.com/pressly/goose/v3"
+)
+
+func main() {
+	if len(os.Args) < 2 {
+		log.Fatal("usage: migrate [command]")
+	}
+
+	command := os.Args[1]
+	dir := "migrations"
+
+	// TODO: Load configuration for DSN
+	db, err := goose.OpenDBWithDriver("{{.OpenDriver}}", "{{.OpenDSN}}")
+	if err != nil {
+		log.Fatalf("goose: failed to open DB: %v\n", err)
+	}
+
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Fatalf("goose: failed to close DB: %v\n", err)
+		}
+	}()
+
+	arguments := []string{}
+	if len(os.Args) > 2 {
+		arguments = os.Args[2:]
+	}
+
+	if err := goose.Run(command, db, dir, arguments...); err != nil {
+		log.Fatalf("goose %v: %v", command, err)
+	}
+}

@@ -1,0 +1,81 @@
+// @kthulu:test:service:{{.Name}}
+package service
+
+import (
+	"testing"
+
+	"{{.DomainImport}}"
+)
+
+type fake{{.Title}}Repository struct {
+	store  map[uint]*domain.{{.Title}}
+	nextID uint
+}
+
+func newFake{{.Title}}Repository() *fake{{.Title}}Repository {
+	return &fake{{.Title}}Repository{
+		store:  make(map[uint]*domain.{{.Title}}),
+		nextID: 1,
+	}
+}
+
+func (r *fake{{.Title}}Repository) Create(entity *domain.{{.Title}}) error {
+	if entity.ID == 0 {
+		entity.ID = r.nextID
+		r.nextID++
+	}
+	r.store[entity.ID] = entity
+	return nil
+}
+
+func (r *fake{{.Title}}Repository) GetByID(id uint) (*domain.{{.Title}}, error) {
+	return r.store[id], nil
+}
+
+func (r *fake{{.Title}}Repository) Update(entity *domain.{{.Title}}) error {
+	r.store[entity.ID] = entity
+	return nil
+}
+
+func (r *fake{{.Title}}Repository) Delete(id uint) error {
+	delete(r.store, id)
+	return nil
+}
+
+func (r *fake{{.Title}}Repository) List(filter domain.SearchFilter) ([]*domain.{{.Title}}, error) {
+	items := make([]*domain.{{.Title}}, 0, len(r.store))
+	for _, item := range r.store {
+		items = append(items, item)
+	}
+	return items, nil
+}
+
+func Test{{.Title}}ServiceCRUD(t *testing.T) {
+	repo := newFake{{.Title}}Repository()
+	service := New{{.Title}}Service(repo)
+	entity := &domain.{{.Title}}{}
+	if err := service.Create{{.Title}}(entity); err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
+	if entity.ID == 0 {
+		t.Fatal("expected ID to be set")
+	}
+	if _, err := service.Get{{.Title}}ByID(entity.ID); err != nil {
+		t.Fatalf("get failed: %v", err)
+	}
+	if err := service.Update{{.Title}}(entity); err != nil {
+		t.Fatalf("update failed: %v", err)
+	}
+	
+	filter := domain.SearchFilter{}
+	items, err := service.List{{.PluralTitle}}(filter)
+	if err != nil {
+		t.Fatalf("list failed: %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("expected 1 item got %d", len(items))
+	}
+	if err := service.Delete{{.Title}}(entity.ID); err != nil {
+		t.Fatalf("delete failed: %v", err)
+	}
+}

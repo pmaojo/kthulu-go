@@ -1,0 +1,71 @@
+import { useState, useEffect, useCallback } from 'react';
+import { {{.Title}} } from '../domain/{{.Title}}';
+import { {{.Title}}Service } from '../infrastructure/{{.Title}}Service';
+import { message } from 'antd';
+
+export const use{{.Title}}s = () => {
+  const [data, setData] = useState<{{.Title}}[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetch{{.Title}}s = useCallback(async () => {
+    setLoading(true);
+    try {
+      const result = await {{.Title}}Service.list();
+      setData(result);
+      setError(null);
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch {{.PluralName}}');
+      message.error('Failed to load {{.PluralName}}');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const create{{.Title}} = async ({{.Name}}: Omit<{{.Title}}, 'id'>) => {
+    try {
+      await {{.Title}}Service.create({{.Name}});
+      message.success('{{.Title}} created successfully');
+      fetch{{.Title}}s();
+    } catch (err: any) {
+      message.error('Failed to create {{.Title}}');
+      throw err;
+    }
+  };
+
+  const update{{.Title}} = async (id: number, {{.Name}}: Partial<{{.Title}}>) => {
+    try {
+      await {{.Title}}Service.update(id, {{.Name}});
+      message.success('{{.Title}} updated successfully');
+      fetch{{.Title}}s();
+    } catch (err: any) {
+      message.error('Failed to update {{.Title}}');
+      throw err;
+    }
+  };
+
+  const delete{{.Title}} = async (id: number) => {
+    try {
+      await {{.Title}}Service.delete(id);
+      message.success('{{.Title}} deleted successfully');
+      fetch{{.Title}}s();
+    } catch (err: any) {
+      message.error('Failed to delete {{.Title}}');
+      throw err;
+    }
+  };
+
+  useEffect(() => {
+    fetch{{.Title}}s();
+  }, [fetch{{.Title}}s]);
+
+  return {
+    data,
+    loading,
+    error,
+    refresh: fetch{{.Title}}s,
+    create: create{{.Title}},
+    update: update{{.Title}},
+    remove: delete{{.Title}},
+  };
+};

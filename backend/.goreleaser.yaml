@@ -1,0 +1,55 @@
+project_name: kthulu-cli
+
+before:
+  hooks:
+    - go test ./...
+
+builds:
+  - id: kthulu-cli
+    main: ./cmd/kthulu-cli
+    binary: kthulu-cli
+    dir: .
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X backend/cmd/kthulu-cli/cmd.version={{.Version}} -X backend/cmd/kthulu-cli/cmd.build={{.Date}}
+
+archives:
+  - id: default
+    builds:
+      - kthulu-cli
+    name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+    format_overrides:
+      - goos: windows
+        format: zip
+
+checksum:
+  name_template: '{{ .ProjectName }}_checksums.txt'
+
+signs:
+  - id: gpg
+    artifacts: checksum
+    cmd: gpg
+    args:
+      - --batch
+      - --pinentry-mode
+      - loopback
+      - --passphrase
+      - '{{ .Env.GORELEASER_GPG_PASSPHRASE }}'
+      - --detach-sign
+      - --armor
+      - --output
+      - '${signature}'
+      - '${artifact}'
+    signature: '${artifact}.asc'
+    if: '{{ and (env "GORELEASER_GPG_PRIVATE_KEY") (env "GORELEASER_GPG_PASSPHRASE") }}'
+
+changelog:
+  use: git

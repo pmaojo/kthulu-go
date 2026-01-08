@@ -1,0 +1,12 @@
+export interface {{.Title}} {
+  id: number;
+  created_at?: string;
+  updated_at?: string;
+{{range .Fields}}  {{.Name}}: {{.Type}};
+{{end}}}
+
+export interface {{.Title}}Filter {
+  query?: string;
+  page?: number;
+  pageSize?: number;
+}

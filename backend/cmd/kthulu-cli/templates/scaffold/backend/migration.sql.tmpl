@@ -1,0 +1,13 @@
+-- +goose Up
+-- SQL in section 'Up' is executed when this migration is applied
+CREATE TABLE IF NOT EXISTS {{.PluralTitle}} (
+    {{if eq .Database "postgres"}}id SERIAL PRIMARY KEY{{else}}id INTEGER PRIMARY KEY AUTOINCREMENT{{end}},
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP{{range .Fields}}{{if ne .SQLType "-"}},
+    {{.JSONTag}} {{.SQLType}}{{end}}{{end}}{{range .Fields}}{{if eq .Relation "belongs_to"}},
+    FOREIGN KEY ({{.FKColumnName}}) REFERENCES {{.RelTable}}(id){{end}}{{end}}
+);
+
+-- +goose Down
+-- SQL section 'Down' is executed when this migration is rolled back
+DROP TABLE IF EXISTS {{.PluralTitle}};

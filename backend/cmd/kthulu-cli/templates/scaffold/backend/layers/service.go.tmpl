@@ -1,0 +1,37 @@
+// @kthulu:service:{{.Name}}
+package service
+
+import (
+	"{{.DomainImport}}"
+)
+
+type {{.Title}}Service struct {
+	repo domain.{{.Title}}Repository
+}
+
+func New{{.Title}}Service(repo domain.{{.Title}}Repository) domain.{{.Title}}Service {
+	return &{{.Title}}Service{repo: repo}
+}
+
+func (s *{{.Title}}Service) Create{{.Title}}(entity *domain.{{.Title}}) error {
+	// Add business logic here
+	return s.repo.Create(entity)
+}
+
+func (s *{{.Title}}Service) Get{{.Title}}ByID(id uint) (*domain.{{.Title}}, error) {
+	return s.repo.GetByID(id)
+}
+
+func (s *{{.Title}}Service) Update{{.Title}}(entity *domain.{{.Title}}) error {
+	// Add business logic here
+	return s.repo.Update(entity)
+}
+
+func (s *{{.Title}}Service) Delete{{.Title}}(id uint) error {
+	// Add business logic here
+	return s.repo.Delete(id)
+}
+
+func (s *{{.Title}}Service) List{{.PluralTitle}}(filter domain.SearchFilter) ([]*domain.{{.Title}}, error) {
+	return s.repo.List(filter)
+}

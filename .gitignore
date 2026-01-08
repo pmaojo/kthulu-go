@@ -24,9 +24,10 @@ dist-ssr
 *.sw?
 .env
 kthulu-cli
-!backend/backend/cmd/kthulu-cli
-!backend/backend/cmd/kthulu-cli/**
+kthulu-cli
+!backend/cmd/kthulu-cli
+!backend/cmd/kthulu-cli/**
 kthulu-server
 kthulu-app
-backend/backend/kthulu-app
-backend/backend/kthulu-cli
+backend/kthulu-app
+backend/kthulu-cli

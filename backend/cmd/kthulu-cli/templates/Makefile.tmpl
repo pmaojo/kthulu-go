@@ -1,0 +1,8 @@
+run:
+	go run ./backend/cmd/service
+
+build:
+	go build -o service ./backend/cmd/service
+
+test-bdd:
+	go test -v ./tests/bdd/...

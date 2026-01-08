@@ -1,0 +1,26 @@
+// @kthulu:module:{{.Name}}
+// @kthulu:generated:true
+package {{.Name}}
+
+import (
+	"go.uber.org/fx"
+	"github.com/gorilla/mux"
+
+	"{{.ProjectModule}}/{{.ModuleRelPath}}/{{.Name}}/handlers"
+	"{{.ProjectModule}}/{{.ModuleRelPath}}/{{.Name}}/repository"
+	"{{.ProjectModule}}/{{.Name}}/service"
+)
+
+// Providers returns the Fx providers for the {{.Name}} module
+func Providers() fx.Option {
+        return fx.Options(
+                fx.Provide(
+                        repository.New{{.Title}}Repository,
+                        service.New{{.Title}}Service,
+                        handlers.New{{.Title}}Handler,
+                ),
+                fx.Invoke(func(r *mux.Router, h *handlers.{{.Title}}Handler) {
+                        h.RegisterRoutes(r)
+                }),
+        )
+}

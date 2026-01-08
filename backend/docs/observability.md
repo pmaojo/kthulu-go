@@ -1,52 +1,27 @@
-# Observability Setup
+# Observability
 
-This guide provisions Prometheus, Grafana and Jaeger for local metrics and tracing.
+The backend exposes runtime metrics and traces through OpenTelemetry.
 
-## Prerequisites
-- Docker and Docker Compose
+## Viewing Prometheus metrics
 
-## Application configuration
+When the service is running, metrics are available on the `/metrics` endpoint:
 
-Tracing is configured via environment variables:
-
-- `TRACE_EXPORTER` selects the tracing backend. Supported values are `stdout`
-  (default) and `jaeger`.
-- `TRACE_SAMPLE_RATE` controls the sampling ratio (defaults to `1`).
-
-When using Jaeger, the exporter reads the collector endpoint from
-`OTEL_EXPORTER_JAEGER_ENDPOINT` (default `http://localhost:14268/api/traces`).
-
-Example:
-
-```sh
-TRACE_EXPORTER=jaeger \
-OTEL_EXPORTER_JAEGER_ENDPOINT=http://localhost:14268/api/traces \
-go run cmd/service/main.go
+```bash
+curl http://localhost:8080/metrics
 ```
 
-## Start the stack
-```sh
-docker compose -f deploy/monitoring/docker-compose.yml up -d
+These metrics can be scraped by Prometheus and viewed with tools like Grafana.
+
+## Viewing traces
+
+Traces are exported using the exporter configured in `OBSERVABILITY_TRACE_EXPORTER`.
+Supported values are `stdout` and `jaeger`. For example, to view traces in Jaeger
+run the Jaeger collector and set:
+
+```bash
+export OBSERVABILITY_TRACE_EXPORTER=jaeger
 ```
 
-Prometheus will be available at <http://localhost:9090>, Grafana at <http://localhost:3000> and Jaeger at <http://localhost:16686>.
+Then start the service and open the Jaeger UI to explore spans produced by the
+API handlers and use cases.
 
-## Configure Grafana
-1. Login with `admin`/`admin`.
-2. Add a Prometheus data source pointing to `http://prometheus:9090`.
-3. Add a Jaeger data source pointing to `http://jaeger:16686`.
-4. Import dashboards from `deploy/monitoring/dashboards/`.
-
-Example dashboard showing HTTP metrics:
-![HTTP Dashboard](https://grafana.com/static/assets/img/docs/dashboards/metrics-explorer.png)
-
-Jaeger UI displays traces collected from the service:
-![Jaeger UI](https://www.jaegertracing.io/img/jaeger-ui.png)
-
-## Scrape configuration
-Prometheus is configured to scrape the service at `/metrics` in `deploy/monitoring/prometheus.yml`.
-
-## References
-- [Prometheus documentation](https://prometheus.io/docs/introduction/overview/)
-- [Grafana documentation](https://grafana.com/docs/)
-- [Jaeger documentation](https://www.jaegertracing.io/docs/latest/)

@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kthulu
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kthulu
+  template:
+    metadata:
+      labels:
+        app: kthulu
+    spec:
+      containers:
+        - name: kthulu
+          image: kthulu:latest
+          ports:
+            - containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
