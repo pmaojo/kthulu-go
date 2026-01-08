@@ -414,6 +414,7 @@ func (g *TemplateGenerator) generateCoreProviders() string {
 	}
 
 	imports := []string{
+		"\"fmt\"",
 		"\"log\"",
 		"\"os\"",
 		"\"go.uber.org/fx\"",

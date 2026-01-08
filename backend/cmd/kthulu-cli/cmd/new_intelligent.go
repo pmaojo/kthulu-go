@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 
 	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/generator"
 	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/resolver"
@@ -25,6 +26,16 @@ type ProjectTemplate struct {
 	Frontend    string
 	Auth        string
 	Enterprise  bool
+}
+
+type ProjectPlan struct {
+	Name        string   `yaml:"name"`
+	Description string   `yaml:"description"`
+	Template    string   `yaml:"template"`
+	Features    []string `yaml:"features"`
+	Database    string   `yaml:"database"`
+	Frontend    string   `yaml:"frontend"`
+	Auth        string   `yaml:"auth"`
 }
 
 var projectTemplates = map[string]ProjectTemplate{
@@ -130,6 +141,7 @@ var (
 	newOutputPath    string
 	newDryRun        bool
 	newInteractive   bool
+	newFromPlan      string
 )
 
 const (
@@ -148,12 +160,21 @@ func init() {
 	newCmd.Flags().StringVarP(&newOutputPath, "output", "o", "", "Output directory (default: current directory)")
 	newCmd.Flags().BoolVar(&newDryRun, "dry-run", false, "Show what would be generated without creating files")
 	newCmd.Flags().BoolVar(&newInteractive, "interactive", false, "Interactive project configuration")
+	newCmd.Flags().StringVar(&newFromPlan, "from-plan", "", "Create project from plan file")
 
 	rootCmd.AddCommand(newCmd)
 }
 
 func runNewProjectIntelligent(cmd *cobra.Command, args []string) {
-	projectName := args[0]
+	var projectName string
+	if len(args) > 0 {
+		projectName = args[0]
+	} else if newFromPlan != "" {
+		// Will be extracted from plan
+	} else {
+		cmd.Help()
+		os.Exit(1)
+	}
 
 	fmt.Printf("🧠 Creating intelligent Kthulu project: %s\n", projectName)
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -294,6 +315,28 @@ func readCoveragePercentage(projectPath string) (float64, error) {
 }
 
 func buildProjectConfig(projectName string) (*generator.GeneratorConfig, error) {
+	if newFromPlan != "" {
+		planData, err := os.ReadFile(newFromPlan)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read plan file: %w", err)
+		}
+		var plan ProjectPlan
+		if err := yaml.Unmarshal(planData, &plan); err != nil {
+			return nil, fmt.Errorf("failed to parse plan file: %w", err)
+		}
+		fmt.Printf("📋 Loaded plan from %s (Template: %s)\n", newFromPlan, plan.Template)
+
+		// Override config from plan
+		if projectName == "" {
+			projectName = plan.Name
+		}
+		newTemplate = plan.Template
+		newFeatures = plan.Features
+		newDatabase = plan.Database
+		newFrontend = plan.Frontend
+		newAuth = plan.Auth
+	}
+
 	// Start with template defaults
 	template, exists := projectTemplates[newTemplate]
 	if !exists {
