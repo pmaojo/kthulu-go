@@ -73,8 +73,6 @@ func runProcessAndMonitor(entrypoint, provider, model string) bool {
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "go", "run", entrypoint)
-	
-	// Create pipes
 	stdoutPipe, _ := cmd.StdoutPipe()
 	stderrPipe, _ := cmd.StderrPipe()
 
@@ -83,10 +81,31 @@ func runProcessAndMonitor(entrypoint, provider, model string) bool {
 		return false
 	}
 
-	// Handle interrupts
+	handleInterrupts(cmd)
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go scanStdout(&wg, stdoutPipe)
+	
+	panicBuffer := &strings.Builder{}
+	capturePanic := false
+	go scanStderr(&wg, stderrPipe, panicBuffer, &capturePanic)
+
+	wg.Wait()
+	_ = cmd.Wait()
+	
+	if capturePanic && panicBuffer.Len() > 0 {
+		analyzeErrorLoop(panicBuffer.String(), provider, model)
+		return true
+	}
+
+	return false
+}
+
+func handleInterrupts(cmd *exec.Cmd) {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	
 	go func() {
 		if _, ok := <-sigChan; ok {
 			if cmd.Process != nil {
@@ -94,57 +113,38 @@ func runProcessAndMonitor(entrypoint, provider, model string) bool {
 			}
 		}
 	}()
+}
 
-	var wg sync.WaitGroup
-	wg.Add(2)
-
-	// Standard Output Scanner
-	go func() {
-		defer wg.Done()
-		scanner := bufio.NewScanner(stdoutPipe)
-		for scanner.Scan() {
-			fmt.Println(scanner.Text())
-		}
-	}()
-
-	// Stderr Scanner (The Healer)
-	var panicBuffer strings.Builder
-	var capturePanic bool
-
-	go func() {
-		defer wg.Done()
-		scanner := bufio.NewScanner(stderrPipe)
-		for scanner.Scan() {
-			line := scanner.Text()
-			
-			// Print line normally
-			fmt.Fprintln(os.Stderr, line)
-
-			// Healer Logic
-			if strings.Contains(line, "panic:") || strings.Contains(line, "fatal error:") || strings.Contains(line, "Error:") {
-				capturePanic = true
-				color.HiRed("\n🚨 DETECTED CRITICAL ERROR! ANALYZING... 🚨\n")
-			}
-
-			if capturePanic {
-				panicBuffer.WriteString(line + "\n")
-			}
-		}
-	}()
-
-	err := cmd.Wait()
-	
-	if capturePanic && panicBuffer.Len() > 0 {
-		analyzeErrorLoop(panicBuffer.String(), provider, model)
-		return true // Ask to restart
+func scanStdout(wg *sync.WaitGroup, pipe io.ReadCloser) {
+	defer wg.Done()
+	scanner := bufio.NewScanner(pipe)
+	for scanner.Scan() {
+		fmt.Println(scanner.Text())
 	}
+}
 
-	if err != nil {
-		// Non-panic error exit
-		return false
+func scanStderr(wg *sync.WaitGroup, pipe io.ReadCloser, buffer *strings.Builder, capture *bool) {
+	defer wg.Done()
+	scanner := bufio.NewScanner(pipe)
+	for scanner.Scan() {
+		line := scanner.Text()
+		fmt.Fprintln(os.Stderr, line)
+
+		if isCriticalError(line) {
+			*capture = true
+			color.HiRed("\n🚨 DETECTED CRITICAL ERROR! ANALYZING... 🚨\n")
+		}
+
+		if *capture {
+			buffer.WriteString(line + "\n")
+		}
 	}
+}
 
-	return false // Clean exit
+func isCriticalError(line string) bool {
+	return strings.Contains(line, "panic:") || 
+		strings.Contains(line, "fatal error:") || 
+		strings.Contains(line, "Error:")
 }
 
 func analyzeErrorLoop(logOutput, provider, model string) {

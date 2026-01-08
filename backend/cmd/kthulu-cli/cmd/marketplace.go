@@ -3,11 +3,14 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
+	"io"
 	"os"
+	"path/filepath"
+	"strings"
 	"text/tabwriter"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
