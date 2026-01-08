@@ -8,6 +8,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/jinzhu/inflection"
 	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/resolver"
 )
 
@@ -738,7 +739,7 @@ func (g *TemplateGenerator) generateFeatureList() string {
 
 // Additional generation methods (simplified for brevity)
 func (g *TemplateGenerator) generateModuleFile(name string, info *resolver.ModuleInfo) string {
-	capName := Capitalize(name)
+	capName := Capitalize(inflection.Singular(name))
 	repositoryImport := g.moduleImportPath("internal/adapters/http/modules", name, "repository")
 	serviceImport := g.moduleImportPath("internal/adapters/http/modules", name, "service")
 	handlersImport := g.moduleImportPath("internal/adapters/http/modules", name, "handlers")
@@ -776,7 +777,7 @@ handlers.New%sHandler,
 }
 
 func (g *TemplateGenerator) generateDomainFile(name string, info *resolver.ModuleInfo) string {
-	capName := Capitalize(name)
+	capName := Capitalize(inflection.Singular(name))
 	pluralName := Pluralize(capName)
 	return fmt.Sprintf(`// @kthulu:domain:%s
 package domain
@@ -816,7 +817,7 @@ type %sService interface {
 }
 
 func (g *TemplateGenerator) generateRepositoryFile(name string, info *resolver.ModuleInfo) string {
-	capName := Capitalize(name)
+	capName := Capitalize(inflection.Singular(name))
 	return fmt.Sprintf(`// @kthulu:repository:%s
 package repository
 
@@ -863,7 +864,7 @@ func (r *%sRepository) List() ([]*domain.%s, error) {
 }
 
 func (g *TemplateGenerator) generateServiceFile(name string, info *resolver.ModuleInfo) string {
-	capName := Capitalize(name)
+	capName := Capitalize(inflection.Singular(name))
 	pluralName := Pluralize(capName)
 	return fmt.Sprintf(`// @kthulu:service:%s
 package service
@@ -909,7 +910,7 @@ func (s *%sService) List%s() ([]*domain.%s, error) {
 }
 
 func (g *TemplateGenerator) generateHandlerFile(name string, info *resolver.ModuleInfo) string {
-	capName := Capitalize(name)
+	capName := Capitalize(inflection.Singular(name))
 	pluralName := Pluralize(capName)
 	return fmt.Sprintf(`// @kthulu:handler:%s
 package handlers
@@ -1223,9 +1224,8 @@ t.Fatalf("server lifecycle not executed: started=%v shutdown=%v", srv.started, s
 }
 }
 
-func TestSetupRoutesHealth(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	handler := NewRouter(logger)
+func TestRouterHealth(t *testing.T) {
+	handler := NewRouter()
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
@@ -1343,7 +1343,7 @@ t.Fatal("expected providers option")
 }
 
 func (g *TemplateGenerator) generateRepositoryTestFile(name string) string {
-	capName := Capitalize(name)
+	capName := Capitalize(inflection.Singular(name))
 	domainImport := g.moduleImportPath("internal/adapters/http/modules", name, "domain")
 	return fmt.Sprintf(`// @kthulu:test:repository:%[1]s
 package repository
@@ -1395,7 +1395,7 @@ t.Fatalf("delete failed: %%v", err)
 }
 
 func (g *TemplateGenerator) generateServiceTestFile(name string) string {
-	capName := Capitalize(name)
+	capName := Capitalize(inflection.Singular(name))
 	pluralName := Pluralize(capName)
 	domainImport := g.moduleImportPath("internal/adapters/http/modules", name, "domain")
 	return fmt.Sprintf(`// @kthulu:test:service:%[1]s

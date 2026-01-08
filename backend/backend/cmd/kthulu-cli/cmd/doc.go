@@ -76,45 +76,80 @@ func runDocCommand(cmd *cobra.Command, args []string) error {
 // ensureDocToolInstalled checks if a tool is installed and installs it if not.
 // Duplicated/Adapted to ensure self-containment for this command.
 func ensureDocToolInstalled(binName, installURL string) (string, error) {
-	// Check if in PATH
+	// 1. Check if in PATH
 	if path, err := exec.LookPath(binName); err == nil {
 		return path, nil
 	}
 
-	// Determine installation path (GOBIN or GOPATH/bin)
-	installPath := ""
+	// 2. Check explicitly in GOBIN
+	gobin := os.Getenv("GOBIN")
+	if gobin == "" {
+		cmd := exec.Command("go", "env", "GOBIN")
+		if out, err := cmd.Output(); err == nil && strings.TrimSpace(string(out)) != "" {
+			gobin = strings.TrimSpace(string(out))
+		}
+	}
+	if gobin != "" {
+		path := filepath.Join(gobin, binName)
+		if _, err := os.Stat(path); err == nil {
+			return path, nil
+		}
+	}
 
-	cmdGobin := exec.Command("go", "env", "GOBIN")
-	if out, err := cmdGobin.Output(); err == nil && strings.TrimSpace(string(out)) != "" {
-		installPath = strings.TrimSpace(string(out))
-	} else {
-		// Fallback to GOPATH/bin
-		goPath := os.Getenv("GOPATH")
-		if goPath == "" {
-			cmd := exec.Command("go", "env", "GOPATH")
-			if out, err := cmd.Output(); err == nil {
-				goPath = strings.TrimSpace(string(out))
+	// 3. Check explicitly in GOPATH/bin
+	gopath := os.Getenv("GOPATH")
+	if gopath == "" {
+		cmd := exec.Command("go", "env", "GOPATH")
+		if out, err := cmd.Output(); err == nil {
+			gopath = strings.TrimSpace(string(out))
+		}
+	}
+	if gopath != "" {
+		paths := strings.Split(gopath, string(os.PathListSeparator))
+		for _, p := range paths {
+			path := filepath.Join(p, "bin", binName)
+			if _, err := os.Stat(path); err == nil {
+				return path, nil
 			}
 		}
-		if goPath == "" {
-			home, _ := os.UserHomeDir()
-			goPath = filepath.Join(home, "go")
+	}
+
+	// 4. Try common default: ~/go/bin
+	home, _ := os.UserHomeDir()
+	if home != "" {
+		path := filepath.Join(home, "go", "bin", binName)
+		if _, err := os.Stat(path); err == nil {
+			return path, nil
 		}
-		installPath = filepath.Join(goPath, "bin")
 	}
 
-	candidate := filepath.Join(installPath, binName)
-	if _, err := os.Stat(candidate); err == nil {
-		return candidate, nil
+	// 5. Install if not found
+	fmt.Printf("⚠️  %s not found in PATH or Go bin directories. Attempting to install...\n", binName)
+	installCmd := exec.Command("go", "install", installURL)
+	installCmd.Stdout = os.Stdout
+	installCmd.Stderr = os.Stderr
+	if err := installCmd.Run(); err != nil {
+		return "", fmt.Errorf("failed to install %s: %w. Please install it manually with 'go install %s'", binName, err, installURL)
 	}
 
-	// Install
-	fmt.Printf("⚠️  %s not found. Installing...\n", binName)
-	cmd := exec.Command("go", "install", installURL)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("failed to install %s: %w", binName, err)
+	// After install, check again in common locations
+	if path, err := exec.LookPath(binName); err == nil {
+		return path, nil
 	}
-	return candidate, nil
+	
+	// If still not in path, return the installation candidate if it exists now
+	if gobin != "" {
+		path := filepath.Join(gobin, binName)
+		if _, err := os.Stat(path); err == nil {
+			return path, nil
+		}
+	}
+	if home != "" {
+		path := filepath.Join(home, "go", "bin", binName)
+		if _, err := os.Stat(path); err == nil {
+			return path, nil
+		}
+	}
+
+	return binName, nil // Fallback to just name and hope for the best
 }

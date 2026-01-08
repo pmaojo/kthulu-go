@@ -33,6 +33,17 @@ Examples:
 var addModuleCmd = &cobra.Command{
 	Use:   "module [name] [field:type...]",
 	Short: "Add a new module to your project with optional fields",
+	Long: `Add a new module (domain, repository, service, handlers) to your project.
+Fields can be specified as positional arguments in the format 'name:type' or 'name:relation:target'.
+
+Available types: string, int, bool, float, time
+Available relations: belongs_to (e.g., car:belongs_to:cars)
+
+Examples:
+  kthulu add module orders
+  kthulu add module products name:string price:float
+  kthulu add module reviews rating:int comment:string user:belongs_to:users
+`,
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		module := args[0]
@@ -233,6 +244,11 @@ func runAddModule(module string, fields []string, integrations []string, complia
 
 	// Step 7: Confirmation prompt
 	if !yes {
+		// Check if we are in an interactive terminal
+		if _, err := os.Stdin.Stat(); err != nil {
+			return fmt.Errorf("non-interactive shell detected, please use --yes to confirm")
+		}
+
 		fmt.Printf("\n❓ Do you want to proceed with adding module '%s'? [y/N] ", module)
 		reader := bufio.NewReader(os.Stdin)
 		response, err := reader.ReadString('\n')

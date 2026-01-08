@@ -59,7 +59,7 @@ func newModuleTemplateData(name string, fields []string, database, projectModule
 
 	return moduleTemplateData{
 		Name:          name,
-		Title:         exportName(name),
+		Title:         exportName(inflection.Singular(name)),
 		PluralTitle:   Pluralize(exportName(name)),
 		Fields:        parsedFields,
 		Imports:       imports,
@@ -241,7 +241,7 @@ package domain
 import (
 	"time"
 	{{range .Imports}}
-	"{{.}}"
+	{{.}}
 	{{end}}
 )
 
