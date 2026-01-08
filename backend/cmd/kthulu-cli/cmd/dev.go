@@ -27,18 +27,23 @@ If the application crashes or panics, Kthulu will intercept the log,
 analyze the stack trace using AI, and suggest a fix immediately.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		entrypoint, _ := cmd.Flags().GetString("entrypoint")
-		return runDevServer(entrypoint)
+		provider, _ := cmd.Flags().GetString("provider")
+		model, _ := cmd.Flags().GetString("model")
+		return runDevServer(entrypoint, provider, model)
 	},
 }
 
 func init() {
 	devCmd.Flags().String("entrypoint", "cmd/server/main.go", "Go entrypoint file")
+	devCmd.Flags().String("provider", "openai", "AI provider for healing")
+	devCmd.Flags().String("model", "gpt-4", "AI model for healing")
 	rootCmd.AddCommand(devCmd)
 }
 
-func runDevServer(entrypoint string) error {
+func runDevServer(entrypoint, provider, model string) error {
 	color.Green("🛠️  Starting Kthulu Dev Server...")
 	color.HiBlack("   Entrypoint: %s", entrypoint)
+	color.HiBlack("   Healer:     %s (%s)", provider, model)
 
 	// Check if entrypoint exists
 	if _, err := os.Stat(entrypoint); os.IsNotExist(err) {
@@ -52,7 +57,7 @@ func runDevServer(entrypoint string) error {
 	}
 
 	for {
-		shouldRestart := runProcessAndMonitor(entrypoint)
+		shouldRestart := runProcessAndMonitor(entrypoint, provider, model)
 		if !shouldRestart {
 			break
 		}
@@ -63,7 +68,7 @@ func runDevServer(entrypoint string) error {
 	return nil
 }
 
-func runProcessAndMonitor(entrypoint string) bool {
+func runProcessAndMonitor(entrypoint, provider, model string) bool {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -83,8 +88,11 @@ func runProcessAndMonitor(entrypoint string) bool {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	
 	go func() {
-		<-sigChan
-		cmd.Process.Kill()
+		if _, ok := <-sigChan; ok {
+			if cmd.Process != nil {
+				cmd.Process.Kill()
+			}
+		}
 	}()
 
 	var wg sync.WaitGroup
@@ -113,7 +121,7 @@ func runProcessAndMonitor(entrypoint string) bool {
 			fmt.Fprintln(os.Stderr, line)
 
 			// Healer Logic
-			if strings.Contains(line, "panic:") || strings.Contains(line, "fatal error:") {
+			if strings.Contains(line, "panic:") || strings.Contains(line, "fatal error:") || strings.Contains(line, "Error:") {
 				capturePanic = true
 				color.HiRed("\n🚨 DETECTED CRITICAL ERROR! ANALYZING... 🚨\n")
 			}
@@ -127,7 +135,7 @@ func runProcessAndMonitor(entrypoint string) bool {
 	err := cmd.Wait()
 	
 	if capturePanic && panicBuffer.Len() > 0 {
-		analyzeErrorLoop(panicBuffer.String())
+		analyzeErrorLoop(panicBuffer.String(), provider, model)
 		return true // Ask to restart
 	}
 
@@ -139,7 +147,7 @@ func runProcessAndMonitor(entrypoint string) bool {
 	return false // Clean exit
 }
 
-func analyzeErrorLoop(logOutput string) {
+func analyzeErrorLoop(logOutput, provider, model string) {
 	fmt.Println("🤖 Kthulu AI is diagnosing the crash...")
 
 	prompt := fmt.Sprintf(`
@@ -151,8 +159,8 @@ STDERR:
 %s
 `, logOutput)
 
-	// Create AI Client (Assuming OpenAI or Gemini available)
-	client, err := createAIClient("openai", "gpt-4") // Defaulting to smartest model for debug
+	// Create AI Client
+	client, err := createAIClient(provider, model)
 	if err != nil {
 		color.Red("⚠️  Could not start AI debugger: %v", err)
 		return
@@ -160,7 +168,7 @@ STDERR:
 	defer client.Close()
 
 	uc := usecase.NewAIUseCase(client)
-	diagnosis, err := uc.Suggest(context.Background(), prompt, false, ".") // Include local context!
+	diagnosis, err := uc.Suggest(context.Background(), prompt, true, ".") // Include local context!
 	
 	if err != nil {
 		color.Red("⚠️  AI Diagnosis failed: %v", err)
@@ -170,5 +178,5 @@ STDERR:
 	color.HiCyan("\n🏥 AI DIAGNOSIS:")
 	fmt.Println(diagnosis)
 	fmt.Println("\n---------------------------------------------------")
-	color.HiGreen("Tip: Apply the fix above and saving will trigger restart (if using air).")
+	color.HiGreen("Tip: Apply the fix above and saving will trigger restart.")
 }

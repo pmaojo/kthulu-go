@@ -123,19 +123,20 @@ func runDocCommand(cmd *cobra.Command, args []string, generateDiagrams bool) err
 
 // generateMermaidDiagrams parses Go files and generates a class diagram
 func generateMermaidDiagrams(root string) error {
-	// A simple heuristic parser for "WOW" demo purposes
-	// In production, use `golang.org/x/tools/go/packages`
-	
 	mermaidPath := filepath.Join(root, "docs", "architecture.mermaid")
 	_ = os.MkdirAll(filepath.Join(root, "docs"), 0755)
 
 	var sb strings.Builder
 	sb.WriteString("classDiagram\n")
-	
+	sb.WriteString("    direction TB\n\n")
+
+	structs := make(map[string]string) // name -> package
+	relationships := []string{}
+
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil { return err }
 		if !strings.HasSuffix(path, ".go") { return nil }
-		if strings.Contains(path, "test") || strings.Contains(path, "vendor") { return nil }
+		if strings.Contains(path, "test") || strings.Contains(path, "vendor") || strings.Contains(path, "mocks") { return nil }
 
 		content, err := os.ReadFile(path)
 		if err != nil { return nil }
@@ -151,27 +152,42 @@ func generateMermaidDiagrams(root string) error {
 			}
 		}
 
-		// Very naive struct parser regex-like
-		for _, line := range lines {
+		for i, line := range lines {
 			line = strings.TrimSpace(line)
+			// Detect struct definitions
 			if strings.HasPrefix(line, "type ") && strings.Contains(line, " struct {") {
 				parts := strings.Fields(line)
 				if len(parts) >= 2 {
 					structName := parts[1]
-					// Add class to mermaid
-					sb.WriteString(fmt.Sprintf("    class %s {\n", structName))
-					sb.WriteString(fmt.Sprintf("        <<%s>>\n", packageName))
-					sb.WriteString("    }\n")
+					structs[structName] = packageName
+					
+					// Naive relationship detection in fields
+					for j := i + 1; j < len(lines); j++ {
+						fieldLine := strings.TrimSpace(lines[j])
+						if fieldLine == "}" { break }
+						if fieldLine == "" || strings.HasPrefix(fieldLine, "//") { continue }
+						
+						fParts := strings.Fields(fieldLine)
+						if len(fParts) >= 2 {
+							fieldType := fParts[1]
+							// Look for other structs being mentioned (ignoring pointers, slices for now)
+							cleanType := strings.TrimLeft(fieldType, "*[]")
+							if cleanType != "" && cleanType[0] >= 'A' && cleanType[0] <= 'Z' {
+								relationships = append(relationships, fmt.Sprintf("    %s --> %s", structName, cleanType))
+							}
+						}
+					}
 				}
 			}
 			
-			// Detect interfaces
+			// Detect interface definitions
 			if strings.HasPrefix(line, "type ") && strings.Contains(line, " interface {") {
 				parts := strings.Fields(line)
 				if len(parts) >= 2 {
 					ifName := parts[1]
 					sb.WriteString(fmt.Sprintf("    class %s {\n", ifName))
 					sb.WriteString("        <<interface>>\n")
+					sb.WriteString(fmt.Sprintf("        %s\n", packageName))
 					sb.WriteString("    }\n")
 				}
 			}
@@ -181,6 +197,22 @@ func generateMermaidDiagrams(root string) error {
 
 	if err != nil {
 		return err
+	}
+
+	// Output classes
+	for name, pkg := range structs {
+		sb.WriteString(fmt.Sprintf("    class %s {\n", name))
+		sb.WriteString(fmt.Sprintf("        %s\n", pkg))
+		sb.WriteString("    }\n")
+	}
+
+	// Output unique relationships
+	relMap := make(map[string]bool)
+	for _, rel := range relationships {
+		if !relMap[rel] {
+			sb.WriteString(rel + "\n")
+			relMap[rel] = true
+		}
 	}
 
 	if err := os.WriteFile(mermaidPath, []byte(sb.String()), 0644); err != nil {
