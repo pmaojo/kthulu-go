@@ -10,12 +10,12 @@ export const {{.Title}}Service = {
     if (filter?.page) params.append('page', filter.page.toString());
     if (filter?.pageSize) params.append('pageSize', filter.pageSize.toString());
 
-    const response = await api.get<{{.Title}}[]>(`+ "`" + `${BASE_URL}?${params.toString()}`+ "`" + `);
+    const response = await api.get<{{.Title}}[]>(`${BASE_URL}?${params.toString()}`);
     return response.data;
   },
 
   get: async (id: number): Promise<{{.Title}}> => {
-    const response = await api.get<{{.Title}}>(`+ "`" + `${BASE_URL}/${id}`+ "`" + `);
+    const response = await api.get<{{.Title}}>(`${BASE_URL}/${id}`);
     return response.data;
   },
 
@@ -25,11 +25,11 @@ export const {{.Title}}Service = {
   },
 
   update: async (id: number, data: Partial<{{.Title}}>): Promise<{{.Title}}> => {
-    const response = await api.put<{{.Title}}>(`+ "`" + `${BASE_URL}/${id}`+ "`" + `, data);
+    const response = await api.put<{{.Title}}>(`${BASE_URL}/${id}`, data);
     return response.data;
   },
 
   delete: async (id: number): Promise<void> => {
-    await api.delete(`+ "`" + `${BASE_URL}/${id}`+ "`" + `);
+    await api.delete(`${BASE_URL}/${id}`);
   },
 };

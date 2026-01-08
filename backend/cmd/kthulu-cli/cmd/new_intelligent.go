@@ -143,6 +143,7 @@ var (
 	newInteractive   bool
 	newFromPlan      string
 	newModuleFields  map[string][]string
+	newFrontendModules []string
 )
 
 const (
@@ -343,6 +344,7 @@ func buildProjectConfig(projectName string) (*generator.GeneratorConfig, error) 
 
 		for name, config := range plan.Modules {
 			newFeatures = append(newFeatures, name)
+			newFrontendModules = append(newFrontendModules, name) // Modules get frontend
 			if len(config.Fields) > 0 {
 				parsedModuleFields[name] = config.Fields
 			}
@@ -373,9 +375,10 @@ func buildProjectConfig(projectName string) (*generator.GeneratorConfig, error) 
 		Auth:          template.Auth,
 		Features:      template.Features,
 		Enterprise:    template.Enterprise,
-		Observability: false,
-		ModuleFields:  newModuleFields, // Added ModuleFields
-		CustomValues:  make(map[string]string),
+		Observability:   false,
+		ModuleFields:    newModuleFields,
+		FrontendModules: newFrontendModules, // Convention: 'modules:' = fullstack
+		CustomValues:    make(map[string]string),
 	}
 
 	if newModulePath != "" {

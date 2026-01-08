@@ -19,12 +19,18 @@ func (g *TemplateGenerator) generateFrontendBase(structure *ProjectStructure) er
 		"frontend/src/main.tsx":          "main.tsx.tmpl",
 		"frontend/src/index.css":         "index.css.tmpl",
 		"frontend/src/App.tsx":           "App.tsx.tmpl",
+		"frontend/src/services/api.ts":   "api.ts.tmpl",
 	}
+
+	// Convention over Configuration:
+	// 'modules:' in schema = fullstack (get frontend)
+	// 'features:' in schema = backend-only
+	frontendModules := g.config.FrontendModules
 
 	data := map[string]interface{}{
 		"Name":     g.config.ProjectName,
-		"Features": g.config.Features,
-		"Modules":  g.config.Features, // Alias for template convenience
+		"Features": frontendModules,
+		"Modules":  frontendModules,
 	}
 
 	for path, tmplName := range templates {
@@ -48,7 +54,8 @@ func (g *TemplateGenerator) generateFrontendBase(structure *ProjectStructure) er
 	structure.Directories = append(structure.Directories, 
 		"frontend", 
 		"frontend/src",
-		"frontend/src/modules", // Already added by modules but good to be safe
+		"frontend/src/modules",
+		"frontend/src/services",
 	)
 
 	return nil

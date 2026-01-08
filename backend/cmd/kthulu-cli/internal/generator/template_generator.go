@@ -33,8 +33,9 @@ type GeneratorConfig struct {
 	Features      []string          `json:"features"`      // modules to include
 	Enterprise    bool              `json:"enterprise"`    // enterprise features
 	Observability bool              `json:"observability"` // monitoring
-	CustomValues  map[string]string `json:"custom_values"` // custom template values
-	ModuleFields  map[string][]string `json:"module_fields"` // fields for each module
+	CustomValues    map[string]string   `json:"custom_values"`    // custom template values
+	ModuleFields    map[string][]string `json:"module_fields"`    // fields for each module
+	FrontendModules []string            `json:"frontend_modules"` // modules that get frontend (from schema 'modules:')
 }
 
 // modulePath returns the module import path for the generated project.
@@ -119,10 +120,13 @@ func (g *TemplateGenerator) executeTemplate(name, path string, data interface{})
 		}
 
 		tmpl, err = template.New(name).Funcs(template.FuncMap{
-			"Capitalize": Capitalize,
+			"Capitalize":  Capitalize,
+			"capitalize":  Capitalize,
 			"Pluralize":   Pluralize,
+			"pluralize":   Pluralize,
 			"ToSnakeCase": ToSnakeCase,
 			"ToKebabCase": ToKebabCase,
+			"lower":       strings.ToLower,
 		}).Parse(string(content))
 		if err != nil {
 			return "", fmt.Errorf("failed to parse template %s: %w", path, err)
