@@ -9,14 +9,7 @@ const docTemplate = `{
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
-        "contact": {
-            "name": "Kthulu Framework",
-            "url": "https://github.com/kthulu-framework"
-        },
-        "license": {
-            "name": "MIT",
-            "url": "https://opensource.org/licenses/MIT"
-        },
+        "contact": {},
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
@@ -61,7 +54,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/backend_internal_domain.AvailabilitySlot"
+                                "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.AvailabilitySlot"
                             }
                         }
                     },
@@ -106,7 +99,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_usecase.BookSlotRequest"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.BookSlotRequest"
                         }
                     }
                 ],
@@ -114,7 +107,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Booking created successfully",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_domain.Booking"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Booking"
                         }
                     },
                     "400": {
@@ -216,7 +209,7 @@ const docTemplate = `{
                     "200": {
                         "description": "List of calendars",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_usecase.PaginatedResponse-backend_internal_domain_Calendar"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.PaginatedResponse-github_com_pmaojo_kthulu-go_backend_internal_domain_Calendar"
                         }
                     },
                     "500": {
@@ -249,7 +242,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_usecase.CreateCalendarRequest"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateCalendarRequest"
                         }
                     }
                 ],
@@ -257,7 +250,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Calendar created successfully",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_domain.Calendar"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Calendar"
                         }
                     },
                     "400": {
@@ -304,7 +297,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Calendar details",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_domain.Calendar"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Calendar"
                         }
                     },
                     "404": {
@@ -377,7 +370,7 @@ const docTemplate = `{
                     "200": {
                         "description": "List of events",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_usecase.PaginatedResponse-backend_internal_domain_Event"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.PaginatedResponse-github_com_pmaojo_kthulu-go_backend_internal_domain_Event"
                         }
                     },
                     "500": {
@@ -410,7 +403,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_usecase.CreateEventRequest"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateEventRequest"
                         }
                     }
                 ],
@@ -418,7 +411,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Event created successfully",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_domain.Event"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Event"
                         }
                     },
                     "400": {
@@ -465,7 +458,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Event details",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_domain.Event"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Event"
                         }
                     },
                     "404": {
@@ -525,7 +518,7 @@ const docTemplate = `{
                     "200": {
                         "description": "List of inventory items",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_usecase.PaginatedResponse-backend_internal_domain_InventoryItem"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.PaginatedResponse-github_com_pmaojo_kthulu-go_backend_internal_domain_InventoryItem"
                         }
                     },
                     "500": {
@@ -560,7 +553,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_usecase.UpdateStockRequest"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.UpdateStockRequest"
                         }
                     }
                 ],
@@ -568,7 +561,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Updated inventory item",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_domain.InventoryItem"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.InventoryItem"
                         }
                     },
                     "400": {
@@ -622,7 +615,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Inventory item details",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_domain.InventoryItem"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.InventoryItem"
                         }
                     },
                     "404": {
@@ -670,7 +663,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/backend_internal_domain.InventoryItem"
+                                "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.InventoryItem"
                             }
                         }
                     },
@@ -723,7 +716,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Stock movement history",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_usecase.PaginatedResponse-backend_internal_domain_StockMovement"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.PaginatedResponse-github_com_pmaojo_kthulu-go_backend_internal_domain_StockMovement"
                         }
                     },
                     "500": {
@@ -774,7 +767,7 @@ const docTemplate = `{
                     "200": {
                         "description": "List of warehouses",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_usecase.PaginatedResponse-backend_internal_domain_Warehouse"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.PaginatedResponse-github_com_pmaojo_kthulu-go_backend_internal_domain_Warehouse"
                         }
                     },
                     "500": {
@@ -807,7 +800,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_usecase.CreateWarehouseRequest"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateWarehouseRequest"
                         }
                     }
                 ],
@@ -815,7 +808,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Warehouse created successfully",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_domain.Warehouse"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Warehouse"
                         }
                     },
                     "400": {
@@ -862,7 +855,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Warehouse details",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_domain.Warehouse"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Warehouse"
                         }
                     },
                     "404": {
@@ -911,7 +904,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_usecase.UpdateWarehouseRequest"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.UpdateWarehouseRequest"
                         }
                     }
                 ],
@@ -919,7 +912,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Updated warehouse",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_domain.Warehouse"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Warehouse"
                         }
                     },
                     "400": {
@@ -933,6 +926,1060 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Warehouse not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/modules": {
+            "get": {
+                "description": "Retrieves a list of available modules, optionally filtered by category",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Modules"
+                ],
+                "summary": "List modules",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by category",
+                        "name": "category",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Maximum number of modules to return",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Number of modules to skip",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Modules retrieved successfully",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ModuleInfo"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid query parameters",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/modules/plan": {
+            "post": {
+                "description": "Creates an injection plan for the given modules",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Modules"
+                ],
+                "summary": "Plan module injection",
+                "parameters": [
+                    {
+                        "description": "Module names to plan",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Injection plan",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ModuleInjectionPlan"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/modules/validate": {
+            "post": {
+                "description": "Validates a set of modules for compatibility and dependencies",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Modules"
+                ],
+                "summary": "Validate modules",
+                "parameters": [
+                    {
+                        "description": "Module names to validate",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Validation result",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ModuleValidationResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/modules/{name}": {
+            "get": {
+                "description": "Retrieves a specific module by name",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Modules"
+                ],
+                "summary": "Get a module",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Module name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Module retrieved successfully",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ModuleInfo"
+                        }
+                    },
+                    "404": {
+                        "description": "Module not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/projects": {
+            "get": {
+                "description": "Retrieves a list of projects with pagination",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "List projects",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Maximum number of projects to return",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Number of projects to skip",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Projects retrieved successfully",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Project"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid query parameters",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Creates and persists a new project based on the configuration",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Generate a project",
+                "parameters": [
+                    {
+                        "description": "Project configuration",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ProjectRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Project created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Project"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Project already exists",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/projects/plan": {
+            "post": {
+                "description": "Creates a project plan based on the provided configuration",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Plan a project",
+                "parameters": [
+                    {
+                        "description": "Project configuration",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ProjectRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Project plan created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ProjectPlan"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/projects/{id}": {
+            "get": {
+                "description": "Retrieves a project by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Get a project",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Project retrieved successfully",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Project"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid project ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Project not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Removes a project by ID",
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Delete a project",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Project deleted successfully"
+                    },
+                    "400": {
+                        "description": "Invalid project ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Project not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "Updates an existing project",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Update a project",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Project update configuration",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ProjectRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Project updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Project"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Project not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/templates": {
+            "get": {
+                "description": "Retrieves a list of available templates",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Templates"
+                ],
+                "summary": "List templates",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Maximum number of templates to return",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Number of templates to skip",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Templates retrieved successfully",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Template"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid query parameters",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Creates a new template",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Templates"
+                ],
+                "summary": "Create a template",
+                "parameters": [
+                    {
+                        "description": "Template data",
+                        "name": "template",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Template"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Template created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Template"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Template already exists",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/templates/registries": {
+            "post": {
+                "description": "Adds a new template registry source",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Templates"
+                ],
+                "summary": "Add template registry",
+                "parameters": [
+                    {
+                        "description": "Registry data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Registry added successfully",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.TemplateRegistry"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Registry already exists",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/templates/registries/{name}": {
+            "delete": {
+                "description": "Removes a template registry source",
+                "tags": [
+                    "Templates"
+                ],
+                "summary": "Remove template registry",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Registry name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Registry removed successfully"
+                    },
+                    "404": {
+                        "description": "Registry not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/templates/render": {
+            "post": {
+                "description": "Renders a template with provided variables",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Templates"
+                ],
+                "summary": "Render a template",
+                "parameters": [
+                    {
+                        "description": "Render request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.TemplateRenderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Template rendered successfully",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.TemplateRenderResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Template not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/templates/{name}": {
+            "get": {
+                "description": "Retrieves a specific template by name",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Templates"
+                ],
+                "summary": "Get a template",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Template name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Template retrieved successfully",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Template"
+                        }
+                    },
+                    "404": {
+                        "description": "Template not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Updates an existing template",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Templates"
+                ],
+                "summary": "Update a template",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Template name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Template update data",
+                        "name": "template",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Template"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Template updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Template"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Template not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Removes a template by name",
+                "tags": [
+                    "Templates"
+                ],
+                "summary": "Delete a template",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Template name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Template deleted successfully"
+                    },
+                    "404": {
+                        "description": "Template not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/templates/{name}/validate": {
+            "post": {
+                "description": "Validates a template's structure and content",
+                "tags": [
+                    "Templates"
+                ],
+                "summary": "Validate a template",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Template name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Template is valid",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Template not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Template validation failed",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -972,7 +2019,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.confirmRequest"
+                            "$ref": "#/definitions/adapterhttp.confirmRequest"
                         }
                     }
                 ],
@@ -980,7 +2027,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Email confirmed successfully",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_usecase.AuthResponse"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.AuthResponse"
                         }
                     },
                     "400": {
@@ -1033,7 +2080,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.loginRequest"
+                            "$ref": "#/definitions/adapterhttp.loginRequest"
                         }
                     }
                 ],
@@ -1041,7 +2088,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Authentication successful",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_usecase.AuthResponse"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.AuthResponse"
                         }
                     },
                     "400": {
@@ -1091,7 +2138,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.logoutRequest"
+                            "$ref": "#/definitions/adapterhttp.logoutRequest"
                         }
                     }
                 ],
@@ -1131,7 +2178,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.refreshRequest"
+                            "$ref": "#/definitions/adapterhttp.refreshRequest"
                         }
                     }
                 ],
@@ -1139,7 +2186,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Token refreshed successfully",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_usecase.AuthResponse"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.AuthResponse"
                         }
                     },
                     "401": {
@@ -1183,7 +2230,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.registerRequest"
+                            "$ref": "#/definitions/adapterhttp.registerRequest"
                         }
                     }
                 ],
@@ -1191,7 +2238,7 @@ const docTemplate = `{
                     "201": {
                         "description": "User registered successfully",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_usecase.AuthResponse"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.AuthResponse"
                         }
                     },
                     "400": {
@@ -1232,7 +2279,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.resendConfirmationRequest"
+                            "$ref": "#/definitions/adapterhttp.resendConfirmationRequest"
                         }
                     }
                 ],
@@ -1336,25 +2383,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_usecase.ContactListResponse"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.ContactListResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     }
                 }
@@ -1390,7 +2437,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_usecase.CreateContactRequest"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateContactRequest"
                         }
                     }
                 ],
@@ -1398,31 +2445,31 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_domain.Contact"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Contact"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     }
                 }
@@ -1456,25 +2503,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_repository.ContactStats"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain_repository.ContactStats"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     }
                 }
@@ -1515,31 +2562,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_domain.Contact"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Contact"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     }
                 }
@@ -1578,25 +2625,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     }
                 }
@@ -1639,7 +2686,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_usecase.UpdateContactRequest"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.UpdateContactRequest"
                         }
                     }
                 ],
@@ -1647,37 +2694,37 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_domain.Contact"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Contact"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     }
                 }
@@ -1722,7 +2769,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_usecase.CreateAddressRequest"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateAddressRequest"
                         }
                     }
                 ],
@@ -1730,31 +2777,31 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_domain.ContactAddress"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ContactAddress"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     }
                 }
@@ -1795,31 +2842,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_domain.Contact"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Contact"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     }
                 }
@@ -1864,7 +2911,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_usecase.CreatePhoneRequest"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.CreatePhoneRequest"
                         }
                     }
                 ],
@@ -1872,31 +2919,31 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_domain.ContactPhone"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ContactPhone"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     }
                 }
@@ -1949,25 +2996,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     }
                 }
@@ -1987,13 +3034,13 @@ const docTemplate = `{
                     "200": {
                         "description": "Service is healthy",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.HealthResponse"
+                            "$ref": "#/definitions/adapterhttp.HealthResponse"
                         }
                     },
                     "503": {
                         "description": "Service is unhealthy",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.HealthResponse"
+                            "$ref": "#/definitions/adapterhttp.HealthResponse"
                         }
                     }
                 }
@@ -2139,19 +3186,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_usecase.InvoiceListResponse"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.InvoiceListResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     }
                 }
@@ -2187,7 +3234,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_usecase.CreateInvoiceRequest"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateInvoiceRequest"
                         }
                     }
                 ],
@@ -2195,25 +3242,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_domain.Invoice"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Invoice"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     }
                 }
@@ -2249,20 +3296,20 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/backend_internal_domain.Invoice"
+                                "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Invoice"
                             }
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     }
                 }
@@ -2296,19 +3343,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_repository.InvoiceStats"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain_repository.InvoiceStats"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     }
                 }
@@ -2349,25 +3396,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_domain.Invoice"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Invoice"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     }
                 }
@@ -2410,7 +3457,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_usecase.UpdateInvoiceRequest"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.UpdateInvoiceRequest"
                         }
                     }
                 ],
@@ -2418,25 +3465,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_domain.Invoice"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Invoice"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     }
                 }
@@ -2475,19 +3522,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     }
                 }
@@ -2532,7 +3579,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_usecase.CreatePaymentRequest"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.CreatePaymentRequest"
                         }
                     }
                 ],
@@ -2540,25 +3587,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_domain.Payment"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Payment"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     }
                 }
@@ -2611,19 +3658,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     }
                 }
@@ -2890,7 +3937,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.CreateOrganizationRequest"
+                            "$ref": "#/definitions/adapterhttp.CreateOrganizationRequest"
                         }
                     }
                 ],
@@ -2898,7 +3945,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Organization created successfully",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_domain.Organization"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Organization"
                         }
                     },
                     "400": {
@@ -2966,7 +4013,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Organization retrieved successfully",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_domain.Organization"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Organization"
                         }
                     },
                     "400": {
@@ -3111,19 +4158,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_usecase.ProductListResponse"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.ProductListResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     }
                 }
@@ -3159,7 +4206,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_usecase.CreateProductRequest"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateProductRequest"
                         }
                     }
                 ],
@@ -3167,25 +4214,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_domain.Product"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Product"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     }
                 }
@@ -3219,19 +4266,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_repository.ProductStats"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain_repository.ProductStats"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     }
                 }
@@ -3278,25 +4325,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_domain.Product"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Product"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     }
                 }
@@ -3339,7 +4386,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_usecase.UpdateProductRequest"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.UpdateProductRequest"
                         }
                     }
                 ],
@@ -3347,25 +4394,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_domain.Product"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Product"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     }
                 }
@@ -3404,19 +4451,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     }
                 }
@@ -3469,19 +4516,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.ErrorResponse"
+                            "$ref": "#/definitions/adapterhttp.ErrorResponse"
                         }
                     }
                 }
@@ -3506,7 +4553,7 @@ const docTemplate = `{
                     "200": {
                         "description": "User profile retrieved successfully",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_domain.User"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.User"
                         }
                     },
                     "401": {
@@ -3562,7 +4609,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_adapters_http.updateProfileRequest"
+                            "$ref": "#/definitions/adapterhttp.updateProfileRequest"
                         }
                     }
                 ],
@@ -3570,7 +4617,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Profile updated successfully",
                         "schema": {
-                            "$ref": "#/definitions/backend_internal_domain.User"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.User"
                         }
                     },
                     "400": {
@@ -3623,7 +4670,179 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "backend_internal_domain.AddressType": {
+        "adapterhttp.CreateOrganizationRequest": {
+            "type": "object",
+            "required": [
+                "name",
+                "slug",
+                "type"
+            ],
+            "properties": {
+                "address": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "city": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "country": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "domain": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 2
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "postalCode": {
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "slug": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 2
+                },
+                "state": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "type": {
+                    "enum": [
+                        "company",
+                        "nonprofit",
+                        "personal",
+                        "education"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.OrganizationType"
+                        }
+                    ]
+                },
+                "website": {
+                    "type": "string"
+                }
+            }
+        },
+        "adapterhttp.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "details": {},
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "adapterhttp.HealthResponse": {
+            "type": "object",
+            "properties": {
+                "checks": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "adapterhttp.confirmRequest": {
+            "type": "object",
+            "properties": {
+                "confirmationCode": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                }
+            }
+        },
+        "adapterhttp.loginRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
+        "adapterhttp.logoutRequest": {
+            "type": "object",
+            "properties": {
+                "refreshToken": {
+                    "type": "string"
+                }
+            }
+        },
+        "adapterhttp.refreshRequest": {
+            "type": "object",
+            "properties": {
+                "refreshToken": {
+                    "type": "string"
+                }
+            }
+        },
+        "adapterhttp.registerRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "roleId": {
+                    "type": "integer"
+                }
+            }
+        },
+        "adapterhttp.resendConfirmationRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                }
+            }
+        },
+        "adapterhttp.updateProfileRequest": {
+            "type": "object",
+            "properties": {
+                "currentPassword": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.AddressType": {
             "type": "string",
             "enum": [
                 "billing",
@@ -3640,7 +4859,7 @@ const docTemplate = `{
                 "AddressTypeOther"
             ]
         },
-        "backend_internal_domain.Attendee": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.Attendee": {
             "type": "object",
             "properties": {
                 "createdAt": {
@@ -3653,7 +4872,7 @@ const docTemplate = `{
                     "description": "Relationships",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/backend_internal_domain.Event"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Event"
                         }
                     ]
                 },
@@ -3670,20 +4889,20 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "status": {
-                    "$ref": "#/definitions/backend_internal_domain.AttendeeStatus"
+                    "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.AttendeeStatus"
                 },
                 "updatedAt": {
                     "type": "string"
                 },
                 "user": {
-                    "$ref": "#/definitions/backend_internal_domain.User"
+                    "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.User"
                 },
                 "userId": {
                     "type": "integer"
                 }
             }
         },
-        "backend_internal_domain.AttendeeStatus": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.AttendeeStatus": {
             "type": "string",
             "enum": [
                 "pending",
@@ -3698,14 +4917,14 @@ const docTemplate = `{
                 "AttendeeStatusTentative"
             ]
         },
-        "backend_internal_domain.AvailabilitySlot": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.AvailabilitySlot": {
             "type": "object",
             "properties": {
                 "calendar": {
                     "description": "Relationships",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/backend_internal_domain.Calendar"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Calendar"
                         }
                     ]
                 },
@@ -3740,14 +4959,34 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_domain.Booking": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.BackendConfig": {
+            "type": "object",
+            "properties": {
+                "architecture": {
+                    "type": "string"
+                },
+                "modules": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "packageName": {
+                    "type": "string"
+                },
+                "template": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.Booking": {
             "type": "object",
             "properties": {
                 "availabilitySlot": {
                     "description": "Relationships",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/backend_internal_domain.AvailabilitySlot"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.AvailabilitySlot"
                         }
                     ]
                 },
@@ -3755,7 +4994,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "bookedBy": {
-                    "$ref": "#/definitions/backend_internal_domain.User"
+                    "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.User"
                 },
                 "bookedById": {
                     "type": "integer"
@@ -3773,7 +5012,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "event": {
-                    "$ref": "#/definitions/backend_internal_domain.Event"
+                    "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Event"
                 },
                 "eventId": {
                     "type": "integer"
@@ -3793,7 +5032,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_domain.Calendar": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.Calendar": {
             "type": "object",
             "properties": {
                 "color": {
@@ -3809,7 +5048,7 @@ const docTemplate = `{
                 "events": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/backend_internal_domain.Event"
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Event"
                     }
                 },
                 "id": {
@@ -3825,7 +5064,7 @@ const docTemplate = `{
                     "description": "Relationships",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/backend_internal_domain.User"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.User"
                         }
                     ]
                 },
@@ -3833,14 +5072,14 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "type": {
-                    "$ref": "#/definitions/backend_internal_domain.CalendarType"
+                    "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.CalendarType"
                 },
                 "updatedAt": {
                     "type": "string"
                 }
             }
         },
-        "backend_internal_domain.CalendarType": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.CalendarType": {
             "type": "string",
             "enum": [
                 "personal",
@@ -3855,7 +5094,18 @@ const docTemplate = `{
                 "CalendarTypePublic"
             ]
         },
-        "backend_internal_domain.Contact": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.CircularDependencyChain": {
+            "type": "object",
+            "properties": {
+                "chain": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.Contact": {
             "type": "object",
             "required": [
                 "organizationId",
@@ -3866,7 +5116,7 @@ const docTemplate = `{
                     "description": "Related entities (loaded separately)",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/backend_internal_domain.ContactAddress"
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ContactAddress"
                     }
                 },
                 "companyName": {
@@ -3911,7 +5161,7 @@ const docTemplate = `{
                 "phones": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/backend_internal_domain.ContactPhone"
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ContactPhone"
                     }
                 },
                 "taxNumber": {
@@ -3927,7 +5177,7 @@ const docTemplate = `{
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/backend_internal_domain.ContactType"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ContactType"
                         }
                     ]
                 },
@@ -3940,7 +5190,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_domain.ContactAddress": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.ContactAddress": {
             "type": "object",
             "required": [
                 "addressLine1",
@@ -3996,7 +5246,7 @@ const docTemplate = `{
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/backend_internal_domain.AddressType"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.AddressType"
                         }
                     ]
                 },
@@ -4005,7 +5255,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_domain.ContactPhone": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.ContactPhone": {
             "type": "object",
             "required": [
                 "contactId",
@@ -4043,7 +5293,7 @@ const docTemplate = `{
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/backend_internal_domain.PhoneType"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.PhoneType"
                         }
                     ]
                 },
@@ -4052,7 +5302,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_domain.ContactType": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.ContactType": {
             "type": "string",
             "enum": [
                 "customer",
@@ -4067,10 +5317,38 @@ const docTemplate = `{
                 "ContactTypePartner"
             ]
         },
-        "backend_internal_domain.Email": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.DatabaseConfig": {
+            "type": "object",
+            "properties": {
+                "migrations": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.DockerConfig": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                },
+                "services": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.Email": {
             "type": "object"
         },
-        "backend_internal_domain.Event": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.Event": {
             "type": "object",
             "properties": {
                 "allDay": {
@@ -4079,14 +5357,14 @@ const docTemplate = `{
                 "attendees": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/backend_internal_domain.Attendee"
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Attendee"
                     }
                 },
                 "calendar": {
                     "description": "Relationships",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/backend_internal_domain.Calendar"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Calendar"
                         }
                     ]
                 },
@@ -4097,7 +5375,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "createdBy": {
-                    "$ref": "#/definitions/backend_internal_domain.User"
+                    "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.User"
                 },
                 "createdById": {
                     "type": "integer"
@@ -4124,27 +5402,27 @@ const docTemplate = `{
                 "reminders": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/backend_internal_domain.Reminder"
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Reminder"
                     }
                 },
                 "startTime": {
                     "type": "string"
                 },
                 "status": {
-                    "$ref": "#/definitions/backend_internal_domain.EventStatus"
+                    "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.EventStatus"
                 },
                 "title": {
                     "type": "string"
                 },
                 "type": {
-                    "$ref": "#/definitions/backend_internal_domain.EventType"
+                    "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.EventType"
                 },
                 "updatedAt": {
                     "type": "string"
                 }
             }
         },
-        "backend_internal_domain.EventStatus": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.EventStatus": {
             "type": "string",
             "enum": [
                 "tentative",
@@ -4157,7 +5435,7 @@ const docTemplate = `{
                 "EventStatusCancelled"
             ]
         },
-        "backend_internal_domain.EventType": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.EventType": {
             "type": "string",
             "enum": [
                 "appointment",
@@ -4174,7 +5452,27 @@ const docTemplate = `{
                 "EventTypeBooking"
             ]
         },
-        "backend_internal_domain.InventoryItem": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.FrontendConfig": {
+            "type": "object",
+            "properties": {
+                "framework": {
+                    "type": "string"
+                },
+                "language": {
+                    "type": "string"
+                },
+                "modules": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "template": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.InventoryItem": {
             "type": "object",
             "properties": {
                 "createdAt": {
@@ -4193,7 +5491,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "product": {
-                    "$ref": "#/definitions/backend_internal_domain.Product"
+                    "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Product"
                 },
                 "productId": {
                     "type": "integer"
@@ -4216,7 +5514,7 @@ const docTemplate = `{
                 "stockMovements": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/backend_internal_domain.StockMovement"
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.StockMovement"
                     }
                 },
                 "unitCost": {
@@ -4229,7 +5527,7 @@ const docTemplate = `{
                     "description": "Relationships",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/backend_internal_domain.Warehouse"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Warehouse"
                         }
                     ]
                 },
@@ -4238,7 +5536,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_domain.Invoice": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.Invoice": {
             "type": "object",
             "required": [
                 "contactId",
@@ -4292,7 +5590,7 @@ const docTemplate = `{
                     "description": "Related entities (loaded separately)",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/backend_internal_domain.InvoiceItem"
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.InvoiceItem"
                     }
                 },
                 "notes": {
@@ -4312,7 +5610,7 @@ const docTemplate = `{
                 "payments": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/backend_internal_domain.Payment"
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Payment"
                     }
                 },
                 "status": {
@@ -4327,7 +5625,7 @@ const docTemplate = `{
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/backend_internal_domain.InvoiceStatus"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.InvoiceStatus"
                         }
                     ]
                 },
@@ -4355,7 +5653,7 @@ const docTemplate = `{
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/backend_internal_domain.InvoiceType"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.InvoiceType"
                         }
                     ]
                 },
@@ -4364,7 +5662,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_domain.InvoiceItem": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.InvoiceItem": {
             "type": "object",
             "required": [
                 "description",
@@ -4431,7 +5729,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_domain.InvoiceStatus": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.InvoiceStatus": {
             "type": "string",
             "enum": [
                 "draft",
@@ -4452,7 +5750,7 @@ const docTemplate = `{
                 "InvoiceStatusCancelled"
             ]
         },
-        "backend_internal_domain.InvoiceType": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.InvoiceType": {
             "type": "string",
             "enum": [
                 "invoice",
@@ -4467,7 +5765,186 @@ const docTemplate = `{
                 "InvoiceTypeProforma"
             ]
         },
-        "backend_internal_domain.Organization": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.ModuleConflict": {
+            "type": "object",
+            "properties": {
+                "conflicts": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "module": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.ModuleInfo": {
+            "type": "object",
+            "properties": {
+                "backend": {
+                    "type": "boolean"
+                },
+                "category": {
+                    "type": "string"
+                },
+                "config": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "conflicts": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "dependencies": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "description": {
+                    "type": "string"
+                },
+                "entities": {
+                    "type": "array",
+                    "items": {}
+                },
+                "frontend": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "maxVersion": {
+                    "type": "string"
+                },
+                "migrations": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "minVersion": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "optional": {
+                    "type": "boolean"
+                },
+                "routes": {
+                    "type": "array",
+                    "items": {}
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.ModuleInjectionPlan": {
+            "type": "object",
+            "properties": {
+                "errors": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "execution_order": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "injected_modules": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "module_details": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ModuleInfo"
+                    }
+                },
+                "requested_modules": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "resolved_modules": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "warnings": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.ModuleValidationResult": {
+            "type": "object",
+            "properties": {
+                "circular": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.CircularDependencyChain"
+                    }
+                },
+                "conflicts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ModuleConflict"
+                    }
+                },
+                "missing": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "resolved": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "valid": {
+                    "type": "boolean"
+                },
+                "warnings": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.Organization": {
             "type": "object",
             "required": [
                 "name",
@@ -4536,7 +6013,7 @@ const docTemplate = `{
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/backend_internal_domain.OrganizationType"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.OrganizationType"
                         }
                     ]
                 },
@@ -4547,7 +6024,7 @@ const docTemplate = `{
                     "description": "Relationships",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/backend_internal_domain.OrganizationUser"
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.OrganizationUser"
                     }
                 },
                 "website": {
@@ -4555,7 +6032,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_domain.OrganizationRole": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.OrganizationRole": {
             "type": "string",
             "enum": [
                 "owner",
@@ -4570,7 +6047,7 @@ const docTemplate = `{
                 "OrganizationRoleGuest"
             ]
         },
-        "backend_internal_domain.OrganizationType": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.OrganizationType": {
             "type": "string",
             "enum": [
                 "company",
@@ -4585,7 +6062,7 @@ const docTemplate = `{
                 "OrganizationTypeEducation"
             ]
         },
-        "backend_internal_domain.OrganizationUser": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.OrganizationUser": {
             "type": "object",
             "required": [
                 "organizationId",
@@ -4606,7 +6083,7 @@ const docTemplate = `{
                     "description": "Relationships",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/backend_internal_domain.Organization"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Organization"
                         }
                     ]
                 },
@@ -4622,7 +6099,7 @@ const docTemplate = `{
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/backend_internal_domain.OrganizationRole"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.OrganizationRole"
                         }
                     ]
                 },
@@ -4630,14 +6107,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "user": {
-                    "$ref": "#/definitions/backend_internal_domain.User"
+                    "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.User"
                 },
                 "userId": {
                     "type": "integer"
                 }
             }
         },
-        "backend_internal_domain.Payment": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.Payment": {
             "type": "object",
             "required": [
                 "amount",
@@ -4693,7 +6170,7 @@ const docTemplate = `{
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/backend_internal_domain.PaymentMethod"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.PaymentMethod"
                         }
                     ]
                 },
@@ -4706,7 +6183,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_domain.PaymentMethod": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.PaymentMethod": {
             "type": "string",
             "enum": [
                 "cash",
@@ -4727,7 +6204,7 @@ const docTemplate = `{
                 "PaymentMethodOther"
             ]
         },
-        "backend_internal_domain.Permission": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.Permission": {
             "type": "object",
             "properties": {
                 "action": {
@@ -4753,7 +6230,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_domain.PhoneType": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.PhoneType": {
             "type": "string",
             "enum": [
                 "work",
@@ -4770,7 +6247,7 @@ const docTemplate = `{
                 "PhoneTypeOther"
             ]
         },
-        "backend_internal_domain.PriceType": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.PriceType": {
             "type": "string",
             "enum": [
                 "base",
@@ -4787,7 +6264,7 @@ const docTemplate = `{
                 "PriceTypeCost"
             ]
         },
-        "backend_internal_domain.Product": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.Product": {
             "type": "object",
             "required": [
                 "name",
@@ -4838,7 +6315,7 @@ const docTemplate = `{
                 "prices": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/backend_internal_domain.ProductPrice"
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ProductPrice"
                     }
                 },
                 "sku": {
@@ -4862,7 +6339,7 @@ const docTemplate = `{
                     "description": "Related entities (loaded separately)",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/backend_internal_domain.ProductVariant"
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ProductVariant"
                     }
                 },
                 "weight": {
@@ -4871,7 +6348,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_domain.ProductPrice": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.ProductPrice": {
             "type": "object",
             "required": [
                 "amount",
@@ -4913,7 +6390,7 @@ const docTemplate = `{
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/backend_internal_domain.PriceType"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.PriceType"
                         }
                     ]
                 },
@@ -4934,7 +6411,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_domain.ProductVariant": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.ProductVariant": {
             "type": "object",
             "required": [
                 "name",
@@ -4975,7 +6452,7 @@ const docTemplate = `{
                     "description": "Related entities (loaded separately)",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/backend_internal_domain.ProductPrice"
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ProductPrice"
                     }
                 },
                 "productId": {
@@ -4995,7 +6472,217 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_domain.Reminder": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.Project": {
+            "type": "object",
+            "properties": {
+                "author": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "database": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "dryRun": {
+                    "type": "boolean"
+                },
+                "frontend": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "license": {
+                    "type": "string"
+                },
+                "modules": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "skipDocker": {
+                    "type": "boolean"
+                },
+                "skipGit": {
+                    "type": "boolean"
+                },
+                "template": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.ProjectPlan": {
+            "type": "object",
+            "properties": {
+                "backendFiles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "backendTemplate": {
+                    "type": "string"
+                },
+                "backendTemplateVersion": {
+                    "type": "string"
+                },
+                "configFiles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "dockerServices": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "frontendFiles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "frontendTemplate": {
+                    "type": "string"
+                },
+                "frontendTemplateVersion": {
+                    "type": "string"
+                },
+                "migrationFiles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "modules": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "options": {
+                    "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ProjectRequest"
+                },
+                "projectDirectories": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "staticFiles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "structure": {
+                    "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ProjectStructure"
+                }
+            }
+        },
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.ProjectRequest": {
+            "type": "object",
+            "properties": {
+                "author": {
+                    "type": "string"
+                },
+                "database": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "dryRun": {
+                    "type": "boolean"
+                },
+                "frontend": {
+                    "type": "string"
+                },
+                "license": {
+                    "type": "string"
+                },
+                "modules": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "skipDocker": {
+                    "type": "boolean"
+                },
+                "skipGit": {
+                    "type": "boolean"
+                },
+                "template": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.ProjectStructure": {
+            "type": "object",
+            "properties": {
+                "author": {
+                    "type": "string"
+                },
+                "backend": {
+                    "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.BackendConfig"
+                },
+                "config": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "database": {
+                    "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.DatabaseConfig"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "docker": {
+                    "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.DockerConfig"
+                },
+                "frontend": {
+                    "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.FrontendConfig"
+                },
+                "license": {
+                    "type": "string"
+                },
+                "modules": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ModuleInfo"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.Reminder": {
             "type": "object",
             "properties": {
                 "createdAt": {
@@ -5005,7 +6692,7 @@ const docTemplate = `{
                     "description": "Relationships",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/backend_internal_domain.Event"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Event"
                         }
                     ]
                 },
@@ -5025,11 +6712,11 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "type": {
-                    "$ref": "#/definitions/backend_internal_domain.ReminderType"
+                    "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ReminderType"
                 }
             }
         },
-        "backend_internal_domain.ReminderType": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.ReminderType": {
             "type": "string",
             "enum": [
                 "email",
@@ -5042,7 +6729,7 @@ const docTemplate = `{
                 "ReminderTypePush"
             ]
         },
-        "backend_internal_domain.Role": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.Role": {
             "type": "object",
             "properties": {
                 "createdAt": {
@@ -5060,7 +6747,7 @@ const docTemplate = `{
                 "permissions": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/backend_internal_domain.Permission"
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Permission"
                     }
                 },
                 "updatedAt": {
@@ -5068,7 +6755,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_domain.StockMovement": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.StockMovement": {
             "type": "object",
             "properties": {
                 "createdAt": {
@@ -5081,7 +6768,7 @@ const docTemplate = `{
                     "description": "Relationships",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/backend_internal_domain.InventoryItem"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.InventoryItem"
                         }
                     ]
                 },
@@ -5107,20 +6794,20 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "type": {
-                    "$ref": "#/definitions/backend_internal_domain.StockMovementType"
+                    "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.StockMovementType"
                 },
                 "unitCost": {
                     "type": "number"
                 },
                 "user": {
-                    "$ref": "#/definitions/backend_internal_domain.User"
+                    "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.User"
                 },
                 "userId": {
                     "type": "integer"
                 }
             }
         },
-        "backend_internal_domain.StockMovementType": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.StockMovementType": {
             "type": "string",
             "enum": [
                 "receive",
@@ -5141,7 +6828,99 @@ const docTemplate = `{
                 "StockMovementTypeRelease"
             ]
         },
-        "backend_internal_domain.User": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.Template": {
+            "type": "object",
+            "properties": {
+                "author": {
+                    "type": "string"
+                },
+                "category": {
+                    "type": "string"
+                },
+                "content": {
+                    "description": "file path -\u003e content",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "remote": {
+                    "type": "boolean"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.TemplateRegistry": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.TemplateRenderRequest": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "vars": {
+                    "type": "object",
+                    "additionalProperties": true
+                }
+            }
+        },
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.TemplateRenderResult": {
+            "type": "object",
+            "properties": {
+                "files": {
+                    "description": "base64 encoded",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.User": {
             "type": "object",
             "properties": {
                 "confirmedAt": {
@@ -5151,13 +6930,13 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "email": {
-                    "$ref": "#/definitions/backend_internal_domain.Email"
+                    "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Email"
                 },
                 "id": {
                     "type": "integer"
                 },
                 "role": {
-                    "$ref": "#/definitions/backend_internal_domain.Role"
+                    "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Role"
                 },
                 "roleId": {
                     "type": "integer"
@@ -5167,7 +6946,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_domain.Warehouse": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain.Warehouse": {
             "type": "object",
             "properties": {
                 "address": {
@@ -5189,7 +6968,7 @@ const docTemplate = `{
                     "description": "Relationships",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/backend_internal_domain.InventoryItem"
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.InventoryItem"
                     }
                 },
                 "isActive": {
@@ -5203,7 +6982,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_repository.ContactStats": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain_repository.ContactStats": {
             "type": "object",
             "properties": {
                 "activeContacts": {
@@ -5233,7 +7012,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_repository.InvoiceStats": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain_repository.InvoiceStats": {
             "type": "object",
             "properties": {
                 "averageInvoiceValue": {
@@ -5275,7 +7054,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_repository.ProductStats": {
+        "github_com_pmaojo_kthulu-go_backend_internal_domain_repository.ProductStats": {
             "type": "object",
             "properties": {
                 "activeProducts": {
@@ -5314,7 +7093,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_usecase.AuthResponse": {
+        "github_com_pmaojo_kthulu-go_backend_internal_usecase.AuthResponse": {
             "type": "object",
             "properties": {
                 "accessToken": {
@@ -5327,11 +7106,11 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "user": {
-                    "$ref": "#/definitions/backend_internal_domain.User"
+                    "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.User"
                 }
             }
         },
-        "backend_internal_usecase.BookSlotRequest": {
+        "github_com_pmaojo_kthulu-go_backend_internal_usecase.BookSlotRequest": {
             "type": "object",
             "required": [
                 "bookedById",
@@ -5378,13 +7157,13 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_usecase.ContactListResponse": {
+        "github_com_pmaojo_kthulu-go_backend_internal_usecase.ContactListResponse": {
             "type": "object",
             "properties": {
                 "contacts": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/backend_internal_domain.Contact"
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Contact"
                     }
                 },
                 "page": {
@@ -5401,7 +7180,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_usecase.CreateAddressRequest": {
+        "github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateAddressRequest": {
             "type": "object",
             "required": [
                 "addressLine1",
@@ -5447,13 +7226,13 @@ const docTemplate = `{
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/backend_internal_domain.AddressType"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.AddressType"
                         }
                     ]
                 }
             }
         },
-        "backend_internal_usecase.CreateAttendeeRequest": {
+        "github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateAttendeeRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -5475,7 +7254,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_usecase.CreateCalendarRequest": {
+        "github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateCalendarRequest": {
             "type": "object",
             "required": [
                 "name",
@@ -5499,11 +7278,11 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "type": {
-                    "$ref": "#/definitions/backend_internal_domain.CalendarType"
+                    "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.CalendarType"
                 }
             }
         },
-        "backend_internal_usecase.CreateContactRequest": {
+        "github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateContactRequest": {
             "type": "object",
             "required": [
                 "type"
@@ -5549,7 +7328,7 @@ const docTemplate = `{
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/backend_internal_domain.ContactType"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ContactType"
                         }
                     ]
                 },
@@ -5559,7 +7338,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_usecase.CreateEventRequest": {
+        "github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateEventRequest": {
             "type": "object",
             "required": [
                 "calendarId",
@@ -5576,7 +7355,7 @@ const docTemplate = `{
                 "attendees": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/backend_internal_usecase.CreateAttendeeRequest"
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateAttendeeRequest"
                     }
                 },
                 "calendarId": {
@@ -5609,7 +7388,7 @@ const docTemplate = `{
                 "reminders": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/backend_internal_usecase.CreateReminderRequest"
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateReminderRequest"
                     }
                 },
                 "startTime": {
@@ -5620,11 +7399,11 @@ const docTemplate = `{
                     "maxLength": 255
                 },
                 "type": {
-                    "$ref": "#/definitions/backend_internal_domain.EventType"
+                    "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.EventType"
                 }
             }
         },
-        "backend_internal_usecase.CreateInvoiceItemRequest": {
+        "github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateInvoiceItemRequest": {
             "type": "object",
             "required": [
                 "description",
@@ -5663,7 +7442,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_usecase.CreateInvoiceRequest": {
+        "github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateInvoiceRequest": {
             "type": "object",
             "required": [
                 "contactId",
@@ -5692,7 +7471,7 @@ const docTemplate = `{
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/backend_internal_usecase.CreateInvoiceItemRequest"
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateInvoiceItemRequest"
                     }
                 },
                 "notes": {
@@ -5717,13 +7496,13 @@ const docTemplate = `{
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/backend_internal_domain.InvoiceType"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.InvoiceType"
                         }
                     ]
                 }
             }
         },
-        "backend_internal_usecase.CreatePaymentRequest": {
+        "github_com_pmaojo_kthulu-go_backend_internal_usecase.CreatePaymentRequest": {
             "type": "object",
             "required": [
                 "amount",
@@ -5769,7 +7548,7 @@ const docTemplate = `{
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/backend_internal_domain.PaymentMethod"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.PaymentMethod"
                         }
                     ]
                 },
@@ -5779,7 +7558,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_usecase.CreatePhoneRequest": {
+        "github_com_pmaojo_kthulu-go_backend_internal_usecase.CreatePhoneRequest": {
             "type": "object",
             "required": [
                 "number",
@@ -5807,13 +7586,13 @@ const docTemplate = `{
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/backend_internal_domain.PhoneType"
+                            "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.PhoneType"
                         }
                     ]
                 }
             }
         },
-        "backend_internal_usecase.CreateProductRequest": {
+        "github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateProductRequest": {
             "type": "object",
             "required": [
                 "name",
@@ -5868,7 +7647,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_usecase.CreateReminderRequest": {
+        "github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateReminderRequest": {
             "type": "object",
             "required": [
                 "minutesBefore",
@@ -5880,11 +7659,11 @@ const docTemplate = `{
                     "minimum": 0
                 },
                 "type": {
-                    "$ref": "#/definitions/backend_internal_domain.ReminderType"
+                    "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ReminderType"
                 }
             }
         },
-        "backend_internal_usecase.CreateWarehouseRequest": {
+        "github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateWarehouseRequest": {
             "type": "object",
             "required": [
                 "code",
@@ -5909,13 +7688,13 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_usecase.InvoiceListResponse": {
+        "github_com_pmaojo_kthulu-go_backend_internal_usecase.InvoiceListResponse": {
             "type": "object",
             "properties": {
                 "invoices": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/backend_internal_domain.Invoice"
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Invoice"
                     }
                 },
                 "page": {
@@ -5932,13 +7711,13 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_usecase.PaginatedResponse-backend_internal_domain_Calendar": {
+        "github_com_pmaojo_kthulu-go_backend_internal_usecase.PaginatedResponse-github_com_pmaojo_kthulu-go_backend_internal_domain_Calendar": {
             "type": "object",
             "properties": {
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/backend_internal_domain.Calendar"
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Calendar"
                     }
                 },
                 "page": {
@@ -5955,13 +7734,13 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_usecase.PaginatedResponse-backend_internal_domain_Event": {
+        "github_com_pmaojo_kthulu-go_backend_internal_usecase.PaginatedResponse-github_com_pmaojo_kthulu-go_backend_internal_domain_Event": {
             "type": "object",
             "properties": {
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/backend_internal_domain.Event"
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Event"
                     }
                 },
                 "page": {
@@ -5978,13 +7757,13 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_usecase.PaginatedResponse-backend_internal_domain_InventoryItem": {
+        "github_com_pmaojo_kthulu-go_backend_internal_usecase.PaginatedResponse-github_com_pmaojo_kthulu-go_backend_internal_domain_InventoryItem": {
             "type": "object",
             "properties": {
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/backend_internal_domain.InventoryItem"
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.InventoryItem"
                     }
                 },
                 "page": {
@@ -6001,13 +7780,13 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_usecase.PaginatedResponse-backend_internal_domain_StockMovement": {
+        "github_com_pmaojo_kthulu-go_backend_internal_usecase.PaginatedResponse-github_com_pmaojo_kthulu-go_backend_internal_domain_StockMovement": {
             "type": "object",
             "properties": {
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/backend_internal_domain.StockMovement"
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.StockMovement"
                     }
                 },
                 "page": {
@@ -6024,13 +7803,13 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_usecase.PaginatedResponse-backend_internal_domain_Warehouse": {
+        "github_com_pmaojo_kthulu-go_backend_internal_usecase.PaginatedResponse-github_com_pmaojo_kthulu-go_backend_internal_domain_Warehouse": {
             "type": "object",
             "properties": {
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/backend_internal_domain.Warehouse"
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Warehouse"
                     }
                 },
                 "page": {
@@ -6047,7 +7826,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_usecase.ProductListResponse": {
+        "github_com_pmaojo_kthulu-go_backend_internal_usecase.ProductListResponse": {
             "type": "object",
             "properties": {
                 "page": {
@@ -6059,7 +7838,7 @@ const docTemplate = `{
                 "products": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/backend_internal_domain.Product"
+                        "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Product"
                     }
                 },
                 "total": {
@@ -6070,7 +7849,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_usecase.UpdateContactRequest": {
+        "github_com_pmaojo_kthulu-go_backend_internal_usecase.UpdateContactRequest": {
             "type": "object",
             "properties": {
                 "companyName": {
@@ -6110,7 +7889,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_usecase.UpdateInvoiceRequest": {
+        "github_com_pmaojo_kthulu-go_backend_internal_usecase.UpdateInvoiceRequest": {
             "type": "object",
             "required": [
                 "contactId"
@@ -6134,7 +7913,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_usecase.UpdateProductRequest": {
+        "github_com_pmaojo_kthulu-go_backend_internal_usecase.UpdateProductRequest": {
             "type": "object",
             "required": [
                 "name",
@@ -6183,7 +7962,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_usecase.UpdateStockRequest": {
+        "github_com_pmaojo_kthulu-go_backend_internal_usecase.UpdateStockRequest": {
             "type": "object",
             "required": [
                 "movementType",
@@ -6201,7 +7980,7 @@ const docTemplate = `{
                     "minimum": 0
                 },
                 "movementType": {
-                    "$ref": "#/definitions/backend_internal_domain.StockMovementType"
+                    "$ref": "#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.StockMovementType"
                 },
                 "notes": {
                     "type": "string",
@@ -6233,7 +8012,7 @@ const docTemplate = `{
                 }
             }
         },
-        "backend_internal_usecase.UpdateWarehouseRequest": {
+        "github_com_pmaojo_kthulu-go_backend_internal_usecase.UpdateWarehouseRequest": {
             "type": "object",
             "properties": {
                 "address": {
@@ -6252,198 +8031,18 @@ const docTemplate = `{
                     "maxLength": 255
                 }
             }
-        },
-        "internal_adapters_http.CreateOrganizationRequest": {
-            "type": "object",
-            "required": [
-                "name",
-                "slug",
-                "type"
-            ],
-            "properties": {
-                "address": {
-                    "type": "string",
-                    "maxLength": 200
-                },
-                "city": {
-                    "type": "string",
-                    "maxLength": 100
-                },
-                "country": {
-                    "type": "string",
-                    "maxLength": 100
-                },
-                "description": {
-                    "type": "string",
-                    "maxLength": 500
-                },
-                "domain": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string",
-                    "maxLength": 100,
-                    "minLength": 2
-                },
-                "phone": {
-                    "type": "string"
-                },
-                "postalCode": {
-                    "type": "string",
-                    "maxLength": 20
-                },
-                "slug": {
-                    "type": "string",
-                    "maxLength": 50,
-                    "minLength": 2
-                },
-                "state": {
-                    "type": "string",
-                    "maxLength": 100
-                },
-                "type": {
-                    "enum": [
-                        "company",
-                        "nonprofit",
-                        "personal",
-                        "education"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/backend_internal_domain.OrganizationType"
-                        }
-                    ]
-                },
-                "website": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_adapters_http.ErrorResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer"
-                },
-                "details": {},
-                "error": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_adapters_http.HealthResponse": {
-            "type": "object",
-            "properties": {
-                "checks": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "string"
-                    }
-                },
-                "status": {
-                    "type": "string"
-                },
-                "timestamp": {
-                    "type": "string"
-                },
-                "version": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_adapters_http.confirmRequest": {
-            "type": "object",
-            "properties": {
-                "confirmationCode": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_adapters_http.loginRequest": {
-            "type": "object",
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_adapters_http.logoutRequest": {
-            "type": "object",
-            "properties": {
-                "refreshToken": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_adapters_http.refreshRequest": {
-            "type": "object",
-            "properties": {
-                "refreshToken": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_adapters_http.registerRequest": {
-            "type": "object",
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string"
-                },
-                "roleId": {
-                    "type": "integer"
-                }
-            }
-        },
-        "internal_adapters_http.resendConfirmationRequest": {
-            "type": "object",
-            "properties": {
-                "email": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_adapters_http.updateProfileRequest": {
-            "type": "object",
-            "properties": {
-                "currentPassword": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string"
-                }
-            }
-        }
-    },
-    "securityDefinitions": {
-        "BearerAuth": {
-            "description": "JWT token obtained from /auth/login endpoint. Format: Bearer \u003ctoken\u003e",
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header"
         }
     }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.0.0",
-	Host:             "localhost:8080",
-	BasePath:         "/",
+	Version:          "",
+	Host:             "",
+	BasePath:         "",
 	Schemes:          []string{},
-	Title:            "Kthulu API",
-	Description:      "Complete enterprise-grade API for the Kthulu framework\n\nThis API provides authentication, user management, organization management,\nand ERP-lite modules including contacts, products, invoices, inventory, and calendar.\n\n## Authentication\n\nMost endpoints require authentication via JWT Bearer token in the Authorization header:\n```\nAuthorization: Bearer <your-jwt-token>\n```\n\n## Module Tags\n\nEndpoints are tagged by module for selective generation:\n- `@kthulu:core` - Core framework functionality\n- `@kthulu:module:auth` - Authentication module\n- `@kthulu:module:user` - User management module\n- `@kthulu:module:org` - Organization management module\n- `@kthulu:module:contacts` - Contacts module\n- `@kthulu:module:products` - Products module\n- `@kthulu:module:invoices` - Invoices module\n- `@kthulu:module:inventory` - Inventory module\n- `@kthulu:module:calendar` - Calendar module",
+	Title:            "",
+	Description:      "",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

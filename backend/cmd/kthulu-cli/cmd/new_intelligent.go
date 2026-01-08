@@ -409,12 +409,22 @@ func buildProjectConfig(projectName string) (*generator.GeneratorConfig, error) 
 }
 
 func getOutputPath(projectName string) string {
+	basePath := ""
 	if newOutputPath != "" {
-		return filepath.Join(newOutputPath, projectName)
+		basePath = newOutputPath
+	} else {
+		basePath, _ = os.Getwd()
 	}
 
-	pwd, _ := os.Getwd()
-	return filepath.Join(pwd, projectName)
+	// Clean the path to interpret dots and etc
+	basePath = filepath.Clean(basePath)
+
+	// If the base path already ends with the project name, assume the user meant that explicit directory
+	if filepath.Base(basePath) == projectName {
+		return basePath
+	}
+
+	return filepath.Join(basePath, projectName)
 }
 
 func runInteractiveMode(config *generator.GeneratorConfig) error {

@@ -1,6 +1,120 @@
-basePath: /
 definitions:
-  backend_internal_domain.AddressType:
+  adapterhttp.CreateOrganizationRequest:
+    properties:
+      address:
+        maxLength: 200
+        type: string
+      city:
+        maxLength: 100
+        type: string
+      country:
+        maxLength: 100
+        type: string
+      description:
+        maxLength: 500
+        type: string
+      domain:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      phone:
+        type: string
+      postalCode:
+        maxLength: 20
+        type: string
+      slug:
+        maxLength: 50
+        minLength: 2
+        type: string
+      state:
+        maxLength: 100
+        type: string
+      type:
+        allOf:
+        - $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.OrganizationType'
+        enum:
+        - company
+        - nonprofit
+        - personal
+        - education
+      website:
+        type: string
+    required:
+    - name
+    - slug
+    - type
+    type: object
+  adapterhttp.ErrorResponse:
+    properties:
+      code:
+        type: integer
+      details: {}
+      error:
+        type: string
+    type: object
+  adapterhttp.HealthResponse:
+    properties:
+      checks:
+        additionalProperties:
+          type: string
+        type: object
+      status:
+        type: string
+      timestamp:
+        type: string
+      version:
+        type: string
+    type: object
+  adapterhttp.confirmRequest:
+    properties:
+      confirmationCode:
+        type: string
+      email:
+        type: string
+    type: object
+  adapterhttp.loginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  adapterhttp.logoutRequest:
+    properties:
+      refreshToken:
+        type: string
+    type: object
+  adapterhttp.refreshRequest:
+    properties:
+      refreshToken:
+        type: string
+    type: object
+  adapterhttp.registerRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+      roleId:
+        type: integer
+    type: object
+  adapterhttp.resendConfirmationRequest:
+    properties:
+      email:
+        type: string
+    type: object
+  adapterhttp.updateProfileRequest:
+    properties:
+      currentPassword:
+        type: string
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  github_com_pmaojo_kthulu-go_backend_internal_domain.AddressType:
     enum:
     - billing
     - shipping
@@ -14,7 +128,7 @@ definitions:
     - AddressTypeOffice
     - AddressTypeHome
     - AddressTypeOther
-  backend_internal_domain.Attendee:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.Attendee:
     properties:
       createdAt:
         type: string
@@ -22,7 +136,7 @@ definitions:
         type: string
       event:
         allOf:
-        - $ref: '#/definitions/backend_internal_domain.Event'
+        - $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Event'
         description: Relationships
       eventId:
         type: integer
@@ -33,15 +147,15 @@ definitions:
       name:
         type: string
       status:
-        $ref: '#/definitions/backend_internal_domain.AttendeeStatus'
+        $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.AttendeeStatus'
       updatedAt:
         type: string
       user:
-        $ref: '#/definitions/backend_internal_domain.User'
+        $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.User'
       userId:
         type: integer
     type: object
-  backend_internal_domain.AttendeeStatus:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.AttendeeStatus:
     enum:
     - pending
     - accepted
@@ -53,11 +167,11 @@ definitions:
     - AttendeeStatusAccepted
     - AttendeeStatusDeclined
     - AttendeeStatusTentative
-  backend_internal_domain.AvailabilitySlot:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.AvailabilitySlot:
     properties:
       calendar:
         allOf:
-        - $ref: '#/definitions/backend_internal_domain.Calendar'
+        - $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Calendar'
         description: Relationships
       calendarId:
         type: integer
@@ -80,16 +194,29 @@ definitions:
       updatedAt:
         type: string
     type: object
-  backend_internal_domain.Booking:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.BackendConfig:
+    properties:
+      architecture:
+        type: string
+      modules:
+        items:
+          type: string
+        type: array
+      packageName:
+        type: string
+      template:
+        type: string
+    type: object
+  github_com_pmaojo_kthulu-go_backend_internal_domain.Booking:
     properties:
       availabilitySlot:
         allOf:
-        - $ref: '#/definitions/backend_internal_domain.AvailabilitySlot'
+        - $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.AvailabilitySlot'
         description: Relationships
       availabilitySlotId:
         type: integer
       bookedBy:
-        $ref: '#/definitions/backend_internal_domain.User'
+        $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.User'
       bookedById:
         type: integer
       bookedForEmail:
@@ -101,7 +228,7 @@ definitions:
       createdAt:
         type: string
       event:
-        $ref: '#/definitions/backend_internal_domain.Event'
+        $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Event'
       eventId:
         type: integer
       id:
@@ -109,12 +236,12 @@ definitions:
       notes:
         type: string
       status:
-        description: confirmed, cancelled, completed
+        description: confirmed, canceled, completed
         type: string
       updatedAt:
         type: string
     type: object
-  backend_internal_domain.Calendar:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.Calendar:
     properties:
       color:
         description: Hex color code
@@ -125,7 +252,7 @@ definitions:
         type: string
       events:
         items:
-          $ref: '#/definitions/backend_internal_domain.Event'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Event'
         type: array
       id:
         type: integer
@@ -135,16 +262,16 @@ definitions:
         type: string
       owner:
         allOf:
-        - $ref: '#/definitions/backend_internal_domain.User'
+        - $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.User'
         description: Relationships
       ownerId:
         type: integer
       type:
-        $ref: '#/definitions/backend_internal_domain.CalendarType'
+        $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.CalendarType'
       updatedAt:
         type: string
     type: object
-  backend_internal_domain.CalendarType:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.CalendarType:
     enum:
     - personal
     - shared
@@ -156,12 +283,19 @@ definitions:
     - CalendarTypeShared
     - CalendarTypeResource
     - CalendarTypePublic
-  backend_internal_domain.Contact:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.CircularDependencyChain:
+    properties:
+      chain:
+        items:
+          type: string
+        type: array
+    type: object
+  github_com_pmaojo_kthulu-go_backend_internal_domain.Contact:
     properties:
       addresses:
         description: Related entities (loaded separately)
         items:
-          $ref: '#/definitions/backend_internal_domain.ContactAddress'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ContactAddress'
         type: array
       companyName:
         maxLength: 200
@@ -193,14 +327,14 @@ definitions:
         type: string
       phones:
         items:
-          $ref: '#/definitions/backend_internal_domain.ContactPhone'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ContactPhone'
         type: array
       taxNumber:
         maxLength: 50
         type: string
       type:
         allOf:
-        - $ref: '#/definitions/backend_internal_domain.ContactType'
+        - $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ContactType'
         enum:
         - customer
         - supplier
@@ -215,7 +349,7 @@ definitions:
     - organizationId
     - type
     type: object
-  backend_internal_domain.ContactAddress:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.ContactAddress:
     properties:
       addressLine1:
         maxLength: 200
@@ -245,7 +379,7 @@ definitions:
         type: string
       type:
         allOf:
-        - $ref: '#/definitions/backend_internal_domain.AddressType'
+        - $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.AddressType'
         enum:
         - billing
         - shipping
@@ -261,7 +395,7 @@ definitions:
     - country
     - type
     type: object
-  backend_internal_domain.ContactPhone:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.ContactPhone:
     properties:
       contactId:
         type: integer
@@ -279,7 +413,7 @@ definitions:
         type: string
       type:
         allOf:
-        - $ref: '#/definitions/backend_internal_domain.PhoneType'
+        - $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.PhoneType'
         enum:
         - work
         - mobile
@@ -293,7 +427,7 @@ definitions:
     - number
     - type
     type: object
-  backend_internal_domain.ContactType:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.ContactType:
     enum:
     - customer
     - supplier
@@ -305,26 +439,44 @@ definitions:
     - ContactTypeSupplier
     - ContactTypeLead
     - ContactTypePartner
-  backend_internal_domain.Email:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.DatabaseConfig:
+    properties:
+      migrations:
+        items:
+          type: string
+        type: array
+      type:
+        type: string
     type: object
-  backend_internal_domain.Event:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.DockerConfig:
+    properties:
+      enabled:
+        type: boolean
+      services:
+        items:
+          type: string
+        type: array
+    type: object
+  github_com_pmaojo_kthulu-go_backend_internal_domain.Email:
+    type: object
+  github_com_pmaojo_kthulu-go_backend_internal_domain.Event:
     properties:
       allDay:
         type: boolean
       attendees:
         items:
-          $ref: '#/definitions/backend_internal_domain.Attendee'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Attendee'
         type: array
       calendar:
         allOf:
-        - $ref: '#/definitions/backend_internal_domain.Calendar'
+        - $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Calendar'
         description: Relationships
       calendarId:
         type: integer
       createdAt:
         type: string
       createdBy:
-        $ref: '#/definitions/backend_internal_domain.User'
+        $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.User'
       createdById:
         type: integer
       description:
@@ -342,30 +494,30 @@ definitions:
         type: string
       reminders:
         items:
-          $ref: '#/definitions/backend_internal_domain.Reminder'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Reminder'
         type: array
       startTime:
         type: string
       status:
-        $ref: '#/definitions/backend_internal_domain.EventStatus'
+        $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.EventStatus'
       title:
         type: string
       type:
-        $ref: '#/definitions/backend_internal_domain.EventType'
+        $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.EventType'
       updatedAt:
         type: string
     type: object
-  backend_internal_domain.EventStatus:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.EventStatus:
     enum:
     - tentative
     - confirmed
-    - cancelled
+    - canceled
     type: string
     x-enum-varnames:
     - EventStatusTentative
     - EventStatusConfirmed
     - EventStatusCancelled
-  backend_internal_domain.EventType:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.EventType:
     enum:
     - appointment
     - meeting
@@ -379,7 +531,20 @@ definitions:
     - EventTypeTask
     - EventTypeReminder
     - EventTypeBooking
-  backend_internal_domain.InventoryItem:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.FrontendConfig:
+    properties:
+      framework:
+        type: string
+      language:
+        type: string
+      modules:
+        items:
+          type: string
+        type: array
+      template:
+        type: string
+    type: object
+  github_com_pmaojo_kthulu-go_backend_internal_domain.InventoryItem:
     properties:
       createdAt:
         type: string
@@ -392,7 +557,7 @@ definitions:
       minimumStock:
         type: integer
       product:
-        $ref: '#/definitions/backend_internal_domain.Product'
+        $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Product'
       productId:
         type: integer
       quantity:
@@ -407,7 +572,7 @@ definitions:
         type: string
       stockMovements:
         items:
-          $ref: '#/definitions/backend_internal_domain.StockMovement'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.StockMovement'
         type: array
       unitCost:
         type: number
@@ -415,12 +580,12 @@ definitions:
         type: string
       warehouse:
         allOf:
-        - $ref: '#/definitions/backend_internal_domain.Warehouse'
+        - $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Warehouse'
         description: Relationships
       warehouseId:
         type: integer
     type: object
-  backend_internal_domain.Invoice:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.Invoice:
     properties:
       balanceDue:
         type: number
@@ -451,7 +616,7 @@ definitions:
       items:
         description: Related entities (loaded separately)
         items:
-          $ref: '#/definitions/backend_internal_domain.InvoiceItem'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.InvoiceItem'
         type: array
       notes:
         type: string
@@ -465,11 +630,11 @@ definitions:
         type: string
       payments:
         items:
-          $ref: '#/definitions/backend_internal_domain.Payment'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Payment'
         type: array
       status:
         allOf:
-        - $ref: '#/definitions/backend_internal_domain.InvoiceStatus'
+        - $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.InvoiceStatus'
         enum:
         - draft
         - sent
@@ -477,7 +642,7 @@ definitions:
         - partial
         - paid
         - overdue
-        - cancelled
+        - canceled
       subtotal:
         minimum: 0
         type: number
@@ -491,7 +656,7 @@ definitions:
         type: number
       type:
         allOf:
-        - $ref: '#/definitions/backend_internal_domain.InvoiceType'
+        - $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.InvoiceType'
         enum:
         - invoice
         - quote
@@ -509,7 +674,7 @@ definitions:
     - status
     - type
     type: object
-  backend_internal_domain.InvoiceItem:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.InvoiceItem:
     properties:
       createdAt:
         type: string
@@ -558,7 +723,7 @@ definitions:
     - quantity
     - unitPrice
     type: object
-  backend_internal_domain.InvoiceStatus:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.InvoiceStatus:
     enum:
     - draft
     - sent
@@ -566,7 +731,7 @@ definitions:
     - partial
     - paid
     - overdue
-    - cancelled
+    - canceled
     type: string
     x-enum-varnames:
     - InvoiceStatusDraft
@@ -576,7 +741,7 @@ definitions:
     - InvoiceStatusPaid
     - InvoiceStatusOverdue
     - InvoiceStatusCancelled
-  backend_internal_domain.InvoiceType:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.InvoiceType:
     enum:
     - invoice
     - quote
@@ -588,7 +753,126 @@ definitions:
     - InvoiceTypeQuote
     - InvoiceTypeCreditNote
     - InvoiceTypeProforma
-  backend_internal_domain.Organization:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.ModuleConflict:
+    properties:
+      conflicts:
+        items:
+          type: string
+        type: array
+      module:
+        type: string
+      reason:
+        type: string
+    type: object
+  github_com_pmaojo_kthulu-go_backend_internal_domain.ModuleInfo:
+    properties:
+      backend:
+        type: boolean
+      category:
+        type: string
+      config:
+        additionalProperties: {}
+        type: object
+      conflicts:
+        items:
+          type: string
+        type: array
+      createdAt:
+        type: string
+      dependencies:
+        items:
+          type: string
+        type: array
+      description:
+        type: string
+      entities:
+        items: {}
+        type: array
+      frontend:
+        type: boolean
+      id:
+        type: integer
+      maxVersion:
+        type: string
+      migrations:
+        items:
+          type: string
+        type: array
+      minVersion:
+        type: string
+      name:
+        type: string
+      optional:
+        type: boolean
+      routes:
+        items: {}
+        type: array
+      tags:
+        items:
+          type: string
+        type: array
+      updatedAt:
+        type: string
+      version:
+        type: string
+    type: object
+  github_com_pmaojo_kthulu-go_backend_internal_domain.ModuleInjectionPlan:
+    properties:
+      errors:
+        items:
+          type: string
+        type: array
+      execution_order:
+        items:
+          type: string
+        type: array
+      injected_modules:
+        items:
+          type: string
+        type: array
+      module_details:
+        additionalProperties:
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ModuleInfo'
+        type: object
+      requested_modules:
+        items:
+          type: string
+        type: array
+      resolved_modules:
+        items:
+          type: string
+        type: array
+      warnings:
+        items:
+          type: string
+        type: array
+    type: object
+  github_com_pmaojo_kthulu-go_backend_internal_domain.ModuleValidationResult:
+    properties:
+      circular:
+        items:
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.CircularDependencyChain'
+        type: array
+      conflicts:
+        items:
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ModuleConflict'
+        type: array
+      missing:
+        items:
+          type: string
+        type: array
+      resolved:
+        items:
+          type: string
+        type: array
+      valid:
+        type: boolean
+      warnings:
+        items:
+          type: string
+        type: array
+    type: object
+  github_com_pmaojo_kthulu-go_backend_internal_domain.Organization:
     properties:
       address:
         maxLength: 200
@@ -630,7 +914,7 @@ definitions:
         type: string
       type:
         allOf:
-        - $ref: '#/definitions/backend_internal_domain.OrganizationType'
+        - $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.OrganizationType'
         enum:
         - company
         - nonprofit
@@ -641,7 +925,7 @@ definitions:
       users:
         description: Relationships
         items:
-          $ref: '#/definitions/backend_internal_domain.OrganizationUser'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.OrganizationUser'
         type: array
       website:
         type: string
@@ -650,7 +934,7 @@ definitions:
     - slug
     - type
     type: object
-  backend_internal_domain.OrganizationRole:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.OrganizationRole:
     enum:
     - owner
     - admin
@@ -662,7 +946,7 @@ definitions:
     - OrganizationRoleAdmin
     - OrganizationRoleMember
     - OrganizationRoleGuest
-  backend_internal_domain.OrganizationType:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.OrganizationType:
     enum:
     - company
     - nonprofit
@@ -674,7 +958,7 @@ definitions:
     - OrganizationTypeNonProfit
     - OrganizationTypePersonal
     - OrganizationTypeEducation
-  backend_internal_domain.OrganizationUser:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.OrganizationUser:
     properties:
       createdAt:
         type: string
@@ -684,13 +968,13 @@ definitions:
         type: string
       organization:
         allOf:
-        - $ref: '#/definitions/backend_internal_domain.Organization'
+        - $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Organization'
         description: Relationships
       organizationId:
         type: integer
       role:
         allOf:
-        - $ref: '#/definitions/backend_internal_domain.OrganizationRole'
+        - $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.OrganizationRole'
         enum:
         - owner
         - admin
@@ -699,7 +983,7 @@ definitions:
       updatedAt:
         type: string
       user:
-        $ref: '#/definitions/backend_internal_domain.User'
+        $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.User'
       userId:
         type: integer
     required:
@@ -707,7 +991,7 @@ definitions:
     - role
     - userId
     type: object
-  backend_internal_domain.Payment:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.Payment:
     properties:
       amount:
         minimum: 0
@@ -733,7 +1017,7 @@ definitions:
         type: string
       paymentMethod:
         allOf:
-        - $ref: '#/definitions/backend_internal_domain.PaymentMethod'
+        - $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.PaymentMethod'
         enum:
         - cash
         - check
@@ -756,7 +1040,7 @@ definitions:
     - paymentDate
     - paymentMethod
     type: object
-  backend_internal_domain.PaymentMethod:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.PaymentMethod:
     enum:
     - cash
     - check
@@ -774,7 +1058,7 @@ definitions:
     - PaymentMethodPayPal
     - PaymentMethodStripe
     - PaymentMethodOther
-  backend_internal_domain.Permission:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.Permission:
     properties:
       action:
         type: string
@@ -791,7 +1075,7 @@ definitions:
       updatedAt:
         type: string
     type: object
-  backend_internal_domain.PhoneType:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.PhoneType:
     enum:
     - work
     - mobile
@@ -805,7 +1089,7 @@ definitions:
     - PhoneTypeHome
     - PhoneTypeFax
     - PhoneTypeOther
-  backend_internal_domain.PriceType:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.PriceType:
     enum:
     - base
     - sale
@@ -819,7 +1103,7 @@ definitions:
     - PriceTypeWholesale
     - PriceTypeRetail
     - PriceTypeCost
-  backend_internal_domain.Product:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.Product:
     properties:
       barcode:
         maxLength: 100
@@ -851,7 +1135,7 @@ definitions:
         type: integer
       prices:
         items:
-          $ref: '#/definitions/backend_internal_domain.ProductPrice'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ProductPrice'
         type: array
       sku:
         maxLength: 100
@@ -869,7 +1153,7 @@ definitions:
       variants:
         description: Related entities (loaded separately)
         items:
-          $ref: '#/definitions/backend_internal_domain.ProductVariant'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ProductVariant'
         type: array
       weight:
         minimum: 0
@@ -880,7 +1164,7 @@ definitions:
     - sku
     - unitOfMeasure
     type: object
-  backend_internal_domain.ProductPrice:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.ProductPrice:
     properties:
       amount:
         minimum: 0
@@ -901,7 +1185,7 @@ definitions:
         type: integer
       priceType:
         allOf:
-        - $ref: '#/definitions/backend_internal_domain.PriceType'
+        - $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.PriceType'
         enum:
         - base
         - sale
@@ -923,7 +1207,7 @@ definitions:
     - currency
     - priceType
     type: object
-  backend_internal_domain.ProductVariant:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.ProductVariant:
     properties:
       attributes:
         additionalProperties: true
@@ -949,7 +1233,7 @@ definitions:
       prices:
         description: Related entities (loaded separately)
         items:
-          $ref: '#/definitions/backend_internal_domain.ProductPrice'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ProductPrice'
         type: array
       productId:
         type: integer
@@ -967,13 +1251,152 @@ definitions:
     - productId
     - sku
     type: object
-  backend_internal_domain.Reminder:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.Project:
+    properties:
+      author:
+        type: string
+      createdAt:
+        type: string
+      database:
+        type: string
+      description:
+        type: string
+      dryRun:
+        type: boolean
+      frontend:
+        type: string
+      id:
+        type: integer
+      license:
+        type: string
+      modules:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      path:
+        type: string
+      skipDocker:
+        type: boolean
+      skipGit:
+        type: boolean
+      template:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  github_com_pmaojo_kthulu-go_backend_internal_domain.ProjectPlan:
+    properties:
+      backendFiles:
+        items:
+          type: string
+        type: array
+      backendTemplate:
+        type: string
+      backendTemplateVersion:
+        type: string
+      configFiles:
+        items:
+          type: string
+        type: array
+      dockerServices:
+        items:
+          type: string
+        type: array
+      frontendFiles:
+        items:
+          type: string
+        type: array
+      frontendTemplate:
+        type: string
+      frontendTemplateVersion:
+        type: string
+      migrationFiles:
+        items:
+          type: string
+        type: array
+      modules:
+        items:
+          type: string
+        type: array
+      options:
+        $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ProjectRequest'
+      projectDirectories:
+        items:
+          type: string
+        type: array
+      staticFiles:
+        items:
+          type: string
+        type: array
+      structure:
+        $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ProjectStructure'
+    type: object
+  github_com_pmaojo_kthulu-go_backend_internal_domain.ProjectRequest:
+    properties:
+      author:
+        type: string
+      database:
+        type: string
+      description:
+        type: string
+      dryRun:
+        type: boolean
+      frontend:
+        type: string
+      license:
+        type: string
+      modules:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      path:
+        type: string
+      skipDocker:
+        type: boolean
+      skipGit:
+        type: boolean
+      template:
+        type: string
+    type: object
+  github_com_pmaojo_kthulu-go_backend_internal_domain.ProjectStructure:
+    properties:
+      author:
+        type: string
+      backend:
+        $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.BackendConfig'
+      config:
+        additionalProperties: {}
+        type: object
+      database:
+        $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.DatabaseConfig'
+      description:
+        type: string
+      docker:
+        $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.DockerConfig'
+      frontend:
+        $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.FrontendConfig'
+      license:
+        type: string
+      modules:
+        items:
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ModuleInfo'
+        type: array
+      name:
+        type: string
+      path:
+        type: string
+    type: object
+  github_com_pmaojo_kthulu-go_backend_internal_domain.Reminder:
     properties:
       createdAt:
         type: string
       event:
         allOf:
-        - $ref: '#/definitions/backend_internal_domain.Event'
+        - $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Event'
         description: Relationships
       eventId:
         type: integer
@@ -986,9 +1409,9 @@ definitions:
       sentAt:
         type: string
       type:
-        $ref: '#/definitions/backend_internal_domain.ReminderType'
+        $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ReminderType'
     type: object
-  backend_internal_domain.ReminderType:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.ReminderType:
     enum:
     - email
     - sms
@@ -998,7 +1421,7 @@ definitions:
     - ReminderTypeEmail
     - ReminderTypeSMS
     - ReminderTypePush
-  backend_internal_domain.Role:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.Role:
     properties:
       createdAt:
         type: string
@@ -1010,12 +1433,12 @@ definitions:
         type: string
       permissions:
         items:
-          $ref: '#/definitions/backend_internal_domain.Permission'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Permission'
         type: array
       updatedAt:
         type: string
     type: object
-  backend_internal_domain.StockMovement:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.StockMovement:
     properties:
       createdAt:
         type: string
@@ -1023,7 +1446,7 @@ definitions:
         type: integer
       inventoryItem:
         allOf:
-        - $ref: '#/definitions/backend_internal_domain.InventoryItem'
+        - $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.InventoryItem'
         description: Relationships
       inventoryItemId:
         type: integer
@@ -1040,15 +1463,15 @@ definitions:
       totalCost:
         type: number
       type:
-        $ref: '#/definitions/backend_internal_domain.StockMovementType'
+        $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.StockMovementType'
       unitCost:
         type: number
       user:
-        $ref: '#/definitions/backend_internal_domain.User'
+        $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.User'
       userId:
         type: integer
     type: object
-  backend_internal_domain.StockMovementType:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.StockMovementType:
     enum:
     - receive
     - transfer
@@ -1066,24 +1489,85 @@ definitions:
     - StockMovementTypeReturn
     - StockMovementTypeReserve
     - StockMovementTypeRelease
-  backend_internal_domain.User:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.Template:
+    properties:
+      author:
+        type: string
+      category:
+        type: string
+      content:
+        additionalProperties:
+          type: string
+        description: file path -> content
+        type: object
+      createdAt:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      remote:
+        type: boolean
+      tags:
+        items:
+          type: string
+        type: array
+      updatedAt:
+        type: string
+      url:
+        type: string
+      version:
+        type: string
+    type: object
+  github_com_pmaojo_kthulu-go_backend_internal_domain.TemplateRegistry:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      updatedAt:
+        type: string
+      url:
+        type: string
+    type: object
+  github_com_pmaojo_kthulu-go_backend_internal_domain.TemplateRenderRequest:
+    properties:
+      name:
+        type: string
+      vars:
+        additionalProperties: true
+        type: object
+    type: object
+  github_com_pmaojo_kthulu-go_backend_internal_domain.TemplateRenderResult:
+    properties:
+      files:
+        additionalProperties:
+          type: string
+        description: base64 encoded
+        type: object
+    type: object
+  github_com_pmaojo_kthulu-go_backend_internal_domain.User:
     properties:
       confirmedAt:
         type: string
       createdAt:
         type: string
       email:
-        $ref: '#/definitions/backend_internal_domain.Email'
+        $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Email'
       id:
         type: integer
       role:
-        $ref: '#/definitions/backend_internal_domain.Role'
+        $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Role'
       roleId:
         type: integer
       updatedAt:
         type: string
     type: object
-  backend_internal_domain.Warehouse:
+  github_com_pmaojo_kthulu-go_backend_internal_domain.Warehouse:
     properties:
       address:
         type: string
@@ -1098,7 +1582,7 @@ definitions:
       inventoryItems:
         description: Relationships
         items:
-          $ref: '#/definitions/backend_internal_domain.InventoryItem'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.InventoryItem'
         type: array
       isActive:
         type: boolean
@@ -1107,7 +1591,7 @@ definitions:
       updatedAt:
         type: string
     type: object
-  backend_internal_repository.ContactStats:
+  github_com_pmaojo_kthulu-go_backend_internal_domain_repository.ContactStats:
     properties:
       activeContacts:
         type: integer
@@ -1127,14 +1611,14 @@ definitions:
       totalContacts:
         type: integer
     type: object
-  backend_internal_repository.InvoiceStats:
+  github_com_pmaojo_kthulu-go_backend_internal_domain_repository.InvoiceStats:
     properties:
       averageInvoiceValue:
         type: number
       averagePaymentTime:
         description: Days
         type: number
-      cancelledInvoices:
+      canceledInvoices:
         type: integer
       draftInvoices:
         type: integer
@@ -1155,7 +1639,7 @@ definitions:
       totalRevenue:
         type: number
     type: object
-  backend_internal_repository.ProductStats:
+  github_com_pmaojo_kthulu-go_backend_internal_domain_repository.ProductStats:
     properties:
       activeProducts:
         type: integer
@@ -1181,7 +1665,7 @@ definitions:
       trackableProducts:
         type: integer
     type: object
-  backend_internal_usecase.AuthResponse:
+  github_com_pmaojo_kthulu-go_backend_internal_usecase.AuthResponse:
     properties:
       accessToken:
         type: string
@@ -1190,9 +1674,9 @@ definitions:
       refreshToken:
         type: string
       user:
-        $ref: '#/definitions/backend_internal_domain.User'
+        $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.User'
     type: object
-  backend_internal_usecase.BookSlotRequest:
+  github_com_pmaojo_kthulu-go_backend_internal_usecase.BookSlotRequest:
     properties:
       bookedById:
         type: integer
@@ -1226,11 +1710,11 @@ definitions:
     - slotType
     - startTime
     type: object
-  backend_internal_usecase.ContactListResponse:
+  github_com_pmaojo_kthulu-go_backend_internal_usecase.ContactListResponse:
     properties:
       contacts:
         items:
-          $ref: '#/definitions/backend_internal_domain.Contact'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Contact'
         type: array
       page:
         type: integer
@@ -1241,7 +1725,7 @@ definitions:
       totalPages:
         type: integer
     type: object
-  backend_internal_usecase.CreateAddressRequest:
+  github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateAddressRequest:
     properties:
       addressLine1:
         maxLength: 200
@@ -1265,7 +1749,7 @@ definitions:
         type: string
       type:
         allOf:
-        - $ref: '#/definitions/backend_internal_domain.AddressType'
+        - $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.AddressType'
         enum:
         - billing
         - shipping
@@ -1278,7 +1762,7 @@ definitions:
     - country
     - type
     type: object
-  backend_internal_usecase.CreateAttendeeRequest:
+  github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateAttendeeRequest:
     properties:
       email:
         type: string
@@ -1293,7 +1777,7 @@ definitions:
     - email
     - name
     type: object
-  backend_internal_usecase.CreateCalendarRequest:
+  github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateCalendarRequest:
     properties:
       color:
         maxLength: 7
@@ -1307,13 +1791,13 @@ definitions:
       ownerId:
         type: integer
       type:
-        $ref: '#/definitions/backend_internal_domain.CalendarType'
+        $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.CalendarType'
     required:
     - name
     - ownerId
     - type
     type: object
-  backend_internal_usecase.CreateContactRequest:
+  github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateContactRequest:
     properties:
       companyName:
         maxLength: 200
@@ -1340,7 +1824,7 @@ definitions:
         type: string
       type:
         allOf:
-        - $ref: '#/definitions/backend_internal_domain.ContactType'
+        - $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ContactType'
         enum:
         - customer
         - supplier
@@ -1352,13 +1836,13 @@ definitions:
     required:
     - type
     type: object
-  backend_internal_usecase.CreateEventRequest:
+  github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateEventRequest:
     properties:
       allDay:
         type: boolean
       attendees:
         items:
-          $ref: '#/definitions/backend_internal_usecase.CreateAttendeeRequest'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateAttendeeRequest'
         type: array
       calendarId:
         type: integer
@@ -1381,7 +1865,7 @@ definitions:
         type: string
       reminders:
         items:
-          $ref: '#/definitions/backend_internal_usecase.CreateReminderRequest'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateReminderRequest'
         type: array
       startTime:
         type: string
@@ -1389,7 +1873,7 @@ definitions:
         maxLength: 255
         type: string
       type:
-        $ref: '#/definitions/backend_internal_domain.EventType'
+        $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.EventType'
     required:
     - calendarId
     - createdById
@@ -1398,7 +1882,7 @@ definitions:
     - title
     - type
     type: object
-  backend_internal_usecase.CreateInvoiceItemRequest:
+  github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateInvoiceItemRequest:
     properties:
       description:
         maxLength: 500
@@ -1427,7 +1911,7 @@ definitions:
     - quantity
     - unitPrice
     type: object
-  backend_internal_usecase.CreateInvoiceRequest:
+  github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateInvoiceRequest:
     properties:
       contactId:
         type: integer
@@ -1441,7 +1925,7 @@ definitions:
         type: string
       items:
         items:
-          $ref: '#/definitions/backend_internal_usecase.CreateInvoiceItemRequest'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateInvoiceItemRequest'
         type: array
       notes:
         type: string
@@ -1454,7 +1938,7 @@ definitions:
         type: string
       type:
         allOf:
-        - $ref: '#/definitions/backend_internal_domain.InvoiceType'
+        - $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.InvoiceType'
         enum:
         - invoice
         - quote
@@ -1468,7 +1952,7 @@ definitions:
     - organizationId
     - type
     type: object
-  backend_internal_usecase.CreatePaymentRequest:
+  github_com_pmaojo_kthulu-go_backend_internal_usecase.CreatePaymentRequest:
     properties:
       amount:
         minimum: 0
@@ -1487,7 +1971,7 @@ definitions:
         type: string
       paymentMethod:
         allOf:
-        - $ref: '#/definitions/backend_internal_domain.PaymentMethod'
+        - $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.PaymentMethod'
         enum:
         - cash
         - check
@@ -1508,7 +1992,7 @@ definitions:
     - paymentDate
     - paymentMethod
     type: object
-  backend_internal_usecase.CreatePhoneRequest:
+  github_com_pmaojo_kthulu-go_backend_internal_usecase.CreatePhoneRequest:
     properties:
       extension:
         maxLength: 10
@@ -1520,7 +2004,7 @@ definitions:
         type: string
       type:
         allOf:
-        - $ref: '#/definitions/backend_internal_domain.PhoneType'
+        - $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.PhoneType'
         enum:
         - work
         - mobile
@@ -1531,7 +2015,7 @@ definitions:
     - number
     - type
     type: object
-  backend_internal_usecase.CreateProductRequest:
+  github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateProductRequest:
     properties:
       barcode:
         maxLength: 100
@@ -1572,18 +2056,18 @@ definitions:
     - sku
     - unitOfMeasure
     type: object
-  backend_internal_usecase.CreateReminderRequest:
+  github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateReminderRequest:
     properties:
       minutesBefore:
         minimum: 0
         type: integer
       type:
-        $ref: '#/definitions/backend_internal_domain.ReminderType'
+        $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ReminderType'
     required:
     - minutesBefore
     - type
     type: object
-  backend_internal_usecase.CreateWarehouseRequest:
+  github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateWarehouseRequest:
     properties:
       address:
         maxLength: 500
@@ -1601,11 +2085,11 @@ definitions:
     - code
     - name
     type: object
-  backend_internal_usecase.InvoiceListResponse:
+  github_com_pmaojo_kthulu-go_backend_internal_usecase.InvoiceListResponse:
     properties:
       invoices:
         items:
-          $ref: '#/definitions/backend_internal_domain.Invoice'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Invoice'
         type: array
       page:
         type: integer
@@ -1616,11 +2100,26 @@ definitions:
       totalPages:
         type: integer
     type: object
-  backend_internal_usecase.PaginatedResponse-backend_internal_domain_Calendar:
+  ? github_com_pmaojo_kthulu-go_backend_internal_usecase.PaginatedResponse-github_com_pmaojo_kthulu-go_backend_internal_domain_Calendar
+  : properties:
+      data:
+        items:
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Calendar'
+        type: array
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      total:
+        type: integer
+      totalPages:
+        type: integer
+    type: object
+  github_com_pmaojo_kthulu-go_backend_internal_usecase.PaginatedResponse-github_com_pmaojo_kthulu-go_backend_internal_domain_Event:
     properties:
       data:
         items:
-          $ref: '#/definitions/backend_internal_domain.Calendar'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Event'
         type: array
       page:
         type: integer
@@ -1631,11 +2130,11 @@ definitions:
       totalPages:
         type: integer
     type: object
-  backend_internal_usecase.PaginatedResponse-backend_internal_domain_Event:
-    properties:
+  ? github_com_pmaojo_kthulu-go_backend_internal_usecase.PaginatedResponse-github_com_pmaojo_kthulu-go_backend_internal_domain_InventoryItem
+  : properties:
       data:
         items:
-          $ref: '#/definitions/backend_internal_domain.Event'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.InventoryItem'
         type: array
       page:
         type: integer
@@ -1646,11 +2145,11 @@ definitions:
       totalPages:
         type: integer
     type: object
-  backend_internal_usecase.PaginatedResponse-backend_internal_domain_InventoryItem:
-    properties:
+  ? github_com_pmaojo_kthulu-go_backend_internal_usecase.PaginatedResponse-github_com_pmaojo_kthulu-go_backend_internal_domain_StockMovement
+  : properties:
       data:
         items:
-          $ref: '#/definitions/backend_internal_domain.InventoryItem'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.StockMovement'
         type: array
       page:
         type: integer
@@ -1661,11 +2160,11 @@ definitions:
       totalPages:
         type: integer
     type: object
-  backend_internal_usecase.PaginatedResponse-backend_internal_domain_StockMovement:
-    properties:
+  ? github_com_pmaojo_kthulu-go_backend_internal_usecase.PaginatedResponse-github_com_pmaojo_kthulu-go_backend_internal_domain_Warehouse
+  : properties:
       data:
         items:
-          $ref: '#/definitions/backend_internal_domain.StockMovement'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Warehouse'
         type: array
       page:
         type: integer
@@ -1676,22 +2175,7 @@ definitions:
       totalPages:
         type: integer
     type: object
-  backend_internal_usecase.PaginatedResponse-backend_internal_domain_Warehouse:
-    properties:
-      data:
-        items:
-          $ref: '#/definitions/backend_internal_domain.Warehouse'
-        type: array
-      page:
-        type: integer
-      pageSize:
-        type: integer
-      total:
-        type: integer
-      totalPages:
-        type: integer
-    type: object
-  backend_internal_usecase.ProductListResponse:
+  github_com_pmaojo_kthulu-go_backend_internal_usecase.ProductListResponse:
     properties:
       page:
         type: integer
@@ -1699,14 +2183,14 @@ definitions:
         type: integer
       products:
         items:
-          $ref: '#/definitions/backend_internal_domain.Product'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Product'
         type: array
       total:
         type: integer
       totalPages:
         type: integer
     type: object
-  backend_internal_usecase.UpdateContactRequest:
+  github_com_pmaojo_kthulu-go_backend_internal_usecase.UpdateContactRequest:
     properties:
       companyName:
         maxLength: 200
@@ -1735,7 +2219,7 @@ definitions:
         maxLength: 500
         type: string
     type: object
-  backend_internal_usecase.UpdateInvoiceRequest:
+  github_com_pmaojo_kthulu-go_backend_internal_usecase.UpdateInvoiceRequest:
     properties:
       contactId:
         type: integer
@@ -1751,7 +2235,7 @@ definitions:
     required:
     - contactId
     type: object
-  backend_internal_usecase.UpdateProductRequest:
+  github_com_pmaojo_kthulu-go_backend_internal_usecase.UpdateProductRequest:
     properties:
       barcode:
         maxLength: 100
@@ -1787,7 +2271,7 @@ definitions:
     - name
     - unitOfMeasure
     type: object
-  backend_internal_usecase.UpdateStockRequest:
+  github_com_pmaojo_kthulu-go_backend_internal_usecase.UpdateStockRequest:
     properties:
       adjustmentType:
         description: 'for adjustments: set, increase, decrease'
@@ -1796,7 +2280,7 @@ definitions:
         minimum: 0
         type: integer
       movementType:
-        $ref: '#/definitions/backend_internal_domain.StockMovementType'
+        $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.StockMovementType'
       notes:
         maxLength: 500
         type: string
@@ -1823,7 +2307,7 @@ definitions:
     - quantity
     - warehouseId
     type: object
-  backend_internal_usecase.UpdateWarehouseRequest:
+  github_com_pmaojo_kthulu-go_backend_internal_usecase.UpdateWarehouseRequest:
     properties:
       address:
         maxLength: 500
@@ -1837,156 +2321,8 @@ definitions:
         maxLength: 255
         type: string
     type: object
-  internal_adapters_http.CreateOrganizationRequest:
-    properties:
-      address:
-        maxLength: 200
-        type: string
-      city:
-        maxLength: 100
-        type: string
-      country:
-        maxLength: 100
-        type: string
-      description:
-        maxLength: 500
-        type: string
-      domain:
-        type: string
-      name:
-        maxLength: 100
-        minLength: 2
-        type: string
-      phone:
-        type: string
-      postalCode:
-        maxLength: 20
-        type: string
-      slug:
-        maxLength: 50
-        minLength: 2
-        type: string
-      state:
-        maxLength: 100
-        type: string
-      type:
-        allOf:
-        - $ref: '#/definitions/backend_internal_domain.OrganizationType'
-        enum:
-        - company
-        - nonprofit
-        - personal
-        - education
-      website:
-        type: string
-    required:
-    - name
-    - slug
-    - type
-    type: object
-  internal_adapters_http.ErrorResponse:
-    properties:
-      code:
-        type: integer
-      details: {}
-      error:
-        type: string
-    type: object
-  internal_adapters_http.HealthResponse:
-    properties:
-      checks:
-        additionalProperties:
-          type: string
-        type: object
-      status:
-        type: string
-      timestamp:
-        type: string
-      version:
-        type: string
-    type: object
-  internal_adapters_http.confirmRequest:
-    properties:
-      confirmationCode:
-        type: string
-      email:
-        type: string
-    type: object
-  internal_adapters_http.loginRequest:
-    properties:
-      email:
-        type: string
-      password:
-        type: string
-    type: object
-  internal_adapters_http.logoutRequest:
-    properties:
-      refreshToken:
-        type: string
-    type: object
-  internal_adapters_http.refreshRequest:
-    properties:
-      refreshToken:
-        type: string
-    type: object
-  internal_adapters_http.registerRequest:
-    properties:
-      email:
-        type: string
-      password:
-        type: string
-      roleId:
-        type: integer
-    type: object
-  internal_adapters_http.resendConfirmationRequest:
-    properties:
-      email:
-        type: string
-    type: object
-  internal_adapters_http.updateProfileRequest:
-    properties:
-      currentPassword:
-        type: string
-      email:
-        type: string
-      password:
-        type: string
-    type: object
-host: localhost:8080
 info:
-  contact:
-    name: Kthulu Framework
-    url: https://github.com/kthulu-framework
-  description: |-
-    Complete enterprise-grade API for the Kthulu framework
-
-    This API provides authentication, user management, organization management,
-    and ERP-lite modules including contacts, products, invoices, inventory, and calendar.
-
-    ## Authentication
-
-    Most endpoints require authentication via JWT Bearer token in the Authorization header:
-    ```
-    Authorization: Bearer <your-jwt-token>
-    ```
-
-    ## Module Tags
-
-    Endpoints are tagged by module for selective generation:
-    - `@kthulu:core` - Core framework functionality
-    - `@kthulu:module:auth` - Authentication module
-    - `@kthulu:module:user` - User management module
-    - `@kthulu:module:org` - Organization management module
-    - `@kthulu:module:contacts` - Contacts module
-    - `@kthulu:module:products` - Products module
-    - `@kthulu:module:invoices` - Invoices module
-    - `@kthulu:module:inventory` - Inventory module
-    - `@kthulu:module:calendar` - Calendar module
-  license:
-    name: MIT
-    url: https://opensource.org/licenses/MIT
-  title: Kthulu API
-  version: 1.0.0
+  contact: {}
 paths:
   /api/calendar/appointments/available-slots:
     get:
@@ -2015,7 +2351,7 @@ paths:
           description: Available slots
           schema:
             items:
-              $ref: '#/definitions/backend_internal_domain.AvailabilitySlot'
+              $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.AvailabilitySlot'
             type: array
         "400":
           description: Invalid request
@@ -2043,14 +2379,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/backend_internal_usecase.BookSlotRequest'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.BookSlotRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Booking created successfully
           schema:
-            $ref: '#/definitions/backend_internal_domain.Booking'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Booking'
         "400":
           description: Invalid request
           schema:
@@ -2118,7 +2454,7 @@ paths:
         "200":
           description: List of calendars
           schema:
-            $ref: '#/definitions/backend_internal_usecase.PaginatedResponse-backend_internal_domain_Calendar'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.PaginatedResponse-github_com_pmaojo_kthulu-go_backend_internal_domain_Calendar'
         "500":
           description: Internal server error
           schema:
@@ -2138,14 +2474,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/backend_internal_usecase.CreateCalendarRequest'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateCalendarRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Calendar created successfully
           schema:
-            $ref: '#/definitions/backend_internal_domain.Calendar'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Calendar'
         "400":
           description: Invalid request
           schema:
@@ -2176,7 +2512,7 @@ paths:
         "200":
           description: Calendar details
           schema:
-            $ref: '#/definitions/backend_internal_domain.Calendar'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Calendar'
         "404":
           description: Calendar not found
           schema:
@@ -2225,7 +2561,7 @@ paths:
         "200":
           description: List of events
           schema:
-            $ref: '#/definitions/backend_internal_usecase.PaginatedResponse-backend_internal_domain_Event'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.PaginatedResponse-github_com_pmaojo_kthulu-go_backend_internal_domain_Event'
         "500":
           description: Internal server error
           schema:
@@ -2245,14 +2581,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/backend_internal_usecase.CreateEventRequest'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateEventRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Event created successfully
           schema:
-            $ref: '#/definitions/backend_internal_domain.Event'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Event'
         "400":
           description: Invalid request
           schema:
@@ -2283,7 +2619,7 @@ paths:
         "200":
           description: Event details
           schema:
-            $ref: '#/definitions/backend_internal_domain.Event'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Event'
         "404":
           description: Event not found
           schema:
@@ -2323,7 +2659,7 @@ paths:
         "200":
           description: List of inventory items
           schema:
-            $ref: '#/definitions/backend_internal_usecase.PaginatedResponse-backend_internal_domain_InventoryItem'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.PaginatedResponse-github_com_pmaojo_kthulu-go_backend_internal_domain_InventoryItem'
         "500":
           description: Internal server error
           schema:
@@ -2353,7 +2689,7 @@ paths:
         "200":
           description: Inventory item details
           schema:
-            $ref: '#/definitions/backend_internal_domain.InventoryItem'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.InventoryItem'
         "404":
           description: Inventory item not found
           schema:
@@ -2380,14 +2716,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/backend_internal_usecase.UpdateStockRequest'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.UpdateStockRequest'
       produces:
       - application/json
       responses:
         "200":
           description: Updated inventory item
           schema:
-            $ref: '#/definitions/backend_internal_domain.InventoryItem'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.InventoryItem'
         "400":
           description: Invalid request
           schema:
@@ -2418,7 +2754,7 @@ paths:
           description: Low stock items
           schema:
             items:
-              $ref: '#/definitions/backend_internal_domain.InventoryItem'
+              $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.InventoryItem'
             type: array
         "500":
           description: Internal server error
@@ -2454,7 +2790,7 @@ paths:
         "200":
           description: Stock movement history
           schema:
-            $ref: '#/definitions/backend_internal_usecase.PaginatedResponse-backend_internal_domain_StockMovement'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.PaginatedResponse-github_com_pmaojo_kthulu-go_backend_internal_domain_StockMovement'
         "500":
           description: Internal server error
           schema:
@@ -2488,7 +2824,7 @@ paths:
         "200":
           description: List of warehouses
           schema:
-            $ref: '#/definitions/backend_internal_usecase.PaginatedResponse-backend_internal_domain_Warehouse'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.PaginatedResponse-github_com_pmaojo_kthulu-go_backend_internal_domain_Warehouse'
         "500":
           description: Internal server error
           schema:
@@ -2508,14 +2844,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/backend_internal_usecase.CreateWarehouseRequest'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateWarehouseRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Warehouse created successfully
           schema:
-            $ref: '#/definitions/backend_internal_domain.Warehouse'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Warehouse'
         "400":
           description: Invalid request
           schema:
@@ -2546,7 +2882,7 @@ paths:
         "200":
           description: Warehouse details
           schema:
-            $ref: '#/definitions/backend_internal_domain.Warehouse'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Warehouse'
         "404":
           description: Warehouse not found
           schema:
@@ -2577,14 +2913,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/backend_internal_usecase.UpdateWarehouseRequest'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.UpdateWarehouseRequest'
       produces:
       - application/json
       responses:
         "200":
           description: Updated warehouse
           schema:
-            $ref: '#/definitions/backend_internal_domain.Warehouse'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Warehouse'
         "400":
           description: Invalid request
           schema:
@@ -2606,6 +2942,703 @@ paths:
       summary: Update warehouse
       tags:
       - Inventory
+  /api/v1/modules:
+    get:
+      description: Retrieves a list of available modules, optionally filtered by category
+      parameters:
+      - description: Filter by category
+        in: query
+        name: category
+        type: string
+      - default: 50
+        description: Maximum number of modules to return
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Number of modules to skip
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Modules retrieved successfully
+          schema:
+            items:
+              $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ModuleInfo'
+            type: array
+        "400":
+          description: Invalid query parameters
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List modules
+      tags:
+      - Modules
+  /api/v1/modules/{name}:
+    get:
+      description: Retrieves a specific module by name
+      parameters:
+      - description: Module name
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Module retrieved successfully
+          schema:
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ModuleInfo'
+        "404":
+          description: Module not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get a module
+      tags:
+      - Modules
+  /api/v1/modules/plan:
+    post:
+      consumes:
+      - application/json
+      description: Creates an injection plan for the given modules
+      parameters:
+      - description: Module names to plan
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            items:
+              type: string
+            type: array
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Injection plan
+          schema:
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ModuleInjectionPlan'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Plan module injection
+      tags:
+      - Modules
+  /api/v1/modules/validate:
+    post:
+      consumes:
+      - application/json
+      description: Validates a set of modules for compatibility and dependencies
+      parameters:
+      - description: Module names to validate
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            items:
+              type: string
+            type: array
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Validation result
+          schema:
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ModuleValidationResult'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Validate modules
+      tags:
+      - Modules
+  /api/v1/projects:
+    get:
+      description: Retrieves a list of projects with pagination
+      parameters:
+      - default: 10
+        description: Maximum number of projects to return
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Number of projects to skip
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Projects retrieved successfully
+          schema:
+            items:
+              $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Project'
+            type: array
+        "400":
+          description: Invalid query parameters
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List projects
+      tags:
+      - Projects
+    post:
+      consumes:
+      - application/json
+      description: Creates and persists a new project based on the configuration
+      parameters:
+      - description: Project configuration
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ProjectRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Project created successfully
+          schema:
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Project'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Project already exists
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Generate a project
+      tags:
+      - Projects
+  /api/v1/projects/{id}:
+    delete:
+      description: Removes a project by ID
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: Project deleted successfully
+        "400":
+          description: Invalid project ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Project not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete a project
+      tags:
+      - Projects
+    get:
+      description: Retrieves a project by ID
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Project retrieved successfully
+          schema:
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Project'
+        "400":
+          description: Invalid project ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Project not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get a project
+      tags:
+      - Projects
+    patch:
+      consumes:
+      - application/json
+      description: Updates an existing project
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Project update configuration
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ProjectRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Project updated successfully
+          schema:
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Project'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Project not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update a project
+      tags:
+      - Projects
+  /api/v1/projects/plan:
+    post:
+      consumes:
+      - application/json
+      description: Creates a project plan based on the provided configuration
+      parameters:
+      - description: Project configuration
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ProjectRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Project plan created successfully
+          schema:
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ProjectPlan'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Plan a project
+      tags:
+      - Projects
+  /api/v1/templates:
+    get:
+      description: Retrieves a list of available templates
+      parameters:
+      - default: 50
+        description: Maximum number of templates to return
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Number of templates to skip
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Templates retrieved successfully
+          schema:
+            items:
+              $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Template'
+            type: array
+        "400":
+          description: Invalid query parameters
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List templates
+      tags:
+      - Templates
+    post:
+      consumes:
+      - application/json
+      description: Creates a new template
+      parameters:
+      - description: Template data
+        in: body
+        name: template
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Template'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Template created successfully
+          schema:
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Template'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Template already exists
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a template
+      tags:
+      - Templates
+  /api/v1/templates/{name}:
+    delete:
+      description: Removes a template by name
+      parameters:
+      - description: Template name
+        in: path
+        name: name
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Template deleted successfully
+        "404":
+          description: Template not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete a template
+      tags:
+      - Templates
+    get:
+      description: Retrieves a specific template by name
+      parameters:
+      - description: Template name
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Template retrieved successfully
+          schema:
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Template'
+        "404":
+          description: Template not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get a template
+      tags:
+      - Templates
+    put:
+      consumes:
+      - application/json
+      description: Updates an existing template
+      parameters:
+      - description: Template name
+        in: path
+        name: name
+        required: true
+        type: string
+      - description: Template update data
+        in: body
+        name: template
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Template'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Template updated successfully
+          schema:
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Template'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Template not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update a template
+      tags:
+      - Templates
+  /api/v1/templates/{name}/validate:
+    post:
+      description: Validates a template's structure and content
+      parameters:
+      - description: Template name
+        in: path
+        name: name
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Template is valid
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Template not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Template validation failed
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Validate a template
+      tags:
+      - Templates
+  /api/v1/templates/registries:
+    post:
+      consumes:
+      - application/json
+      description: Adds a new template registry source
+      parameters:
+      - description: Registry data
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Registry added successfully
+          schema:
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.TemplateRegistry'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Registry already exists
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Add template registry
+      tags:
+      - Templates
+  /api/v1/templates/registries/{name}:
+    delete:
+      description: Removes a template registry source
+      parameters:
+      - description: Registry name
+        in: path
+        name: name
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Registry removed successfully
+        "404":
+          description: Registry not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Remove template registry
+      tags:
+      - Templates
+  /api/v1/templates/render:
+    post:
+      consumes:
+      - application/json
+      description: Renders a template with provided variables
+      parameters:
+      - description: Render request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.TemplateRenderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Template rendered successfully
+          schema:
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.TemplateRenderResult'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Template not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Render a template
+      tags:
+      - Templates
   /auth/confirm:
     post:
       consumes:
@@ -2617,14 +3650,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/internal_adapters_http.confirmRequest'
+          $ref: '#/definitions/adapterhttp.confirmRequest'
       produces:
       - application/json
       responses:
         "200":
           description: Email confirmed successfully
           schema:
-            $ref: '#/definitions/backend_internal_usecase.AuthResponse'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.AuthResponse'
         "400":
           description: Invalid confirmation code
           schema:
@@ -2657,14 +3690,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/internal_adapters_http.loginRequest'
+          $ref: '#/definitions/adapterhttp.loginRequest'
       produces:
       - application/json
       responses:
         "200":
           description: Authentication successful
           schema:
-            $ref: '#/definitions/backend_internal_usecase.AuthResponse'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.AuthResponse'
         "400":
           description: Invalid request
           schema:
@@ -2697,7 +3730,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/internal_adapters_http.logoutRequest'
+          $ref: '#/definitions/adapterhttp.logoutRequest'
       responses:
         "204":
           description: Logout successful
@@ -2721,14 +3754,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/internal_adapters_http.refreshRequest'
+          $ref: '#/definitions/adapterhttp.refreshRequest'
       produces:
       - application/json
       responses:
         "200":
           description: Token refreshed successfully
           schema:
-            $ref: '#/definitions/backend_internal_usecase.AuthResponse'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.AuthResponse'
         "401":
           description: Invalid or expired refresh token
           schema:
@@ -2755,14 +3788,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/internal_adapters_http.registerRequest'
+          $ref: '#/definitions/adapterhttp.registerRequest'
       produces:
       - application/json
       responses:
         "201":
           description: User registered successfully
           schema:
-            $ref: '#/definitions/backend_internal_usecase.AuthResponse'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.AuthResponse'
         "400":
           description: Invalid request or user already exists
           schema:
@@ -2789,7 +3822,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/internal_adapters_http.resendConfirmationRequest'
+          $ref: '#/definitions/adapterhttp.resendConfirmationRequest'
       responses:
         "204":
           description: Confirmation email sent
@@ -2857,19 +3890,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/backend_internal_usecase.ContactListResponse'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.ContactListResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: List contacts
@@ -2890,30 +3923,30 @@ paths:
         name: contact
         required: true
         schema:
-          $ref: '#/definitions/backend_internal_usecase.CreateContactRequest'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateContactRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/backend_internal_domain.Contact'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Contact'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Create a new contact
@@ -2939,19 +3972,19 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Delete a contact
@@ -2976,23 +4009,23 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/backend_internal_domain.Contact'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Contact'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get a contact
@@ -3018,34 +4051,34 @@ paths:
         name: contact
         required: true
         schema:
-          $ref: '#/definitions/backend_internal_usecase.UpdateContactRequest'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.UpdateContactRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/backend_internal_domain.Contact'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Contact'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Update a contact
@@ -3072,30 +4105,30 @@ paths:
         name: address
         required: true
         schema:
-          $ref: '#/definitions/backend_internal_usecase.CreateAddressRequest'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateAddressRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/backend_internal_domain.ContactAddress'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ContactAddress'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Add contact address
@@ -3121,23 +4154,23 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/backend_internal_domain.Contact'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Contact'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Convert lead to customer
@@ -3164,30 +4197,30 @@ paths:
         name: phone
         required: true
         schema:
-          $ref: '#/definitions/backend_internal_usecase.CreatePhoneRequest'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.CreatePhoneRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/backend_internal_domain.ContactPhone'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.ContactPhone'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Add contact phone
@@ -3221,19 +4254,19 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Set contact status
@@ -3254,19 +4287,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/backend_internal_repository.ContactStats'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain_repository.ContactStats'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get contact statistics
@@ -3282,11 +4315,11 @@ paths:
         "200":
           description: Service is healthy
           schema:
-            $ref: '#/definitions/internal_adapters_http.HealthResponse'
+            $ref: '#/definitions/adapterhttp.HealthResponse'
         "503":
           description: Service is unhealthy
           schema:
-            $ref: '#/definitions/internal_adapters_http.HealthResponse'
+            $ref: '#/definitions/adapterhttp.HealthResponse'
       summary: Comprehensive health check
       tags:
       - Health
@@ -3379,15 +4412,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/backend_internal_usecase.InvoiceListResponse'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.InvoiceListResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: List invoices
@@ -3408,26 +4441,26 @@ paths:
         name: invoice
         required: true
         schema:
-          $ref: '#/definitions/backend_internal_usecase.CreateInvoiceRequest'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateInvoiceRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/backend_internal_domain.Invoice'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Invoice'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Create a new invoice
@@ -3453,15 +4486,15 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Delete an invoice
@@ -3486,19 +4519,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/backend_internal_domain.Invoice'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Invoice'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get an invoice by ID
@@ -3524,26 +4557,26 @@ paths:
         name: invoice
         required: true
         schema:
-          $ref: '#/definitions/backend_internal_usecase.UpdateInvoiceRequest'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.UpdateInvoiceRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/backend_internal_domain.Invoice'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Invoice'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Update an invoice
@@ -3570,26 +4603,26 @@ paths:
         name: payment
         required: true
         schema:
-          $ref: '#/definitions/backend_internal_usecase.CreatePaymentRequest'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.CreatePaymentRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/backend_internal_domain.Payment'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Payment'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Create a payment
@@ -3623,15 +4656,15 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Set invoice status
@@ -3653,16 +4686,16 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/backend_internal_domain.Invoice'
+              $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Invoice'
             type: array
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get overdue invoices
@@ -3683,15 +4716,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/backend_internal_repository.InvoiceStats'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain_repository.InvoiceStats'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get invoice statistics
@@ -3864,14 +4897,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/internal_adapters_http.CreateOrganizationRequest'
+          $ref: '#/definitions/adapterhttp.CreateOrganizationRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Organization created successfully
           schema:
-            $ref: '#/definitions/backend_internal_domain.Organization'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Organization'
         "400":
           description: Invalid request or validation error
           schema:
@@ -3915,7 +4948,7 @@ paths:
         "200":
           description: Organization retrieved successfully
           schema:
-            $ref: '#/definitions/backend_internal_domain.Organization'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Organization'
         "400":
           description: Invalid organization ID
           schema:
@@ -4010,15 +5043,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/backend_internal_usecase.ProductListResponse'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.ProductListResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: List products
@@ -4039,26 +5072,26 @@ paths:
         name: product
         required: true
         schema:
-          $ref: '#/definitions/backend_internal_usecase.CreateProductRequest'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.CreateProductRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/backend_internal_domain.Product'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Product'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Create a new product
@@ -4084,15 +5117,15 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Delete a product
@@ -4121,19 +5154,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/backend_internal_domain.Product'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Product'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get a product by ID
@@ -4159,26 +5192,26 @@ paths:
         name: product
         required: true
         schema:
-          $ref: '#/definitions/backend_internal_usecase.UpdateProductRequest'
+          $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_usecase.UpdateProductRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/backend_internal_domain.Product'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.Product'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Update a product
@@ -4212,15 +5245,15 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Set product status
@@ -4241,15 +5274,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/backend_internal_repository.ProductStats'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain_repository.ProductStats'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_adapters_http.ErrorResponse'
+            $ref: '#/definitions/adapterhttp.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get product statistics
@@ -4264,7 +5297,7 @@ paths:
         "200":
           description: User profile retrieved successfully
           schema:
-            $ref: '#/definitions/backend_internal_domain.User'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.User'
         "401":
           description: Unauthorized - invalid or missing token
           schema:
@@ -4298,14 +5331,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/internal_adapters_http.updateProfileRequest'
+          $ref: '#/definitions/adapterhttp.updateProfileRequest'
       produces:
       - application/json
       responses:
         "200":
           description: Profile updated successfully
           schema:
-            $ref: '#/definitions/backend_internal_domain.User'
+            $ref: '#/definitions/github_com_pmaojo_kthulu-go_backend_internal_domain.User'
         "400":
           description: Invalid request or current password
           schema:
@@ -4341,10 +5374,4 @@ paths:
       summary: Update current user profile
       tags:
       - Users
-securityDefinitions:
-  BearerAuth:
-    description: 'JWT token obtained from /auth/login endpoint. Format: Bearer <token>'
-    in: header
-    name: Authorization
-    type: apiKey
 swagger: "2.0"

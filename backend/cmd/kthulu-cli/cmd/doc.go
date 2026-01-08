@@ -21,12 +21,38 @@ then runs 'swag init' to generate the documentation.`,
 	},
 }
 
+var (
+	docDir         string
+	docGeneralInfo string
+)
+
 func init() {
+	docCmd.Flags().StringVar(&docDir, "dir", "", "Directory to search for main.go (default: project root)")
+	docCmd.Flags().StringVar(&docGeneralInfo, "generalInfo", "", "API general info file (default: cmd/server/main.go)")
 	rootCmd.AddCommand(docCmd)
 }
 
 func runDocCommand(cmd *cobra.Command, args []string) error {
 	fmt.Println("📚 Generating API documentation...")
+
+	projectRoot := ""
+	var err error
+
+	// 0. Determine project root / working directory
+	if docDir != "" {
+		projectRoot = docDir
+		fmt.Printf("📂 Using specified directory: %s\n", projectRoot)
+	} else {
+		// Find project root automatically
+		projectRoot, err = findProjectRoot()
+		if err != nil {
+			// Fallback to current directory if not found, but warn
+			fmt.Println("⚠️  Could not find go.mod, assuming current directory is project root.")
+			projectRoot, _ = os.Getwd()
+		} else {
+			fmt.Printf("📂 Found project root: %s\n", projectRoot)
+		}
+	}
 
 	// 1. Ensure swag is installed
 	binName, err := ensureDocToolInstalled("swag", "github.com/swaggo/swag/cmd/swag@latest")
@@ -34,20 +60,25 @@ func runDocCommand(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to ensure swag is installed: %w", err)
 	}
 
-	// 2. Run swag init
-	// We assume we are in the project root.
-	// swag init searches for main.go in current dir by default, or we can specify it.
-	// Kthulu projects usually have main in cmd/server/main.go
+	// 2. Determine main file
+	mainFile := "cmd/server/main.go" // Default assumption
 
-	mainFile := "cmd/server/main.go"
-	if _, err := os.Stat(mainFile); os.IsNotExist(err) {
-		// Fallback to main.go or try to find it
-		if _, err := os.Stat("main.go"); err == nil {
-			mainFile = "main.go"
-		} else {
-			// If neither exists, let swag decide or fail, but let's warn
-			fmt.Println("⚠️  Could not find cmd/server/main.go or main.go. Running swag init on current directory...")
-			mainFile = "."
+	if docGeneralInfo != "" {
+		mainFile = docGeneralInfo
+		fmt.Printf("📄 Using specified general info: %s\n", mainFile)
+	} else {
+		// Auto-detect main file
+		if _, err := os.Stat(filepath.Join(projectRoot, mainFile)); os.IsNotExist(err) {
+			// Fallback to main.go or try to find it
+			if _, err := os.Stat(filepath.Join(projectRoot, "main.go")); err == nil {
+				mainFile = "main.go"
+			} else if _, err := os.Stat(filepath.Join(projectRoot, "cmd/kthulu-cli/main.go")); err == nil {
+				mainFile = "cmd/kthulu-cli/main.go"
+			} else {
+				// If neither exists, let swag decide or fail, but let's warn
+				fmt.Println("⚠️  Could not find cmd/server/main.go, main.go or cmd/kthulu-cli/main.go. Running swag init on current directory...")
+				mainFile = "."
+			}
 		}
 	}
 
@@ -56,10 +87,23 @@ func runDocCommand(cmd *cobra.Command, args []string) error {
 		swagArgs = append(swagArgs, "--generalInfo", mainFile)
 	}
 
+	// Use projectRoot as dir if not ".", or if explicit dir was passed
+	if projectRoot != "" {
+		swagArgs = append(swagArgs, "--dir", projectRoot)
+	}
+
 	// Add other common flags if needed, e.g. --parseDependency
 	swagArgs = append(swagArgs, "--parseDependency", "--parseInternal")
 
 	runCmd := exec.Command(binName, swagArgs...)
+	// runCmd.Dir = projectRoot // Swag takes --dir arg, so we can run from anywhere or projectRoot. 
+	// Running from projectRoot is safer for relative paths in generalInfo if strictly relative.
+	if projectRoot != "" {
+		runCmd.Dir = projectRoot
+	} else {
+		runCmd.Dir, _ = os.Getwd()
+	}
+	
 	runCmd.Stdout = os.Stdout
 	runCmd.Stderr = os.Stderr
 
@@ -152,4 +196,22 @@ func ensureDocToolInstalled(binName, installURL string) (string, error) {
 	}
 
 	return binName, nil // Fallback to just name and hope for the best
+}
+
+func findProjectRoot() (string, error) {
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	for {
+		if _, err := os.Stat(filepath.Join(wd, "go.mod")); err == nil {
+			return wd, nil
+		}
+		parent := filepath.Dir(wd)
+		if parent == wd {
+			return "", fmt.Errorf("go.mod not found")
+		}
+		wd = parent
+	}
 }
