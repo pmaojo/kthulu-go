@@ -29,13 +29,18 @@ type ProjectTemplate struct {
 }
 
 type ProjectPlan struct {
-	Name        string   `yaml:"name"`
-	Description string   `yaml:"description"`
-	Template    string   `yaml:"template"`
-	Features    []string `yaml:"features"`
-	Database    string   `yaml:"database"`
-	Frontend    string   `yaml:"frontend"`
-	Auth        string   `yaml:"auth"`
+	Name        string                  `yaml:"name"`
+	Description string                  `yaml:"description"`
+	Template    string                  `yaml:"template"`
+	Features    []string                `yaml:"features"`
+	Modules     map[string]ModuleConfig `yaml:"modules"`
+	Database    string                  `yaml:"database"`
+	Frontend    string                  `yaml:"frontend"`
+	Auth        string                  `yaml:"auth"`
+}
+
+type ModuleConfig struct {
+	Fields []string `yaml:"fields"`
 }
 
 var projectTemplates = map[string]ProjectTemplate{
@@ -98,33 +103,28 @@ var projectTemplates = map[string]ProjectTemplate{
 var newCmd = &cobra.Command{
 	Use:     "create [name]",
 	Aliases: []string{"new"},
-	Short:   "🚀 Create a new enterprise-ready Kthulu project with intelligent dependency resolution",
-	Long: `Create a production-ready Go application with enterprise features and smart module selection.
+	Short:   "🚀 Create a new Kthulu project (The easy way)",
+	Long: `Build a production-ready application in seconds.
 
-The create command uses intelligent dependency resolution to analyze your requirements and automatically
-include all necessary modules, detect conflicts, and suggest optimizations.
+This command sets up everything you need:
+  • Backend (Go + Chi + GORM)
+  • Frontend (React/Next.js or similar)
+  • Database (SQLite/Postgres)
+  • Authentication (JWT/OAuth)
 
-Templates:
-  microservice    - Lightweight microservice (default)
-  monolith        - Full-featured monolithic application
-  api-gateway     - API Gateway with routing
-  fintech         - Financial services with compliance
-  ecommerce       - E-commerce platform
-  saas            - Multi-tenant SaaS application
+How to use:
+  1. Simple start:
+     kthulu new my-app
 
-Examples:
-  kthulu create my-app                          # Create with microservice template
-  kthulu create my-shop --template=ecommerce    # Use e-commerce template
-  kthulu create my-api --features=user,product  # Custom features
-  kthulu create my-fintech --enterprise         # Enable enterprise features
-  
-Advanced Features:
-  • Intelligent dependency resolution
-  • Conflict detection and resolution
-  • Performance optimization suggestions
-  • Enterprise security patterns
-  • Observability integration
-  • Multi-frontend support (React, Templ+HTMX, Fyne)`,
+  2. With specific features:
+     kthulu new my-shop --template=ecommerce --from-plan=plan.yaml
+
+  3. Full stack (recommended):
+     kthulu new airbnb-clone --frontend=react --features=user,auth,property
+
+The tool will automatically resolve dependencies, create the folder structure,
+and prepare your development environment.
+`,
 	Args: cobra.ExactArgs(1),
 	Run:  runNewProjectIntelligent,
 }
@@ -142,6 +142,7 @@ var (
 	newDryRun        bool
 	newInteractive   bool
 	newFromPlan      string
+	newModuleFields  map[string][]string
 )
 
 const (
@@ -335,6 +336,27 @@ func buildProjectConfig(projectName string) (*generator.GeneratorConfig, error) 
 		newDatabase = plan.Database
 		newFrontend = plan.Frontend
 		newAuth = plan.Auth
+
+		// Populate parsed features and fields
+		newFeatures = plan.Features // Start with base features list
+		parsedModuleFields := make(map[string][]string)
+
+		for name, config := range plan.Modules {
+			newFeatures = append(newFeatures, name)
+			if len(config.Fields) > 0 {
+				parsedModuleFields[name] = config.Fields
+			}
+		}
+
+		// Store fields in a temporary global or return them? 
+		// buildProjectConfig returns GeneratorConfig, so I should set it there.
+		// However, buildProjectConfig constructs GeneratorConfig at the END.
+		// I need to pass this map down. 
+		// Since I cannot change the signature easily in replaced block without reading more,
+		// I will rely on newFeatures being global (yikes, but it is in this file).
+		// But I need a place for ModuleFields.
+		// I'll add a global 'newModuleFields' in this file to hold it temporarily, similar to 'newFeatures'.
+		newModuleFields = parsedModuleFields
 	}
 
 	// Start with template defaults
@@ -352,6 +374,7 @@ func buildProjectConfig(projectName string) (*generator.GeneratorConfig, error) 
 		Features:      template.Features,
 		Enterprise:    template.Enterprise,
 		Observability: false,
+		ModuleFields:  newModuleFields, // Added ModuleFields
 		CustomValues:  make(map[string]string),
 	}
 

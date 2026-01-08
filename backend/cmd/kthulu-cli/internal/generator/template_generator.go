@@ -34,6 +34,7 @@ type GeneratorConfig struct {
 	Enterprise    bool              `json:"enterprise"`    // enterprise features
 	Observability bool              `json:"observability"` // monitoring
 	CustomValues  map[string]string `json:"custom_values"` // custom template values
+	ModuleFields  map[string][]string `json:"module_fields"` // fields for each module
 }
 
 // modulePath returns the module import path for the generated project.
@@ -291,7 +292,8 @@ func (g *TemplateGenerator) generateModuleFiles(moduleName string, structure *Pr
 	structure.Directories = append(structure.Directories, moduleDirs...)
 
 	// Generate module files using GenerateBackendModule to ensure consistency
-	files, migrationContent, err := g.GenerateBackendModule(moduleName, []string{}, relPath, "", false)
+	fields := g.config.ModuleFields[moduleName]
+	files, migrationContent, err := g.GenerateBackendModule(moduleName, fields, relPath, "", false)
 	if err != nil {
 		return err
 	}
@@ -761,6 +763,11 @@ func (g *TemplateGenerator) generateFrontend(structure *ProjectStructure) error 
 	// However, we can create the directory structure.
 
 	fmt.Println("  🎨 Setting up frontend structure...")
+	
+	// Generate base scaffold (Vite, React, etc.)
+	if err := g.generateFrontendBase(structure); err != nil {
+		return err
+	}
 
 	for _, feature := range g.config.Features {
 		if feature == "auth" || feature == "users" {
