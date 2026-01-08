@@ -16,8 +16,10 @@ var docCmd = &cobra.Command{
 	Long: `Generate Swagger/OpenAPI documentation for your project.
 This command automatically checks for and installs the 'swag' tool if needed,
 then runs 'swag init' to generate the documentation.`,
+
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return runDocCommand(cmd, args)
+		diagrams, _ := cmd.Flags().GetBool("diagrams")
+		return runDocCommand(cmd, args, diagrams)
 	},
 }
 
@@ -29,10 +31,11 @@ var (
 func init() {
 	docCmd.Flags().StringVar(&docDir, "dir", "", "Directory to search for main.go (default: project root)")
 	docCmd.Flags().StringVar(&docGeneralInfo, "generalInfo", "", "API general info file (default: cmd/server/main.go)")
+	docCmd.Flags().Bool("diagrams", false, "Generate Mermaid architecture diagrams")
 	rootCmd.AddCommand(docCmd)
 }
 
-func runDocCommand(cmd *cobra.Command, args []string) error {
+func runDocCommand(cmd *cobra.Command, args []string, generateDiagrams bool) error {
 	fmt.Println("📚 Generating API documentation...")
 
 	projectRoot := ""
@@ -82,22 +85,17 @@ func runDocCommand(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// 3. Run Swagger Generation
 	swagArgs := []string{"init"}
 	if mainFile != "." {
 		swagArgs = append(swagArgs, "--generalInfo", mainFile)
 	}
-
-	// Use projectRoot as dir if not ".", or if explicit dir was passed
 	if projectRoot != "" {
 		swagArgs = append(swagArgs, "--dir", projectRoot)
 	}
-
-	// Add other common flags if needed, e.g. --parseDependency
 	swagArgs = append(swagArgs, "--parseDependency", "--parseInternal")
 
 	runCmd := exec.Command(binName, swagArgs...)
-	// runCmd.Dir = projectRoot // Swag takes --dir arg, so we can run from anywhere or projectRoot. 
-	// Running from projectRoot is safer for relative paths in generalInfo if strictly relative.
 	if projectRoot != "" {
 		runCmd.Dir = projectRoot
 	} else {
@@ -111,11 +109,88 @@ func runDocCommand(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("swag init failed: %w", err)
 	}
 
-	fmt.Println("\n✅ Documentation generated successfully!")
-	fmt.Println("   Open docs/swagger/index.html (if you serve it) or view docs/swagger.json")
+	// 4. Run Mermaid Generation (The WOW Feature)
+	if generateDiagrams {
+		fmt.Println("\n🎨 Generating Architecture Diagrams...")
+		if err := generateMermaidDiagrams(projectRoot); err != nil {
+			fmt.Printf("⚠️  Failed to generate diagrams: %v\n", err)
+		}
+	}
 
+	fmt.Println("\n✅ Documentation generated successfully!")
 	return nil
 }
+
+// generateMermaidDiagrams parses Go files and generates a class diagram
+func generateMermaidDiagrams(root string) error {
+	// A simple heuristic parser for "WOW" demo purposes
+	// In production, use `golang.org/x/tools/go/packages`
+	
+	mermaidPath := filepath.Join(root, "docs", "architecture.mermaid")
+	_ = os.MkdirAll(filepath.Join(root, "docs"), 0755)
+
+	var sb strings.Builder
+	sb.WriteString("classDiagram\n")
+	
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil { return err }
+		if !strings.HasSuffix(path, ".go") { return nil }
+		if strings.Contains(path, "test") || strings.Contains(path, "vendor") { return nil }
+
+		content, err := os.ReadFile(path)
+		if err != nil { return nil }
+		
+		lines := strings.Split(string(content), "\n")
+		packageName := "unknown"
+		
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "package ") {
+				packageName = strings.TrimPrefix(line, "package ")
+				break
+			}
+		}
+
+		// Very naive struct parser regex-like
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "type ") && strings.Contains(line, " struct {") {
+				parts := strings.Fields(line)
+				if len(parts) >= 2 {
+					structName := parts[1]
+					// Add class to mermaid
+					sb.WriteString(fmt.Sprintf("    class %s {\n", structName))
+					sb.WriteString(fmt.Sprintf("        <<%s>>\n", packageName))
+					sb.WriteString("    }\n")
+				}
+			}
+			
+			// Detect interfaces
+			if strings.HasPrefix(line, "type ") && strings.Contains(line, " interface {") {
+				parts := strings.Fields(line)
+				if len(parts) >= 2 {
+					ifName := parts[1]
+					sb.WriteString(fmt.Sprintf("    class %s {\n", ifName))
+					sb.WriteString("        <<interface>>\n")
+					sb.WriteString("    }\n")
+				}
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	if err := os.WriteFile(mermaidPath, []byte(sb.String()), 0644); err != nil {
+		return err
+	}
+	
+	fmt.Printf("   Generated: %s\n", mermaidPath)
+	return nil
+}
+
 
 // ensureDocToolInstalled checks if a tool is installed and installs it if not.
 // Duplicated/Adapted to ensure self-containment for this command.
