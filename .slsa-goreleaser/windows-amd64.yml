@@ -1,7 +1,7 @@
 version: 1
 git:
   depth: 1
-dir: backend/backend
+dir: backend
 main: ./cmd/kthulu-cli
 binary: kthulu-cli-windows-amd64.exe
 goos: windows
