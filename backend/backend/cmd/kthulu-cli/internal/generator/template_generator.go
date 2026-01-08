@@ -1169,8 +1169,10 @@ package main
 
 import (
 "context"
+"log/slog"
 "net/http"
 "net/http/httptest"
+"os"
 "testing"
 "time"
 )
@@ -1222,14 +1224,15 @@ t.Fatalf("server lifecycle not executed: started=%v shutdown=%v", srv.started, s
 }
 
 func TestSetupRoutesHealth(t *testing.T) {
-handler := setupRoutes()
-req := httptest.NewRequest(http.MethodGet, "/health", nil)
-rr := httptest.NewRecorder()
-handler.ServeHTTP(rr, req)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	handler := NewRouter(logger)
+	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
 
-if rr.Code != http.StatusOK {
-t.Fatalf("expected status 200 got %d", rr.Code)
-}
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200 got %d", rr.Code)
+	}
 if body := rr.Body.String(); body != "OK" {
 t.Fatalf("expected OK body got %s", body)
 }
