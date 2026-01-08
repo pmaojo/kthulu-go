@@ -140,7 +140,7 @@ func init() {
 	newCmd.Flags().StringVarP(&newTemplate, "template", "t", "microservice", "Project template")
 	newCmd.Flags().StringSliceVarP(&newFeatures, "features", "f", []string{}, "Comma-separated list of features/modules")
 	newCmd.Flags().StringVarP(&newDatabase, "database", "d", "", "Database type (sqlite, postgres, mysql)")
-	// newCmd.Flags().StringVar(&newFrontend, "frontend", "", "Frontend type (react, templ, fyne, none)")
+	newCmd.Flags().StringVar(&newFrontend, "frontend", "none", "Frontend type (react, templ, fyne, none)")
 	newCmd.Flags().StringVar(&newAuth, "auth", "", "Auth type (jwt, oauth, both)")
 	newCmd.Flags().StringVar(&newModulePath, "module-path", "", "Go module path (default: project name)")
 	newCmd.Flags().BoolVar(&newEnterprise, "enterprise", false, "Enable enterprise features")
@@ -319,9 +319,9 @@ func buildProjectConfig(projectName string) (*generator.GeneratorConfig, error) 
 	if newDatabase != "" {
 		config.Database = newDatabase
 	}
-	// if newFrontend != "" {
-	// 	config.Frontend = newFrontend
-	// }
+	if newFrontend != "none" && newFrontend != "" {
+		config.Frontend = newFrontend
+	}
 	if newAuth != "" {
 		config.Auth = newAuth
 	}
@@ -358,7 +358,7 @@ func displayProjectConfiguration(config *generator.GeneratorConfig) {
 	fmt.Printf("   Template:      %s\n", newTemplate)
 	fmt.Printf("   Features:      %s\n", strings.Join(config.Features, ", "))
 	fmt.Printf("   Database:      %s\n", config.Database)
-	// fmt.Printf("   Frontend:      %s\n", config.Frontend)
+	fmt.Printf("   Frontend:      %s\n", config.Frontend)
 	fmt.Printf("   Auth:          %s\n", config.Auth)
 	fmt.Printf("   Enterprise:    %v\n", config.Enterprise)
 	fmt.Printf("   Observability: %v\n", config.Observability)
@@ -407,12 +407,12 @@ func displaySuccessMessage(projectName string, config *generator.GeneratorConfig
 	fmt.Printf("   kthulu migrate up           # Run database migrations\n")
 	fmt.Printf("   go run cmd/server/main.go   # Start development server\n")
 
-	// if config.Frontend == "react" {
-	// 	fmt.Printf("\n💻 Frontend development:\n")
-	// 	fmt.Printf("   cd frontend\n")
-	// 	fmt.Printf("   npm install\n")
-	// 	fmt.Printf("   npm run dev\n")
-	// }
+	if config.Frontend == "react" {
+		fmt.Printf("\n💻 Frontend development:\n")
+		fmt.Printf("   cd %s/frontend\n", projectName)
+		fmt.Printf("   npm install\n")
+		fmt.Printf("   npm run dev\n")
+	}
 
 	fmt.Printf("\n🔧 Additional commands:\n")
 	fmt.Printf("   kthulu add module <name>    # Add new modules\n")

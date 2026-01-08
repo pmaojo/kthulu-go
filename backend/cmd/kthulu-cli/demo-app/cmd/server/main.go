@@ -15,13 +15,14 @@ import (
 	"github.com/gorilla/mux"
 	"go.uber.org/fx"
 
+	"demo-app/internal/modules/auth"
+	authDomain "demo-app/internal/modules/auth/domain"
+	authHandlers "demo-app/internal/modules/auth/handlers"
+	"demo-app/internal/modules/user"
+	userDomain "demo-app/internal/modules/user/domain"
+	userHandlers "demo-app/internal/modules/user/handlers"
 	"demo-app/internal/core"
- "demo-app/internal/adapters/http/modules/user"
- userDomain "demo-app/internal/adapters/http/modules/user/domain"
- userHandlers "demo-app/internal/adapters/http/modules/user/handlers"
- "demo-app/internal/adapters/http/modules/auth"
- authDomain "demo-app/internal/adapters/http/modules/auth/domain"
- authHandlers "demo-app/internal/adapters/http/modules/auth/handlers"
+	"demo-app/internal/modules/product"
 )
 
 type httpServer interface {
@@ -87,17 +88,15 @@ func runApplication(ctx context.Context, builder func(http.Handler) httpServer) 
 
 		// Module providers
 		user.Providers(),
-		auth.Providers(),
-
-		fx.Invoke(func(lc fx.Lifecycle, router *mux.Router, userService userDomain.UserService, authService authDomain.AuthService) {
+		auth.Providers(), product.Providers(), fx.Invoke(func(lc fx.Lifecycle, router *mux.Router, userService userDomain.UserService, authService authDomain.AuthService) {
 			apiRouter := router.PathPrefix("/api/v1").Subrouter()
 
-	// user routes
-	userHandler := userHandlers.NewUserHandler(userService)
-	userHandler.RegisterRoutes(apiRouter)
-	// auth routes
-	authHandler := authHandlers.NewAuthHandler(authService)
-	authHandler.RegisterRoutes(apiRouter)
+			// auth routes
+			authHandler := authHandlers.NewAuthHandler(authService)
+			authHandler.RegisterRoutes(apiRouter)
+			// user routes
+			userHandler := userHandlers.NewUserHandler(userService)
+			userHandler.RegisterRoutes(apiRouter)
 
 			server := builder(router)
 

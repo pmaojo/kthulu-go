@@ -162,8 +162,8 @@ func runAddAuthModule() error {
 }
 
 func copyAuthFiles(base string, data map[string]any) error {
-	// Copy templates from backend/internal/modules/auth to the project's internal/modules/auth
-	return copyTemplateTree(templates.Templates, "backend/internal/modules/auth", filepath.Join(base, "internal/modules/auth"), data, false)
+	// Copy templates from internal/modules/auth to the project's internal/modules/auth
+	return copyTemplateTree(templates.Templates, "scaffold/backend/layers", filepath.Join(base, "internal/modules/auth"), data, false)
 }
 
 func installDependency(pkg string) error {
@@ -183,6 +183,7 @@ func runAddModule(module string, fields []string, integrations []string, complia
 	if err != nil {
 		return fmt.Errorf("error getting current directory: %w", err)
 	}
+	currentDir, _ = filepath.Abs(currentDir)
 
 	// Check if we're in a Kthulu project
 	if !isKthuluProject(currentDir) {
@@ -293,17 +294,20 @@ func runAddModule(module string, fields []string, integrations []string, complia
 	fmt.Printf("\n📦 Generating module files...\n")
 	templateGenerator := generator.NewTemplateGenerator(dependencyResolver)
 
-	// Create config for the specific module
+	// Detect project module from go.mod
+	projectModule, _ := getProjectModule(currentDir)
 	config := &generator.GeneratorConfig{
-		ProjectName:  filepath.Base(currentDir),
-		OutputPath:   currentDir,
-		Features:     plan.RequiredModules,
-		Enterprise:   compliance != "",
-		Database:     detectDatabase(currentDir),
-		Frontend:     detectFrontend(currentDir),
-		Auth:         detectAuth(currentDir),
-		CustomValues: make(map[string]string),
+		ProjectName:   filepath.Base(currentDir),
+		ProjectModule: projectModule,
+		OutputPath:    currentDir,
+		Features:      plan.RequiredModules,
+		Enterprise:    compliance != "",
+		Database:      detectDatabase(currentDir),
+		Frontend:      detectFrontend(currentDir),
+		Auth:          detectAuth(currentDir),
+		CustomValues:  make(map[string]string),
 	}
+	templateGenerator.SetConfig(config)
 
 	if prefix != "" {
 		config.CustomValues["route_prefix"] = prefix
@@ -335,7 +339,6 @@ func runAddModule(module string, fields []string, integrations []string, complia
 	}
 
 	// Register module in main.go
-	projectModule, err := getProjectModule(config.OutputPath)
 	if err != nil {
 		fmt.Printf("   ⚠️  Warning: Could not detect project module from go.mod: %v\n", err)
 		// Fallback to trying the framework path only if we are seemingly running tests in the framework itself
@@ -401,14 +404,10 @@ func runAddComponent(componentType, name, module string, withTests, withMigratio
 	}
 
 	// Verify module existence
-	// We need to check both possible locations
-	modulePath := filepath.Join(currentDir, "internal", "adapters", "http", "modules", module)
+	relPath := detectModuleLocation(currentDir)
+	modulePath := filepath.Join(currentDir, relPath, module)
 	if _, err := os.Stat(modulePath); os.IsNotExist(err) {
-		// Check alternate location
-		modulePath = filepath.Join(currentDir, "internal", "modules", module)
-		if _, err := os.Stat(modulePath); os.IsNotExist(err) {
-			return fmt.Errorf("module '%s' does not exist", module)
-		}
+		return fmt.Errorf("module '%s' does not exist in %s", module, relPath)
 	}
 
 	fmt.Printf("Adding %s '%s' to module '%s'...\n", componentType, name, module)
@@ -426,7 +425,8 @@ func runAddComponent(componentType, name, module string, withTests, withMigratio
 	// Initialize generator
 	gen := generator.NewTemplateGenerator(nil) // We don't need a full resolver here for single components
 	gen.SetConfig(&generator.GeneratorConfig{
-		ProjectName: projectModule,
+		ProjectName:   filepath.Base(currentDir),
+		ProjectModule: projectModule,
 	})
 
 	switch componentType {
@@ -557,11 +557,15 @@ func detectModuleFromDir(dir string) string {
 }
 
 func detectModuleLocation(projectRoot string) string {
-	// Check if internal/adapters/http/modules exists
+	// Priority 1: Check if it's an enterprise project style (internal/adapters/http/modules)
 	if _, err := os.Stat(filepath.Join(projectRoot, "internal", "adapters", "http", "modules")); err == nil {
 		return "internal/adapters/http/modules"
 	}
-	// Fallback to internal/modules
+	// Priority 2: Check for the simpler style (internal/modules)
+	if _, err := os.Stat(filepath.Join(projectRoot, "internal", "modules")); err == nil {
+		return "internal/modules"
+	}
+	// Default to internal/modules for new additions if neither exists (fallback)
 	return "internal/modules"
 }
 

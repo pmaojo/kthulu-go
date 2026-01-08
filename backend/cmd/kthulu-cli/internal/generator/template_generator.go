@@ -7,6 +7,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 	"text/template"
 
 	"github.com/jinzhu/inflection"
@@ -26,6 +27,7 @@ type GeneratorConfig struct {
 	ProjectName   string            `json:"project_name"`
 	OutputPath    string            `json:"output_path"`
 	Frontend      string            `json:"frontend"`      // react, templ, fyne, none
+	ProjectModule string            `json:"project_module"`
 	Database      string            `json:"database"`      // sqlite, postgres, mysql
 	Auth          string            `json:"auth"`          // jwt, oauth, both
 	Features      []string          `json:"features"`      // modules to include
@@ -38,6 +40,10 @@ type GeneratorConfig struct {
 func (g *TemplateGenerator) modulePath() string {
 	if g.config == nil {
 		return ""
+	}
+
+	if g.config.ProjectModule != "" {
+		return g.config.ProjectModule
 	}
 
 	if g.config.CustomValues != nil {
@@ -196,25 +202,12 @@ func (g *TemplateGenerator) GenerateProject(config *GeneratorConfig) (*ProjectSt
 func (g *TemplateGenerator) generateBaseStructure(structure *ProjectStructure) error {
 	baseDirs := []string{
 		"cmd/server",
-		"cmd/cli",
 		"cmd/migrate",
 		"internal/core",
-		"internal/adapters/http",
-		"internal/adapters/http/modules",
-		"internal/adapters/cli",
-		"internal/adapters/mcp",
-		"internal/domain",
-		"internal/domain/repository",
-		"internal/usecase",
-		"internal/infrastructure",
-		"pkg/utils",
-		"pkg/errors",
+		g.getModuleRelPath(),
 		"configs",
 		"migrations",
 		"scripts",
-		"docs",
-		"deployments",
-		"test",
 	}
 
 	if g.config.Enterprise {
@@ -285,81 +278,39 @@ func (g *TemplateGenerator) generateBaseStructure(structure *ProjectStructure) e
 func (g *TemplateGenerator) generateModuleFiles(moduleName string, structure *ProjectStructure) error {
 	fmt.Printf("  📦 Generating module: %s\n", moduleName)
 
-	// Get module information
-	moduleInfo, err := g.resolver.GetModuleInfo(moduleName)
-	if err != nil {
-		// Generate basic module structure if not found
-		moduleInfo = &resolver.ModuleInfo{
-			Name:        moduleName,
-			Category:    "Custom",
-			Description: fmt.Sprintf("Custom %s module", moduleName),
-		}
-	}
-
 	// Generate module directory structure
-	moduleBase := fmt.Sprintf("internal/adapters/http/modules/%s", moduleName)
+	relPath := g.getModuleRelPath()
+	moduleBase := fmt.Sprintf("%s/%s", relPath, moduleName)
 	moduleDirs := []string{
 		moduleBase,
 		fmt.Sprintf("%s/domain", moduleBase),
 		fmt.Sprintf("%s/repository", moduleBase),
 		fmt.Sprintf("%s/service", moduleBase),
 		fmt.Sprintf("%s/handlers", moduleBase),
-		fmt.Sprintf("%s/dto", moduleBase),
 	}
 	structure.Directories = append(structure.Directories, moduleDirs...)
 
-	// Generate module files
-	moduleFiles := []GeneratedFile{
-		{
-			Path:     fmt.Sprintf("%s/module.go", moduleBase),
-			Template: "module.go.tmpl",
-			Content:  g.GenerateModuleFile(moduleName, moduleInfo),
-		},
-		{
-			Path:     fmt.Sprintf("%s/domain/%s.go", moduleBase, moduleName),
-			Template: "domain.go.tmpl",
-			Content:  g.generateDomainFileFixed(moduleName, moduleInfo),
-		},
-		{
-			Path:     fmt.Sprintf("%s/repository/%s_repository.go", moduleBase, moduleName),
-			Template: "repository.go.tmpl",
-			Content:  g.generateRepositoryFileFixed(moduleName, moduleInfo),
-		},
-		{
-			Path:     fmt.Sprintf("%s/service/%s_service.go", moduleBase, moduleName),
-			Template: "service.go.tmpl",
-			Content:  g.generateServiceFileFixed(moduleName, moduleInfo),
-		},
-		{
-			Path:     fmt.Sprintf("%s/handlers/%s_handler.go", moduleBase, moduleName),
-			Template: "handler.go.tmpl",
-			Content:  g.GenerateHandlerFile(moduleName),
-		},
+	// Generate module files using GenerateBackendModule to ensure consistency
+	files, migrationContent, err := g.GenerateBackendModule(moduleName, []string{}, relPath, "", false)
+	if err != nil {
+		return err
 	}
 
-	structure.Files = append(structure.Files, moduleFiles...)
-
-	// Generate module tests
-	testFiles := []GeneratedFile{
-		{
-			Path:    fmt.Sprintf("%s/module_test.go", moduleBase),
-			Content: g.generateModuleProvidersTestFile(moduleName),
-		},
-		{
-			Path:    fmt.Sprintf("%s/repository/%s_repository_test.go", moduleBase, moduleName),
-			Content: g.generateRepositoryTestFile(moduleName),
-		},
-		{
-			Path:    fmt.Sprintf("%s/service/%s_service_test.go", moduleBase, moduleName),
-			Content: g.generateServiceTestFile(moduleName),
-		},
-		{
-			Path:    fmt.Sprintf("%s/handlers/%s_handler_test.go", moduleBase, moduleName),
-			Content: g.generateHandlerTestFile(moduleName),
-		},
+	for relPath, content := range files {
+		structure.Files = append(structure.Files, GeneratedFile{
+			Path:    filepath.Join(moduleBase, relPath),
+			Content: content,
+		})
 	}
 
-	structure.Files = append(structure.Files, testFiles...)
+	// Generate migration
+	if migrationContent != "" {
+		timestamp := time.Now().Format("20060102150405")
+		structure.Files = append(structure.Files, GeneratedFile{
+			Path:    filepath.Join("migrations", fmt.Sprintf("%s_create_%s_table.sql", timestamp, moduleName)),
+			Content: migrationContent,
+		})
+	}
 
 	return nil
 }
@@ -616,14 +567,24 @@ func (g *TemplateGenerator) generateFeatureList() string {
 	return strings.Join(features, "\n")
 }
 
+// getModuleRelPath returns the relative path for modules based on configuration
+func (g *TemplateGenerator) getModuleRelPath() string {
+	if g.config.Enterprise {
+		return "internal/adapters/http/modules"
+	}
+	return "internal/modules"
+}
+
 // Additional generation methods (simplified for brevity)
 func (g *TemplateGenerator) GenerateModuleFile(name string, info *resolver.ModuleInfo) string {
+	relPath := g.getModuleRelPath()
 	data := map[string]interface{}{
 		"Name":          name,
 		"Title":         Capitalize(inflection.Singular(name)),
 		"ProjectModule": g.modulePath(),
 		"Module":        name,
-		"ModulePath":    g.moduleImportPath("internal/modules", name),
+		"ModulePath":    g.moduleImportPath(relPath, name),
+		"ModuleRelPath": relPath,
 	}
 
 	content, err := g.executeTemplate("module", "scaffold/backend/module.go.tmpl", data)
@@ -651,10 +612,11 @@ func (g *TemplateGenerator) GenerateDomainFile(name string, fields []BackendFiel
 }
 
 func (g *TemplateGenerator) GenerateRepositoryFile(name string) string {
+	relPath := g.getModuleRelPath()
 	data := map[string]interface{}{
 		"Name":         name,
 		"Title":        Capitalize(inflection.Singular(name)),
-		"DomainImport": g.moduleImportPath("internal/adapters/http/modules", name, "domain"),
+		"DomainImport": g.moduleImportPath(relPath, name, "domain"),
 	}
 
 	content, err := g.executeTemplate("repository", "scaffold/backend/layers/repository.go.tmpl", data)
@@ -666,11 +628,12 @@ func (g *TemplateGenerator) GenerateRepositoryFile(name string) string {
 }
 
 func (g *TemplateGenerator) GenerateServiceFile(name string) string {
+	relPath := g.getModuleRelPath()
 	data := map[string]interface{}{
 		"Name":         name,
 		"Title":        Capitalize(inflection.Singular(name)),
 		"PluralTitle":  Pluralize(Capitalize(name)),
-		"DomainImport": g.moduleImportPath("internal/adapters/http/modules", name, "domain"),
+		"DomainImport": g.moduleImportPath(relPath, name, "domain"),
 	}
 
 	content, err := g.executeTemplate("service", "scaffold/backend/layers/service.go.tmpl", data)
@@ -682,12 +645,13 @@ func (g *TemplateGenerator) GenerateServiceFile(name string) string {
 }
 
 func (g *TemplateGenerator) GenerateHandlerFile(name string) string {
+	relPath := g.getModuleRelPath()
 	data := map[string]interface{}{
 		"Name":         name,
 		"Title":        Capitalize(inflection.Singular(name)),
 		"PluralTitle":  Pluralize(Capitalize(name)),
 		"RoutePrefix":  ToKebabCase(name),
-		"DomainImport": g.moduleImportPath("internal/adapters/http/modules", name, "domain"),
+		"DomainImport": g.moduleImportPath(relPath, name, "domain"),
 	}
 
 	content, err := g.executeTemplate("handler", "scaffold/backend/layers/handler.go.tmpl", data)

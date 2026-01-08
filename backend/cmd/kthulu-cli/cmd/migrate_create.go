@@ -24,13 +24,21 @@ func init() {
 }
 
 func createMigrationFile(name, content string) error {
-	// Need to check if we are in a project root or internal
-	// Assuming command is run from project root
+	// Robust detection of migrations directory
 	dir := "migrations"
-	if _, err := os.Stat("go.mod"); os.IsNotExist(err) {
-		// fallback check
+	
+	// Check if we are in the project root
+	if _, err := os.Stat("go.mod"); err == nil {
+		dir = "migrations"
+	} else {
+		// Check parent directory
 		if _, err := os.Stat("../go.mod"); err == nil {
 			dir = "../migrations"
+		} else {
+			// Check two levels up (e.g. from a module subdirectory)
+			if _, err := os.Stat("../../go.mod"); err == nil {
+				dir = "../../migrations"
+			}
 		}
 	}
 

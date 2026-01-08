@@ -95,7 +95,8 @@ type %[2]sService interface {
 
 func (g *TemplateGenerator) generateRepositoryFileFixed(name string, info *resolver.ModuleInfo) string {
 	capName := Capitalize(name)
-	domainImport := g.moduleImportPath("internal/adapters/http/modules", name, "domain")
+	relPath := g.getModuleRelPath()
+	domainImport := g.moduleImportPath(relPath, name, "domain")
 
 	template := `// @kthulu:repository:%[3]s
 package repository
@@ -143,7 +144,8 @@ func (r *%[2]sRepository) List() ([]*domain.%[2]s, error) {
 func (g *TemplateGenerator) generateServiceFileFixed(name string, info *resolver.ModuleInfo) string {
 	capName := Capitalize(name)
 	pluralName := Pluralize(capName)
-	domainImport := g.moduleImportPath("internal/adapters/http/modules", name, "domain")
+	relPath := g.getModuleRelPath()
+	domainImport := g.moduleImportPath(relPath, name, "domain")
 
 	template := `// @kthulu:service:%[3]s
 package service
