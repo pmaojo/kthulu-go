@@ -382,21 +382,19 @@ func (uc *ProductUseCase) loadProductRelations(ctx context.Context, product *dom
 	// Use errgroup to run independent queries in parallel
 	g, ctx := errgroup.WithContext(ctx)
 
-	// Task 1: Load product prices (Independent)
+	var allPrices []*domain.ProductPrice
+
+	// Task 1: Load ALL prices (product and variant prices) concurrently
 	g.Go(func() error {
-		prices, err := uc.productRepo.GetPricesByProductID(ctx, product.ID)
+		var err error
+		allPrices, err = uc.productRepo.FetchPricesForProducts(ctx, []uint{product.ID})
 		if err != nil {
 			return err
-		}
-		// Convert []*domain.ProductPrice to []domain.ProductPrice
-		product.Prices = make([]domain.ProductPrice, len(prices))
-		for i, price := range prices {
-			product.Prices[i] = *price
 		}
 		return nil
 	})
 
-	// Task 2: Load variants and then their prices
+	// Task 2: Load variants
 	g.Go(func() error {
 		variants, err := uc.productRepo.GetVariantsByProductID(ctx, product.ID)
 		if err != nil {
@@ -404,47 +402,43 @@ func (uc *ProductUseCase) loadProductRelations(ctx context.Context, product *dom
 		}
 
 		// Convert []*domain.ProductVariant to []domain.ProductVariant
-		// We use a local slice first to avoid race conditions if we were appending,
-		// but since we assign the whole slice at the end of the logic block (or careful with index), it's fine.
-		// However, since product.Variants is a separate field from product.Prices,
-		// concurrent assignment to different fields is safe in Go.
-
-		localVariants := make([]domain.ProductVariant, len(variants))
-		variantIDs := make([]uint, len(variants))
+		product.Variants = make([]domain.ProductVariant, len(variants))
 		for i, variant := range variants {
-			localVariants[i] = *variant
-			variantIDs[i] = variant.ID
+			product.Variants[i] = *variant
 		}
-
-		// Batch load prices for all variants
-		if len(variantIDs) > 0 {
-			// Create a map of pointers to local variants for O(1) lookup
-			variantMap := make(map[uint]*domain.ProductVariant, len(localVariants))
-			for i := range localVariants {
-				variantMap[localVariants[i].ID] = &localVariants[i]
-			}
-
-			variantPrices, err := uc.productRepo.GetPricesByVariantIDs(ctx, variantIDs)
-			if err == nil {
-				// Assign prices directly to variants via the map
-				for _, price := range variantPrices {
-					if price.ProductVariantID != nil {
-						if variant, ok := variantMap[*price.ProductVariantID]; ok {
-							variant.Prices = append(variant.Prices, *price)
-						}
-					}
-				}
-			} else {
-				uc.logger.Warn("Failed to batch load variant prices", zap.Error(err))
-			}
-		}
-
-		// Finally assign to the product struct
-		product.Variants = localVariants
 		return nil
 	})
 
-	return g.Wait()
+	if err := g.Wait(); err != nil {
+		return err
+	}
+
+	// Post-processing: Assign prices to product and variants
+	// This runs after both concurrent tasks are done, so no race conditions.
+
+	// 1. Assign product prices
+	for _, price := range allPrices {
+		if price.ProductID != nil && *price.ProductID == product.ID {
+			product.Prices = append(product.Prices, *price)
+		}
+	}
+
+	// 2. Assign variant prices
+	// Create a map of pointers to variants for O(1) lookup
+	variantMap := make(map[uint]*domain.ProductVariant, len(product.Variants))
+	for i := range product.Variants {
+		variantMap[product.Variants[i].ID] = &product.Variants[i]
+	}
+
+	for _, price := range allPrices {
+		if price.ProductVariantID != nil {
+			if variant, ok := variantMap[*price.ProductVariantID]; ok {
+				variant.Prices = append(variant.Prices, *price)
+			}
+		}
+	}
+
+	return nil
 }
 
 // Request/Response DTOs

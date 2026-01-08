@@ -269,7 +269,7 @@ func (r *ProductRepository) List(ctx context.Context, organizationID uint, filte
 		if filters.IncludePrices {
 			g.Go(func() error {
 				var err error
-				prices, err = r.fetchPricesForProducts(ctx, productIDs)
+				prices, err = r.FetchPricesForProducts(ctx, productIDs)
 				if err != nil {
 					r.logger.Error("Failed to bulk load product prices", "error", err)
 				}
@@ -368,10 +368,10 @@ func (r *ProductRepository) loadVariantsForProducts(ctx context.Context, product
 	return nil
 }
 
-// fetchPricesForProducts fetches all prices (product and variant) for a list of product IDs.
+// FetchPricesForProducts fetches all prices (product and variant) for a list of product IDs.
 // It uses a subquery to find variant IDs associated with the products, allowing it to run
 // independently of variant loading.
-func (r *ProductRepository) fetchPricesForProducts(ctx context.Context, productIDs []uint) ([]*domain.ProductPrice, error) {
+func (r *ProductRepository) FetchPricesForProducts(ctx context.Context, productIDs []uint) ([]*domain.ProductPrice, error) {
 	if len(productIDs) == 0 {
 		return nil, nil
 	}
@@ -429,13 +429,13 @@ func (r *ProductRepository) fetchPricesForProducts(ctx context.Context, productI
 
 // loadPricesForProducts loads prices for a list of product IDs and assigns them to the products
 func (r *ProductRepository) loadPricesForProducts(ctx context.Context, productIDs []uint, productMap map[uint]*domain.Product) error {
-	// This legacy method is kept for compatibility if needed, but List() now uses fetchPricesForProducts
+	// This legacy method is kept for compatibility if needed, but List() now uses FetchPricesForProducts
 	// alongside manual attachment to support parallelism.
 	// Re-implementing it using the new fetch method to reduce code duplication,
 	// BUT this method assumes variants are already loaded if it wants to attach to them.
 	// Since List() now handles attachment manually, this might be unused in List() path.
 
-	prices, err := r.fetchPricesForProducts(ctx, productIDs)
+	prices, err := r.FetchPricesForProducts(ctx, productIDs)
 	if err != nil {
 		return err
 	}
