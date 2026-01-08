@@ -269,11 +269,12 @@ func run() error {
 	registry := modules.NewRegistry()
 	modules.RegisterBuiltinModules(registry)
 
-	// Only load the modules needed for the current web UI experience
+	// Always load the modules needed for the current web UI experience
 	coreModules := []string{"projects", "templates", "modules", "static", "health"}
+	activeModules := append(coreModules, cfg.Modules...)
 
 	builder := modules.NewModuleSetBuilder(registry)
-	for _, moduleName := range coreModules {
+	for _, moduleName := range activeModules {
 		if _, ok := registry.GetModule(moduleName); ok {
 			builder.WithModule(moduleName)
 		} else {
