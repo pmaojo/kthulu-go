@@ -459,9 +459,28 @@ func (g *TemplateGenerator) generateCoreProviders() string {
 	}
 	imports = append(imports, driverImport)
 
+	// Generate domain imports for AutoMigrate
+	var domainImports []string
+	var autoMigrateModels []string
+	plan, _ := g.resolver.ResolveDependencies(g.config.Features)
+	relPath := g.getModuleRelPath()
+	for _, module := range plan.RequiredModules {
+		domainImport := g.moduleImportPath(relPath, module, "domain")
+		domainImports = append(domainImports, fmt.Sprintf("\t%sDomain \"%s\"", module, domainImport))
+		autoMigrateModels = append(autoMigrateModels, fmt.Sprintf("&%sDomain.%s{}", module, Capitalize(module)))
+	}
+
 	var importLines []string
 	for _, imp := range imports {
 		importLines = append(importLines, "\t"+imp)
+	}
+	importLines = append(importLines, domainImports...)
+
+	autoMigrateCall := ""
+	if len(autoMigrateModels) > 0 {
+		autoMigrateCall = fmt.Sprintf("\n\t// Auto-migrate all domain models\n\tif err := db.AutoMigrate(%s); err != nil {\n\t\treturn nil, fmt.Errorf(\"auto-migrate failed: %%w\", err)\n\t}\n\treturn db, nil", strings.Join(autoMigrateModels, ", "))
+	} else {
+		autoMigrateCall = "\n\treturn db, nil"
 	}
 
 	return fmt.Sprintf(`package core
@@ -479,7 +498,9 @@ func CoreRepositoryProviders() fx.Option {
 func NewDatabase() (*gorm.DB, error) {
 if os.Getenv("KTHULU_TEST_MODE") == "1" {
 log.Println("Using in-memory SQLite database for tests")
-return gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+if err != nil { return nil, err }
+%s
 }
 %s
 }
@@ -490,7 +511,7 @@ func getEnv(key, fallback string) string {
         }
         return fallback
 }
-`, strings.Join(importLines, "\n"), connectionBuilder.String())
+`, strings.Join(importLines, "\n"), autoMigrateCall, strings.Replace(connectionBuilder.String(), "return gorm.Open(", "db, err := gorm.Open(", 1)+"\nif err != nil { return nil, err }"+autoMigrateCall)
 }
 
 // Helper methods for code generation
