@@ -1,0 +1,9 @@
+{
+  "id": "oauthsso",
+  "name": "Oauthsso Module",
+  "type": "module",
+  "description": "Automatically discovered Kthulu module: oauthsso",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "Box"
+}

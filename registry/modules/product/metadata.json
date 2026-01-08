@@ -1,0 +1,9 @@
+{
+  "id": "product",
+  "name": "Product Module",
+  "type": "module",
+  "description": "Automatically discovered Kthulu module: product",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "Box"
+}

@@ -3,6 +3,7 @@ import path from 'path';
 import matter from 'gray-matter';
 
 const DOCS_DIR = path.join(process.cwd(), '..', 'docs');
+const REGISTRY_DIR = path.join(process.cwd(), '..', 'registry');
 
 export interface DocContent {
   slug: string[];
@@ -12,27 +13,19 @@ export interface DocContent {
   frontmatter: Record<string, any>;
 }
 
-export function getDocBySlug(slug: string[]): DocContent | null {
-  const fullPath = path.join(DOCS_DIR, ...slug) + '.md';
+export function getDocBySlug(slug: string[], baseDir: string = DOCS_DIR): DocContent | null {
+  if (!Array.isArray(slug)) return null;
   
-  if (!fs.existsSync(fullPath)) {
-    // Try index.md if it's a directory
-    const indexPath = path.join(DOCS_DIR, ...slug, 'index.md');
-    if (fs.existsSync(indexPath)) {
-      const fileContents = fs.readFileSync(indexPath, 'utf8');
-      const { data, content } = matter(fileContents);
-      return {
-        slug,
-        title: data.title || slug[slug.length - 1],
-        description: data.description || '',
-        content,
-        frontmatter: data,
-      };
-    }
-    return null;
-  }
+  const fullPath = path.join(baseDir, ...slug) + '.md';
+  const indexPath = path.join(baseDir, ...slug, 'index.md');
+  
+  let targetPath = '';
+  if (fs.existsSync(fullPath)) targetPath = fullPath;
+  else if (fs.existsSync(indexPath)) targetPath = indexPath;
+  
+  if (!targetPath) return null;
 
-  const fileContents = fs.readFileSync(fullPath, 'utf8');
+  const fileContents = fs.readFileSync(targetPath, 'utf8');
   const { data, content } = matter(fileContents);
 
   return {
@@ -44,8 +37,8 @@ export function getDocBySlug(slug: string[]): DocContent | null {
   };
 }
 
-export function getAllDocs(subDir: string = ''): DocContent[] {
-  const fullDir = path.join(DOCS_DIR, subDir);
+export function getAllDocs(subDir: string = '', baseDir: string = DOCS_DIR): DocContent[] {
+  const fullDir = path.join(baseDir, subDir);
   if (!fs.existsSync(fullDir)) return [];
 
   const files = fs.readdirSync(fullDir, { recursive: true }) as string[];
@@ -54,17 +47,20 @@ export function getAllDocs(subDir: string = ''): DocContent[] {
     .filter((file) => file.endsWith('.md'))
     .map((file) => {
       const relativePath = path.join(subDir, file);
-      const slug = relativePath.replace(/\.md$/, '').split(path.sep);
-      return getDocBySlug(slug);
+      const slug = relativePath.replace(/(\.md|index\.md)$/, '').split(path.sep).filter(Boolean);
+      return getDocBySlug(slug, baseDir);
     })
     .filter((doc): doc is DocContent => doc !== null);
 }
 
 export function getMarketplaceItems() {
-  const items = getAllDocs('marketplace');
+  const starters = getAllDocs('starters', REGISTRY_DIR);
+  const modules = getAllDocs('modules', REGISTRY_DIR);
+  const plugins = getAllDocs('plugins', REGISTRY_DIR);
+
   return {
-    starters: items.filter(item => item.frontmatter.type === 'starter'),
-    modules: items.filter(item => item.frontmatter.type === 'module'),
-    plugins: items.filter(item => item.frontmatter.type === 'plugin'),
+    starters,
+    modules,
+    plugins,
   };
 }

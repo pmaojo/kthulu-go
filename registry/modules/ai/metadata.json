@@ -1,0 +1,9 @@
+{
+  "id": "ai",
+  "name": "Ai Module",
+  "type": "module",
+  "description": "Automatically discovered Kthulu module: ai",
+  "author": "Kthulu Core",
+  "stars": 100,
+  "icon": "Sparkles"
+}

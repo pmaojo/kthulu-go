@@ -1,0 +1,9 @@
+{
+  "id": "organization",
+  "name": "Organization Module",
+  "type": "module",
+  "description": "Automatically discovered Kthulu module: organization",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "Box"
+}

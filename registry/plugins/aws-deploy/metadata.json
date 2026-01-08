@@ -1,0 +1,9 @@
+{
+  "id": "aws-deploy",
+  "name": "AWS Deploy",
+  "type": "plugin",
+  "description": "One-click deployment to AWS.",
+  "author": "CloudOps",
+  "stars": 88,
+  "icon": "Cloud"
+}

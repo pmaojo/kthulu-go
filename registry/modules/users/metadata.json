@@ -1,0 +1,9 @@
+{
+  "id": "users",
+  "name": "Users Module",
+  "type": "module",
+  "description": "Automatically discovered Kthulu module: users",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "Box"
+}

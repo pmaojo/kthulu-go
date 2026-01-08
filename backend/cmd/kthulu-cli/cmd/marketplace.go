@@ -3,14 +3,12 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"text/tabwriter"
 	"time"
 
-	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
@@ -58,10 +56,10 @@ var marketplaceInstallCmd = &cobra.Command{
 func init() {
 	// List command flags
 	marketplaceListCmd.Flags().String("type", "", "Filter by type (starter, module, plugin)")
-	marketplaceListCmd.Flags().String("repo", "/Users/pelayo/projects/kthulu-go/marketplace", "Path to marketplace repository")
+	marketplaceListCmd.Flags().String("repo", "/Users/pelayo/projects/kthulu-go/registry", "Path to marketplace repository")
 	
 	// Install command flags
-	marketplaceInstallCmd.Flags().String("repo", "/Users/pelayo/projects/kthulu-go/marketplace", "Path to marketplace repository")
+	marketplaceInstallCmd.Flags().String("repo", "/Users/pelayo/projects/kthulu-go/registry", "Path to marketplace repository")
 
 	marketplaceCmd.AddCommand(marketplaceListCmd)
 	marketplaceCmd.AddCommand(marketplaceInstallCmd)

@@ -1,0 +1,9 @@
+{
+  "id": "calendar",
+  "name": "Calendar Module",
+  "type": "module",
+  "description": "Automatically discovered Kthulu module: calendar",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "Box"
+}

@@ -1,0 +1,9 @@
+{
+  "id": "health",
+  "name": "Health Module",
+  "type": "module",
+  "description": "Automatically discovered Kthulu module: health",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "Box"
+}

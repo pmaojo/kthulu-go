@@ -1,0 +1,9 @@
+{
+  "id": "saas-starter",
+  "name": "SaaS Starter",
+  "type": "starter",
+  "description": "Full-stack SaaS with Auth and Billing.",
+  "author": "Kthulu Team",
+  "stars": 42,
+  "icon": "ShoppingBag"
+}

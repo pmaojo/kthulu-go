@@ -1,0 +1,3 @@
+name: "SaaS Starter"
+template: "saas-starter"
+modules: ["auth", "ai"]

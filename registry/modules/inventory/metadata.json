@@ -1,0 +1,9 @@
+{
+  "id": "inventory",
+  "name": "Inventory Module",
+  "type": "module",
+  "description": "Automatically discovered Kthulu module: inventory",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "Box"
+}

@@ -6,50 +6,59 @@ export default function MarketplacePage() {
   const { starters, modules, plugins } = getMarketplaceItems();
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-12">
-      <div className="mb-12">
-        <h1 className="text-4xl font-bold tracking-tighter mb-4 kthulu-glow">Marketplace</h1>
-        <p className="text-muted-foreground text-lg max-w-2xl">
-          Extend your Kthulu project with community-built starters, modules, and plugins.
+    <div className="kthulu-container py-12">
+      <div className="mb-16 text-center">
+        <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-4 text-gradient kthulu-glow">Marketplace</h1>
+        <p className="text-muted-foreground text-xl max-w-2xl mx-auto">
+          Scale your Kthulu ecosystem with high-performance starters, modules, and community plugins.
         </p>
       </div>
 
-      <section className="mb-16">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
-            <Zap size={24} />
+      <section className="mb-20">
+        <div className="flex items-center gap-4 mb-10 border-b border-white/5 pb-4">
+          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-[0_0_15px_rgba(0,255,102,0.1)]">
+            <Zap size={28} />
           </div>
-          <h2 className="text-2xl font-bold tracking-tight">Starters</h2>
+          <div>
+            <h2 className="text-3xl font-black tracking-tight uppercase italic">Starters</h2>
+            <p className="text-sm text-muted-foreground font-medium uppercase tracking-widest mt-1">Foundation Blueprints</p>
+          </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="kthulu-grid">
           {starters.map((item) => (
             <MarketplaceCard key={item.slug.join('/')} item={item} />
           ))}
         </div>
       </section>
 
-      <section className="mb-16">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-lg bg-secondary/20 flex items-center justify-center text-secondary">
-            <Shield size={24} />
+      <section className="mb-20">
+        <div className="flex items-center gap-4 mb-10 border-b border-white/5 pb-4">
+          <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary shadow-[0_0_15px_rgba(168,85,247,0.1)]">
+            <Shield size={28} />
           </div>
-          <h2 className="text-2xl font-bold tracking-tight">Modules</h2>
+          <div>
+            <h2 className="text-3xl font-black tracking-tight uppercase italic">Modules</h2>
+            <p className="text-sm text-muted-foreground font-medium uppercase tracking-widest mt-1">Foundational Capabilities</p>
+          </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="kthulu-grid">
           {modules.map((item) => (
             <MarketplaceCard key={item.slug.join('/')} item={item} />
           ))}
         </div>
       </section>
 
-      <section className="mb-16">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-lg bg-accent/20 flex items-center justify-center text-accent">
-            <Cloud size={24} />
+      <section className="mb-20">
+        <div className="flex items-center gap-4 mb-10 border-b border-white/5 pb-4">
+          <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center text-accent shadow-[0_0_15px_rgba(249,115,22,0.1)]">
+            <Cloud size={28} />
           </div>
-          <h2 className="text-2xl font-bold tracking-tight">Plugins</h2>
+          <div>
+            <h2 className="text-3xl font-black tracking-tight uppercase italic">Plugins</h2>
+            <p className="text-sm text-muted-foreground font-medium uppercase tracking-widest mt-1">Cloud & Infrastructure</p>
+          </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="kthulu-grid">
           {plugins.map((item) => (
             <MarketplaceCard key={item.slug.join('/')} item={item} />
           ))}
@@ -61,34 +70,43 @@ export default function MarketplacePage() {
 
 function MarketplaceCard({ item }: { item: any }) {
   const iconMap: Record<string, any> = {
-    Zap: <Zap size={18} />,
-    Shield: <Shield size={18} />,
-    Cloud: <Cloud size={18} />,
+    Zap: <Zap size={22} />,
+    Shield: <Shield size={22} />,
+    Cloud: <Cloud size={22} />,
   };
 
-  const Icon = iconMap[item.frontmatter.icon] || <Zap size={18} />;
+  const Icon = iconMap[item.frontmatter.icon] || <Zap size={22} />;
 
   return (
     <div className="kthulu-card group">
-      <div className="flex items-start justify-between mb-4">
-        <div className="p-2 rounded bg-white/5 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all">
+      <div className="flex items-start justify-between mb-8">
+        <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-primary group-hover:border-primary/40 group-hover:bg-primary/10 transition-all duration-500 shadow-inner">
           {Icon}
         </div>
-        <div className="flex items-center gap-1 text-xs text-muted-foreground bg-white/5 px-2 py-1 rounded">
-          <Star size={12} className="text-accent" />
-          {item.frontmatter.stars}
+        <div className="badge flex items-center gap-2">
+          <Star size={12} className="fill-primary" />
+          <span className="font-mono">{item.frontmatter.stars}</span>
         </div>
       </div>
-      <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">{item.frontmatter.title}</h3>
-      <p className="text-sm text-muted-foreground mb-6 line-clamp-2">{item.frontmatter.description}</p>
       
-      <div className="flex items-center justify-between mt-auto">
-        <span className="text-xs font-mono text-muted-foreground">by {item.frontmatter.author}</span>
+      <h3 className="text-2xl font-black tracking-tight mb-4 group-hover:text-primary transition-colors duration-300 italic uppercase">
+        {item.frontmatter.title}
+      </h3>
+      
+      <p className="text-base text-muted-foreground/70 mb-10 line-clamp-3 leading-relaxed font-medium">
+        {item.frontmatter.description}
+      </p>
+      
+      <div className="flex items-center justify-between mt-auto pt-8 border-t border-white/[0.05]">
+        <div className="flex flex-col">
+          <span className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/30 mb-1">Created By</span>
+          <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">{item.frontmatter.author}</span>
+        </div>
         <Link 
           href={`/docs/marketplace/${item.slug.slice(1).join('/')}`}
-          className="text-xs font-bold flex items-center gap-1 hover:text-primary transition-colors uppercase tracking-widest"
+          className="kthulu-btn !py-2 !px-4 !text-[10px] !rounded-lg"
         >
-          Details <ArrowRight size={14} />
+          Details <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
         </Link>
       </div>
     </div>
