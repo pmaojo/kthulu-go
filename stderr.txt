@@ -1,3 +1,0 @@
-Started MCP server (stdio) with 44 tools in /Users/pelayo/projects/kthulu-go
-Debug: Calling Serve()...
-Debug: Serve() returned. Error: <nil>

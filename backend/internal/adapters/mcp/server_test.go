@@ -51,9 +51,10 @@ func TestServerBuilderBuildServer(t *testing.T) {
 }
 
 func TestBuildTransportHTTP(t *testing.T) {
-	transport, endpoint, err := mcp.BuildTransport(mcp.TransportOptions{Kind: "http", ListenAddr: "127.0.0.1:9090", HTTPPath: "mcp"})
+	transport, endpoint, done, err := mcp.BuildTransport(mcp.TransportOptions{Kind: "http", ListenAddr: "127.0.0.1:9090", HTTPPath: "mcp"})
 	require.NoError(t, err)
 	require.NotNil(t, transport)
+	require.Nil(t, done)
 	require.Equal(t, "http://127.0.0.1:9090/mcp", endpoint)
 }
 

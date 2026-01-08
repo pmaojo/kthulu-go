@@ -2,7 +2,10 @@ package mcp
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"strings"
+	"sync"
 
 	mcp_golang "github.com/metoro-io/mcp-golang"
 	mcptransport "github.com/metoro-io/mcp-golang/transport"
@@ -36,6 +39,7 @@ type ServerInstance struct {
 	Server   *mcp_golang.Server
 	Endpoint string
 	Tools    []RegisteredTool
+	Done     <-chan struct{}
 }
 
 // ServerBuilder assembles MCP servers that expose kthulu CLI commands.
@@ -65,7 +69,7 @@ func (b *ServerBuilder) BuildServer(options ServerOptions) (*ServerInstance, err
 	filter := NewAllowDenyFilter(options.AllowList, options.DenyList)
 	tools := b.factory.BuildTools(options.WorkingDir, filter)
 
-	transport, endpoint, err := BuildTransport(options.Transport)
+	transport, endpoint, done, err := BuildTransport(options.Transport)
 	if err != nil {
 		return nil, err
 	}
@@ -88,15 +92,35 @@ func (b *ServerBuilder) BuildServer(options ServerOptions) (*ServerInstance, err
 		}
 	}
 
-	return &ServerInstance{Server: server, Endpoint: endpoint, Tools: tools}, nil
+	return &ServerInstance{Server: server, Endpoint: endpoint, Tools: tools, Done: done}, nil
+}
+
+// StdinKeeper wraps an io.Reader and closes Done channel on EOF.
+type StdinKeeper struct {
+	io.Reader
+	Done chan struct{}
+	once sync.Once
+}
+
+func (k *StdinKeeper) Read(p []byte) (n int, err error) {
+	n, err = k.Reader.Read(p)
+	if err == io.EOF {
+		k.once.Do(func() {
+			close(k.Done)
+		})
+	}
+	return n, err
 }
 
 // BuildTransport creates the transport requested by the caller and a human readable endpoint string.
-func BuildTransport(options TransportOptions) (mcptransport.Transport, string, error) {
+// It returns a done channel that is closed when the transport is finished (only applicable for stdio).
+func BuildTransport(options TransportOptions) (mcptransport.Transport, string, <-chan struct{}, error) {
 	kind := strings.ToLower(strings.TrimSpace(options.Kind))
 	switch kind {
 	case "", "stdio":
-		return stdio.NewStdioServerTransport(), "stdio", nil
+		done := make(chan struct{})
+		keeper := &StdinKeeper{Reader: os.Stdin, Done: done}
+		return stdio.NewStdioServerTransportWithIO(keeper, os.Stdout), "stdio", done, nil
 	case "http":
 		path := normalizeHTTPPath(options.HTTPPath)
 		transport := mcphttp.NewHTTPTransport(path)
@@ -105,9 +129,9 @@ func BuildTransport(options TransportOptions) (mcptransport.Transport, string, e
 			transport = transport.WithAddr(addr)
 		}
 		displayAddr := renderHTTPAddress(addr)
-		return transport, fmt.Sprintf("%s%s", displayAddr, path), nil
+		return transport, fmt.Sprintf("%s%s", displayAddr, path), nil, nil
 	default:
-		return nil, "", fmt.Errorf("unsupported MCP transport %s", options.Kind)
+		return nil, "", nil, fmt.Errorf("unsupported MCP transport %s", options.Kind)
 	}
 }
 

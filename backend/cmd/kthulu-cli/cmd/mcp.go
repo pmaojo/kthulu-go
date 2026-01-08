@@ -75,10 +75,15 @@ func runMCPServer(cmd *cobra.Command, _ []string) error {
 	}
 
 	fmt.Fprintf(cmd.ErrOrStderr(), "Started MCP server (%s) with %d tools in %s\n", instance.Endpoint, len(instance.Tools), workingDir)
-	fmt.Fprintf(cmd.ErrOrStderr(), "Debug: Calling Serve()...\n")
-	err = instance.Server.Serve()
-	fmt.Fprintf(cmd.ErrOrStderr(), "Debug: Serve() returned. Error: %v\n", err)
-	return err
+	if err := instance.Server.Serve(); err != nil {
+		return err
+	}
+
+	if instance.Done != nil {
+		<-instance.Done
+	}
+
+	return nil
 }
 
 func resolveWorkingDir(flagValue string) (string, error) {
