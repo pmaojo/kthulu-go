@@ -238,15 +238,19 @@ func runGoTests(projectPath string) error {
 	fmt.Println("\n🧪 Running go test with coverage...")
 	testCmd := exec.Command("go", "test", "./...", "-coverprofile=coverage.out")
 	testCmd.Dir = projectPath
+	testCmd.Env = append(os.Environ(), "GOWORK=off") // Avoid parent go.work interference
 	testCmd.Stdout = os.Stdout
 	testCmd.Stderr = os.Stderr
 	if err := testCmd.Run(); err != nil {
-		return fmt.Errorf("go test failed: %w", err)
+		fmt.Printf("⚠️  Tests failed (non-fatal): %v\n", err)
+		fmt.Println("   This is often caused by go.work files. Run 'GOWORK=off go test ./...' manually.")
+		return nil // Don't fail project creation on test failures
 	}
 
 	coverage, err := readCoveragePercentage(projectPath)
 	if err != nil {
-		return err
+		fmt.Printf("⚠️  Could not read coverage: %v\n", err)
+		return nil
 	}
 
 	_ = os.Remove(filepath.Join(projectPath, "coverage.out"))

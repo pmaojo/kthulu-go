@@ -431,19 +431,20 @@ func runAddComponent(componentType, name, module string, withTests, withMigratio
 
 	switch componentType {
 	case "handler":
-		content = gen.GenerateHandlerFile(generator.Capitalize(name))
+		// Use module name for imports, component name for the handler struct
+		content = gen.GenerateHandlerFile(module) // Use module for imports
 		subdir = "handlers"
 		filename = fmt.Sprintf("%s_handler.go", strings.ToLower(name))
 	case "service":
-		content = gen.GenerateServiceFile(name)
+		content = gen.GenerateServiceFile(module)
 		subdir = "service"
 		filename = fmt.Sprintf("%s_service.go", strings.ToLower(name))
 	case "repository":
-		content = gen.GenerateRepositoryFile(name)
+		content = gen.GenerateRepositoryFile(module)
 		subdir = "repository"
 		filename = fmt.Sprintf("%s_repository.go", strings.ToLower(name))
 	case "domain":
-		content = gen.GenerateDomainFile(name, nil)
+		content = gen.GenerateDomainFile(module, nil)
 		subdir = "domain"
 		filename = fmt.Sprintf("%s.go", strings.ToLower(name))
 	default:

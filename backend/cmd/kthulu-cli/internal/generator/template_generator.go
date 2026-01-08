@@ -496,12 +496,13 @@ func getEnv(key, fallback string) string {
 // Helper methods for code generation
 func (g *TemplateGenerator) generateModuleImports() string {
 	var imports []string
+	relPath := g.getModuleRelPath()
 	// Use resolved dependencies, not just initial features
 	plan, _ := g.resolver.ResolveDependencies(g.config.Features)
 	for _, module := range plan.RequiredModules {
-		moduleBase := g.moduleImportPath("internal/adapters/http/modules", module)
-		domainImport := g.moduleImportPath("internal/adapters/http/modules", module, "domain")
-		handlersImport := g.moduleImportPath("internal/adapters/http/modules", module, "handlers")
+		moduleBase := g.moduleImportPath(relPath, module)
+		domainImport := g.moduleImportPath(relPath, module, "domain")
+		handlersImport := g.moduleImportPath(relPath, module, "handlers")
 		imports = append(imports, fmt.Sprintf(` "%s"`, moduleBase))
 		imports = append(imports, fmt.Sprintf(` %sDomain "%s"`, module, domainImport))
 		imports = append(imports, fmt.Sprintf(` %sHandlers "%s"`, module, handlersImport))
