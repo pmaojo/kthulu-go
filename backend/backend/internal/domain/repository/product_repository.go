@@ -34,6 +34,7 @@ type ProductRepository interface {
 	GetPricesByProductID(ctx context.Context, productID uint) ([]*domain.ProductPrice, error)
 	GetPricesByVariantID(ctx context.Context, variantID uint) ([]*domain.ProductPrice, error)
 	GetPricesByVariantIDs(ctx context.Context, variantIDs []uint) ([]*domain.ProductPrice, error)
+	FetchPricesForProducts(ctx context.Context, productIDs []uint) ([]*domain.ProductPrice, error)
 	GetEffectivePrice(ctx context.Context, productID *uint, variantID *uint, priceType domain.PriceType, quantity int, at time.Time) (*domain.ProductPrice, error)
 	UpdatePrice(ctx context.Context, price *domain.ProductPrice) error
 	DeletePrice(ctx context.Context, priceID uint) error
