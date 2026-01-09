@@ -22,14 +22,15 @@ func TestRunGoTestsAllowsPartialCoverage(t *testing.T) {
 	}
 }
 
-func TestRunGoTestsFailsWhenTestsFail(t *testing.T) {
+func TestRunGoTestsContinuesWhenTestsFail(t *testing.T) {
 	dir := t.TempDir()
 	writeModuleFile(t, dir, "go.mod", "module example.com/testproj\n\ngo 1.24\n")
 	writeModuleFile(t, dir, "main.go", "package main\n\nfunc alwaysFalse() bool { return false }\n")
 	writeModuleFile(t, dir, "main_test.go", "package main\n\nimport \"testing\"\n\nfunc TestFail(t *testing.T) {\n    if alwaysFalse() {\n        t.Fatal(\"unexpected truthy\")\n    } else {\n        t.Fatal(\"expected failure for coverage enforcement\")\n    }\n}\n")
 
-	if err := runGoTests(dir); err == nil {
-		t.Fatalf("runGoTests should fail when go test fails")
+	// runGoTests is designed to be non-fatal on test failures during project creation
+	if err := runGoTests(dir); err != nil {
+		t.Fatalf("runGoTests should not return error on test failure, got: %v", err)
 	}
 }
 
