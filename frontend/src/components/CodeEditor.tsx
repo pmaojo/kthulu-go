@@ -1,4 +1,4 @@
-import { ChangeEvent, useRef, useState } from 'react';
+import { ChangeEvent, useRef, useState, useMemo, useCallback } from 'react';
 import Editor from '@monaco-editor/react';
 import { FileCode, Download, Upload, Eye, Code, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -123,11 +123,35 @@ export function CodeEditor({ className }: CodeEditorProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const handleLoadClick = () => {
-    fileInputRef.current?.click();
-  };
+  const editorOptions = useMemo(() => ({
+    fontSize: 13,
+    fontFamily: 'JetBrains Mono, Fira Code, monospace',
+    minimap: { enabled: false },
+    scrollBeyondLastLine: false,
+    wordWrap: 'on' as const,
+    lineNumbers: 'on' as const,
+    folding: true,
+    bracketPairColorization: { enabled: true },
+  }), []);
 
-  const handleFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+  const generatedEditorOptions = useMemo(() => ({
+    fontSize: 13,
+    fontFamily: 'JetBrains Mono, Fira Code, monospace',
+    minimap: { enabled: false },
+    scrollBeyondLastLine: false,
+    readOnly: true,
+    lineNumbers: 'on' as const,
+  }), []);
+
+  const handleEditorChange = useCallback((value: string | undefined) => {
+    setYamlContent(value || '');
+  }, []);
+
+  const handleLoadClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileUpload = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
 
     if (!file) {
@@ -174,9 +198,9 @@ export function CodeEditor({ className }: CodeEditorProps) {
       // Reset the input so that the same file can be uploaded again if needed
       event.target.value = '';
     }
-  };
+  }, [toast]);
 
-  const handleExport = () => {
+  const handleExport = useCallback(() => {
     if (!yamlContent.trim()) {
       toast({
         title: 'Sin contenido para exportar',
@@ -227,13 +251,16 @@ export function CodeEditor({ className }: CodeEditorProps) {
         variant: 'destructive',
       });
     }
-  };
+  }, [yamlContent, generatedPreview, toast]);
 
-  const handleGenerate = async () => {
+  const handleGenerate = useCallback(async () => {
     try {
       setIsGenerating(true);
       
       // Parse YAML to create project request
+      // Note: We currently ignore yamlContent here for the mock implementation,
+      // so we don't include it in dependencies to avoid unnecessary recreation
+      // of this handler on every keystroke.
       const projectRequest = {
         name: 'auth-service',
         template: 'hexagonal-go',
@@ -266,7 +293,7 @@ ${generatedCode}`;
     } finally {
       setIsGenerating(false);
     }
-  };
+  }, [toast]); // Removed yamlContent to avoid re-creation on typing
 
   return (
     <div className={`h-full bg-kthulu-surface1 flex flex-col ${className}`}>
@@ -352,18 +379,9 @@ ${generatedCode}`;
               height="100%"
               defaultLanguage="yaml"
               value={yamlContent}
-              onChange={(value) => setYamlContent(value || '')}
+              onChange={handleEditorChange}
               theme="vs-dark"
-              options={{
-                fontSize: 13,
-                fontFamily: 'JetBrains Mono, Fira Code, monospace',
-                minimap: { enabled: false },
-                scrollBeyondLastLine: false,
-                wordWrap: 'on',
-                lineNumbers: 'on',
-                folding: true,
-                bracketPairColorization: { enabled: true },
-              }}
+              options={editorOptions}
             />
           </div>
         </TabsContent>
@@ -417,14 +435,7 @@ ${generatedCode}`;
               defaultLanguage="go"
               value={generatedPreview || generatedCode}
               theme="vs-dark"
-              options={{
-                fontSize: 13,
-                fontFamily: 'JetBrains Mono, Fira Code, monospace',
-                minimap: { enabled: false },
-                scrollBeyondLastLine: false,
-                readOnly: true,
-                lineNumbers: 'on',
-              }}
+              options={generatedEditorOptions}
             />
           </div>
         </TabsContent>
