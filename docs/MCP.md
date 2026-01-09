@@ -13,7 +13,7 @@ When running as an MCP server, Kthulu exposes the following **Tools**:
 - **ai**: Invoke the internal AI assistant for code suggestions.
 - **secure**: Run security scans.
 - **migrate**: Manage database migrations.
-- **inspect**: (If available) Read project structure and configuration.
+- **inspect**: Read project structure and configuration.
 
 ## Installation & Configuration
 
@@ -22,8 +22,8 @@ When running as an MCP server, Kthulu exposes the following **Tools**:
 Ensure you have the `kthulu-cli` binary built and accessible:
 
 ```bash
-cd backend/backend
-go build -o ../../bin/kthulu-cli ./cmd/kthulu-cli
+cd backend
+go build -o ../bin/kthulu-cli ./cmd/kthulu-cli
 ```
 
 ### 2. Configure Claude Desktop
@@ -33,7 +33,7 @@ Edit your configuration file:
 - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 - **Windows**: `%APPDATA%/Claude/claude_desktop_config.json`
 
-Add the server configuration:
+Add the server configuration. **Note that you must provide your `GEMINI_API_KEY` in the `env` block** so the CLI allows AI features to work properly.
 
 ```json
 {
@@ -43,13 +43,38 @@ Add the server configuration:
       "args": [
         "mcp",
         "--working-dir", "/absolute/path/to/your/target/project"
-      ]
+      ],
+      "env": {
+        "GEMINI_API_KEY": "your-gemini-api-key-here"
+      }
     }
   }
 }
 ```
 
-**Note:** The `--working-dir` argument is crucial. It tells the Kthulu MCP server where to execute commands. If omitted, it defaults to the directory where the process is started (which might be the wrong place).
+**Note:** The `--working-dir` argument is crucial. It tells the Kthulu MCP server where to execute commands. If omitted, it defaults to the directory where the process is started.
+
+### 3. Manual Usage
+
+If you are running the MCP server manually (e.g. for testing or another client), ensure the environment variable is set:
+
+```bash
+export GEMINI_API_KEY=your-gemini-api-key-here
+./bin/kthulu-cli mcp --working-dir /path/to/project
+```
+
+## Configuration Flags
+
+The `mcp` command supports several flags to customize its behavior:
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--working-dir` | Working directory for executed CLI commands | Current directory |
+| `--transport` | Transport for MCP server: `stdio` or `http` | `stdio` |
+| `--listen` | Listen address when using the HTTP transport | `:8080` |
+| `--http-path` | HTTP path for MCP requests when transport=`http` | `/mcp` |
+| `--allow` | Whitelist of CLI command paths (e.g. `migrate up`). Only these commands will be exposed. | None (all exposed) |
+| `--deny` | Blacklist of CLI command paths (e.g. `deploy apply`). Denials override allows. | None |
 
 ## Debugging
 
@@ -57,6 +82,7 @@ To debug the MCP communication:
 
 1. Use the **MCP Inspector**:
    ```bash
+   export GEMINI_API_KEY=your-key
    npx @modelcontextprotocol/inspector \
      /absolute/path/to/kthulu-go/bin/kthulu-cli \
      mcp --working-dir /path/to/test/project

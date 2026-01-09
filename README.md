@@ -147,13 +147,19 @@ To use Kthulu as an MCP server with Claude Desktop, add the following configurat
   "mcpServers": {
     "kthulu": {
       "command": "/path/to/kthulu-cli",
-      "args": ["mcp", "--working-dir", "/path/to/your/project"]
+      "args": [
+        "mcp",
+        "--working-dir", "/path/to/your/project"
+      ],
+      "env": {
+        "GEMINI_API_KEY": "your-gemini-api-key-here"
+      }
     }
   }
 }
 ```
 
-Replace `/path/to/kthulu-cli` with the absolute path to your compiled binary (or `go run ...`) and `/path/to/your/project` with the directory where you want the AI to perform actions.
+Replace `/path/to/kthulu-cli` with the absolute path to your compiled binary (or `go run ...`) and `/path/to/your/project` with the directory where you want the AI to perform actions. Ensure you provide your `GEMINI_API_KEY` in the `env` block so the CLI can access AI features.
 
 ## Frontend Experience
 
