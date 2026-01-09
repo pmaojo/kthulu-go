@@ -8,6 +8,7 @@ goos: windows
 goarch: arm64
 env:
   - CGO_ENABLED=0
+  - GOWORK=off
 ldflags:
   - -s -w
   - -X github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/cmd.version={{.Version}}
