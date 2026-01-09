@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Node } from "@xyflow/react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { KthuluSidebar } from "@/components/KthuluSidebar";
@@ -8,7 +8,7 @@ import { Terminal } from "@/components/Terminal";
 import { CodeEditor } from "@/components/CodeEditor";
 import { Dashboard } from "@/components/Dashboard";
 import { BehaviorLab } from "@/components/BehaviorLab";
-import { Projects } from "@/components/Projects"; // New import
+import { Projects } from "@/components/Projects";
 import { ProjectGeneratorDialog } from "@/components/ProjectGeneratorDialog";
 import { ModuleCatalog } from "@/components/ModuleCatalog";
 import { ComponentScaffolder } from "@/components/ComponentScaffolder";
@@ -22,9 +22,16 @@ import { Badge } from "@/components/ui/badge";
 import { useKthuluConnection } from "@/hooks/useKthuluConnection";
 import { ElementProperties, ElementType } from "@/types/properties";
 import CommandPalette from "@/components/CommandPalette";
+import { useParams, useNavigate } from "react-router-dom";
 
-const Index = () => {
-  const [activeSection, setActiveSection] = useState("dashboard"); // Changed default to dashboard
+interface IndexProps {
+  section?: string;
+}
+
+const Index = ({ section: propSection }: IndexProps) => {
+  const navigate = useNavigate();
+  const { moduleId } = useParams(); // Get moduleId from URL if present
+  const [activeSection, setActiveSection] = useState(propSection || "dashboard");
   const [showProperties, setShowProperties] = useState(false);
   const [showGenerator, setShowGenerator] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -36,6 +43,36 @@ const Index = () => {
     status: "active",
   });
   const { isConnected, isChecking } = useKthuluConnection();
+
+  // Sync activeSection with propSection when it changes (e.g. navigation)
+  useEffect(() => {
+    if (propSection) {
+      setActiveSection(propSection);
+    }
+  }, [propSection]);
+
+  const handleSectionChange = (section: string) => {
+    setActiveSection(section);
+    // Map section back to URL
+    switch (section) {
+      case "dashboard": navigate("/"); break;
+      case "projects": navigate("/projects"); break;
+      case "modules": navigate("/hub"); break;
+      case "services": navigate("/services"); break;
+      case "entities": navigate("/entities"); break;
+      case "architecture": navigate("/architecture"); break;
+      case "terminal": navigate("/terminal"); break;
+      case "behavior-lab": navigate("/behavior-lab"); break;
+      case "components": navigate("/components"); break;
+      case "templates": navigate("/templates"); break;
+      case "audit": navigate("/audit"); break;
+      case "ai": navigate("/ai"); break;
+      case "generate": navigate("/generate"); break;
+      case "code": navigate("/code"); break;
+      case "settings": navigate("/settings"); break;
+      default: break; // Or navigate to /?
+    }
+  };
 
   const handleApplyProperties = (updatedElement: ElementProperties) => {
     setSelectedElement(updatedElement);
@@ -63,14 +100,14 @@ const Index = () => {
 
   const renderMainContent = () => {
     switch (activeSection) {
-      case "dashboard": // Handled Dashboard ID
-      case "preview": // Keep backward compatibility just in case
+      case "dashboard":
+      case "preview":
         return <Dashboard />;
 
-      case "behavior-lab": // New section
+      case "behavior-lab":
         return <BehaviorLab />;
 
-      case "projects": // New section
+      case "projects":
         return <Projects onCreateProject={() => setShowGenerator(true)} />;
 
       case "services":
@@ -86,7 +123,8 @@ const Index = () => {
         return <CodeEditor className="flex-1" />;
 
       case "modules":
-        return <ModuleCatalog />;
+        // Pass moduleId to ModuleCatalog if present
+        return <ModuleCatalog initialModuleId={moduleId} />;
 
       case "components":
         return <ComponentScaffolder />;
@@ -108,9 +146,6 @@ const Index = () => {
         return <SecurityPanel />;
       
       default:
-        // Fallback to Dashboard if unknown section, or keep ServiceCanvas?
-        // Let's keep ServiceCanvas as fallback for now, or Dashboard.
-        // Given Dashboard is the main entry, Dashboard makes sense, but ServiceCanvas was original default.
         return <Dashboard />;
     }
   };
@@ -188,7 +223,7 @@ const Index = () => {
           open={commandPaletteOpen}
           onOpenChange={setCommandPaletteOpen}
           activeSection={activeSection}
-          onNavigate={setActiveSection}
+          onNavigate={handleSectionChange}
           onToggleProperties={() => setShowProperties((current) => !current)}
           onOpenGenerator={() => setShowGenerator(true)}
         />
@@ -197,7 +232,7 @@ const Index = () => {
         <div className="flex h-[calc(100vh-3.5rem)] w-full">
           <KthuluSidebar 
             activeSection={activeSection} 
-            onSectionChange={setActiveSection}
+            onSectionChange={handleSectionChange}
           />
           
           {/* Main Content */}

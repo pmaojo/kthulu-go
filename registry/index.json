@@ -1,0 +1,269 @@
+{
+  "generated_at": "2026-01-08T23:45:28.045082719Z",
+  "items": [
+    {
+      "id": "base-api",
+      "name": "Base API",
+      "type": "starter",
+      "description": "The standard Kthulu API structure.",
+      "author": "Kthulu Team",
+      "stars": 42,
+      "tags": null,
+      "version": "",
+      "icon": "Zap"
+    },
+    {
+      "id": "saas-starter",
+      "name": "SaaS Starter",
+      "type": "starter",
+      "description": "Full-stack SaaS with Auth and Billing.",
+      "author": "Kthulu Team",
+      "stars": 42,
+      "tags": null,
+      "version": "",
+      "icon": "ShoppingBag"
+    },
+    {
+      "id": "ai",
+      "name": "Ai Module",
+      "type": "module",
+      "description": "Automatically discovered Kthulu module: ai",
+      "author": "Kthulu Core",
+      "stars": 100,
+      "tags": null,
+      "version": "",
+      "icon": "Sparkles"
+    },
+    {
+      "id": "auth",
+      "name": "Auth Module",
+      "type": "module",
+      "description": "Automatically discovered Kthulu module: auth",
+      "author": "Kthulu Core",
+      "stars": 100,
+      "tags": null,
+      "version": "",
+      "icon": "Shield"
+    },
+    {
+      "id": "calendar",
+      "name": "Calendar Module",
+      "type": "module",
+      "description": "Automatically discovered Kthulu module: calendar",
+      "author": "Kthulu Core",
+      "stars": 0,
+      "tags": null,
+      "version": "",
+      "icon": "Box"
+    },
+    {
+      "id": "cli",
+      "name": "Cli Module",
+      "type": "module",
+      "description": "Automatically discovered Kthulu module: cli",
+      "author": "Kthulu Core",
+      "stars": 0,
+      "tags": null,
+      "version": "",
+      "icon": "Box"
+    },
+    {
+      "id": "contact",
+      "name": "Contact Module",
+      "type": "module",
+      "description": "Automatically discovered Kthulu module: contact",
+      "author": "Kthulu Core",
+      "stars": 0,
+      "tags": null,
+      "version": "",
+      "icon": "Box"
+    },
+    {
+      "id": "flags",
+      "name": "Flags Module",
+      "type": "module",
+      "description": "Automatically discovered Kthulu module: flags",
+      "author": "Kthulu Core",
+      "stars": 0,
+      "tags": null,
+      "version": "",
+      "icon": "Box"
+    },
+    {
+      "id": "health",
+      "name": "Health Module",
+      "type": "module",
+      "description": "Automatically discovered Kthulu module: health",
+      "author": "Kthulu Core",
+      "stars": 0,
+      "tags": null,
+      "version": "",
+      "icon": "Box"
+    },
+    {
+      "id": "inventory",
+      "name": "Inventory Module",
+      "type": "module",
+      "description": "Automatically discovered Kthulu module: inventory",
+      "author": "Kthulu Core",
+      "stars": 0,
+      "tags": null,
+      "version": "",
+      "icon": "Box"
+    },
+    {
+      "id": "invoice",
+      "name": "Invoice Module",
+      "type": "module",
+      "description": "Automatically discovered Kthulu module: invoice",
+      "author": "Kthulu Core",
+      "stars": 0,
+      "tags": null,
+      "version": "",
+      "icon": "Box"
+    },
+    {
+      "id": "modules",
+      "name": "Modules Module",
+      "type": "module",
+      "description": "Automatically discovered Kthulu module: modules",
+      "author": "Kthulu Core",
+      "stars": 0,
+      "tags": null,
+      "version": "",
+      "icon": "Box"
+    },
+    {
+      "id": "notifier",
+      "name": "Notifier Module",
+      "type": "module",
+      "description": "Automatically discovered Kthulu module: notifier",
+      "author": "Kthulu Core",
+      "stars": 0,
+      "tags": null,
+      "version": "",
+      "icon": "Box"
+    },
+    {
+      "id": "oauthsso",
+      "name": "Oauthsso Module",
+      "type": "module",
+      "description": "Automatically discovered Kthulu module: oauthsso",
+      "author": "Kthulu Core",
+      "stars": 0,
+      "tags": null,
+      "version": "",
+      "icon": "Box"
+    },
+    {
+      "id": "organization",
+      "name": "Organization Module",
+      "type": "module",
+      "description": "Automatically discovered Kthulu module: organization",
+      "author": "Kthulu Core",
+      "stars": 0,
+      "tags": null,
+      "version": "",
+      "icon": "Box"
+    },
+    {
+      "id": "product",
+      "name": "Product Module",
+      "type": "module",
+      "description": "Automatically discovered Kthulu module: product",
+      "author": "Kthulu Core",
+      "stars": 0,
+      "tags": null,
+      "version": "",
+      "icon": "Box"
+    },
+    {
+      "id": "projects",
+      "name": "Projects Module",
+      "type": "module",
+      "description": "Automatically discovered Kthulu module: projects",
+      "author": "Kthulu Core",
+      "stars": 0,
+      "tags": null,
+      "version": "",
+      "icon": "Box"
+    },
+    {
+      "id": "realtime",
+      "name": "Realtime Module",
+      "type": "module",
+      "description": "Automatically discovered Kthulu module: realtime",
+      "author": "Kthulu Core",
+      "stars": 0,
+      "tags": null,
+      "version": "",
+      "icon": "Box"
+    },
+    {
+      "id": "secure",
+      "name": "Secure Module",
+      "type": "module",
+      "description": "Automatically discovered Kthulu module: secure",
+      "author": "Kthulu Core",
+      "stars": 0,
+      "tags": null,
+      "version": "",
+      "icon": "Box"
+    },
+    {
+      "id": "templates",
+      "name": "Templates Module",
+      "type": "module",
+      "description": "Automatically discovered Kthulu module: templates",
+      "author": "Kthulu Core",
+      "stars": 0,
+      "tags": null,
+      "version": "",
+      "icon": "Box"
+    },
+    {
+      "id": "user",
+      "name": "User Module",
+      "type": "module",
+      "description": "Automatically discovered Kthulu module: user",
+      "author": "Kthulu Core",
+      "stars": 0,
+      "tags": null,
+      "version": "",
+      "icon": "Box"
+    },
+    {
+      "id": "users",
+      "name": "Users Module",
+      "type": "module",
+      "description": "Automatically discovered Kthulu module: users",
+      "author": "Kthulu Core",
+      "stars": 0,
+      "tags": null,
+      "version": "",
+      "icon": "Box"
+    },
+    {
+      "id": "verifactu",
+      "name": "Verifactu Module",
+      "type": "module",
+      "description": "Automatically discovered Kthulu module: verifactu",
+      "author": "Kthulu Core",
+      "stars": 0,
+      "tags": null,
+      "version": "",
+      "icon": "Box"
+    },
+    {
+      "id": "aws-deploy",
+      "name": "AWS Deploy",
+      "type": "plugin",
+      "description": "One-click deployment to AWS.",
+      "author": "CloudOps",
+      "stars": 88,
+      "tags": null,
+      "version": "",
+      "icon": "Cloud"
+    }
+  ]
+}

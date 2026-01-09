@@ -1,0 +1,29 @@
+name: Registry Update
+
+on:
+  push:
+    paths:
+      - 'registry/**'
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  update-index:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24'
+
+      - name: Generate Index
+        run: go run backend/cmd/registry-indexer/main.go --path registry --output registry/index.json
+
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: update registry index [skip ci]"
+          file_pattern: 'registry/index.json'

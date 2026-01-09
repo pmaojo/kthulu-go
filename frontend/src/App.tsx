@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-// BehaviorLab page was deleted, integrated into Index.tsx as a component
 
 const queryClient = new QueryClient();
 
@@ -17,9 +16,24 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          {/* BehaviorLab is now integrated into Index, but we can keep the route redirection if needed,
-              or just remove it. Since it's a SPA now controlled by Index state, we remove the direct route.
-          */}
+          <Route path="/projects" element={<Index section="projects" />} />
+          <Route path="/hub" element={<Index section="modules" />} />
+          <Route path="/hub/:moduleId" element={<Index section="modules" />} />
+
+          <Route path="/services" element={<Index section="services" />} />
+          <Route path="/entities" element={<Index section="entities" />} />
+          <Route path="/architecture" element={<Index section="architecture" />} />
+          <Route path="/terminal" element={<Index section="terminal" />} />
+
+          <Route path="/behavior-lab" element={<Index section="behavior-lab" />} />
+          <Route path="/components" element={<Index section="components" />} />
+          <Route path="/templates" element={<Index section="templates" />} />
+          <Route path="/audit" element={<Index section="audit" />} />
+          <Route path="/ai" element={<Index section="ai" />} />
+          <Route path="/generate" element={<Index section="generate" />} />
+          <Route path="/code" element={<Index section="code" />} />
+          <Route path="/settings" element={<Index section="settings" />} />
+
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
