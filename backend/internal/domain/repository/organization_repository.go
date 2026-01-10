@@ -13,6 +13,7 @@ type OrganizationRepository interface {
 	// Basic CRUD operations
 	Create(ctx context.Context, org *domain.Organization) error
 	FindByID(ctx context.Context, id uint) (*domain.Organization, error)
+	FindByIDs(ctx context.Context, ids []uint) ([]*domain.Organization, error)
 	FindBySlug(ctx context.Context, slug string) (*domain.Organization, error)
 	Update(ctx context.Context, org *domain.Organization) error
 	Delete(ctx context.Context, id uint) error

@@ -297,14 +297,15 @@ func (u *OrganizationUseCase) ListUserOrganizations(ctx context.Context, userID 
 	}
 
 	// Get organizations
-	organizations := make([]*domain.Organization, 0, len(orgUsers))
-	for _, orgUser := range orgUsers {
-		org, err := u.organizations.FindByID(ctx, orgUser.OrganizationID)
-		if err != nil {
-			u.logger.Error("Failed to find organization", "organizationId", orgUser.OrganizationID, "error", err)
-			continue // Skip this organization but continue with others
-		}
-		organizations = append(organizations, org)
+	orgIDs := make([]uint, len(orgUsers))
+	for i, orgUser := range orgUsers {
+		orgIDs[i] = orgUser.OrganizationID
+	}
+
+	organizations, err := u.organizations.FindByIDs(ctx, orgIDs)
+	if err != nil {
+		u.logger.Error("Failed to find organizations", "userId", userID, "count", len(orgIDs), "error", err)
+		return nil, fmt.Errorf("failed to find organizations: %w", err)
 	}
 
 	u.logger.Info("User organizations retrieved", "userId", userID, "count", len(organizations))
