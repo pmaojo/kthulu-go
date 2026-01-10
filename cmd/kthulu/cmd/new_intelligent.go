@@ -534,8 +534,13 @@ func displaySuccessMessage(projectName string, config *generator.GeneratorConfig
 
 	fmt.Printf("\n🔧 Additional commands:\n")
 	fmt.Printf("   kthulu add module <name>    # Add new modules\n")
-	fmt.Printf("   kthulu ai suggest          # Get AI recommendations\n")
-	fmt.Printf("   kthulu analyze             # Analyze project structure\n")
+	fmt.Printf("   kthulu add component <type> # Add new components (handler, service, etc)\n")
+	fmt.Printf("   kthulu ai suggest           # Get AI recommendations\n")
+	fmt.Printf("   kthulu analyze              # Analyze project structure\n")
+	fmt.Printf("   kthulu doc                  # Generate OpenAPI documentation\n")
+	fmt.Printf("   kthulu secure               # Audit and patch security vulnerabilities\n")
+	fmt.Printf("   kthulu audit                # Run enterprise compliance checks\n")
+	fmt.Printf("   kthulu deploy               # Deploy to cloud providers\n")
 
 	fmt.Printf("\n📚 Documentation: https://docs.kthulu.dev\n")
 	fmt.Printf("💬 Community: https://discord.gg/kthulu\n")
