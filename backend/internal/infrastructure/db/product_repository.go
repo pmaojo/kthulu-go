@@ -389,10 +389,14 @@ func (r *ProductRepository) FetchPricesForProducts(ctx context.Context, productI
 			   min_quantity, max_quantity, valid_from, valid_until,
 			   is_active, created_at, updated_at
 		FROM product_prices
-		WHERE product_id IN (%s)
-		   OR product_variant_id IN (
-		       SELECT id FROM product_variants WHERE product_id IN (%s)
-		   )
+		WHERE product_id IN (%s) AND product_variant_id IS NULL
+		UNION ALL
+		SELECT pp.id, pp.product_id, pp.product_variant_id, pp.price_type, pp.currency, pp.amount,
+			   pp.min_quantity, pp.max_quantity, pp.valid_from, pp.valid_until,
+			   pp.is_active, pp.created_at, pp.updated_at
+		FROM product_prices pp
+		JOIN product_variants pv ON pp.product_variant_id = pv.id
+		WHERE pv.product_id IN (%s)
 		ORDER BY price_type, min_quantity`, idsStr, idsStr)
 
 	// Since we are using positional placeholders $1..$N in both IN clauses, and they refer to the same set of IDs
