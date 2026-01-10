@@ -125,6 +125,26 @@ func (r *OrganizationRepository) FindByID(ctx context.Context, id uint) (*domain
 	return r.modelToDomain(&model), nil
 }
 
+// FindByIDs finds organizations by IDs
+func (r *OrganizationRepository) FindByIDs(ctx context.Context, ids []uint) ([]*domain.Organization, error) {
+	var models []organizationModel
+
+	if len(ids) == 0 {
+		return []*domain.Organization{}, nil
+	}
+
+	if err := r.db.WithContext(ctx).Where("id IN ?", ids).Find(&models).Error; err != nil {
+		return nil, err
+	}
+
+	organizations := make([]*domain.Organization, len(models))
+	for i, model := range models {
+		organizations[i] = r.modelToDomain(&model)
+	}
+
+	return organizations, nil
+}
+
 // FindBySlug finds an organization by slug
 func (r *OrganizationRepository) FindBySlug(ctx context.Context, slug string) (*domain.Organization, error) {
 	var model organizationModel
