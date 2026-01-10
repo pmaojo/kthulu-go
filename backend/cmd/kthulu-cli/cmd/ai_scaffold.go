@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
+	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/blueprint"
 	"github.com/pmaojo/kthulu-go/backend/internal/usecase"
 )
 
@@ -108,8 +109,8 @@ User Description:
 	cleanYaml := performBasicYamlCleanup(yamlContent)
 
 	// Verify it parses
-	var plan ProjectPlan
-	if err := yaml.Unmarshal([]byte(cleanYaml), &plan); err != nil {
+	var bp blueprint.ProjectBlueprint
+	if err := yaml.Unmarshal([]byte(cleanYaml), &bp); err != nil {
 		fmt.Printf("⚠️  Generated YAML might be invalid, but saving anyway for inspection.\nError: %v\n", err)
 	}
 
@@ -124,7 +125,7 @@ User Description:
 	colorPrintPlan(cleanYaml)
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	fmt.Printf("\n🚀 To create this project, run:\n")
-	fmt.Printf("   kthulu create %s --from-plan %s\n", plan.Name, outputFile)
+	fmt.Printf("   kthulu create %s --from-plan %s\n", bp.Name, outputFile)
 
 	return nil
 }

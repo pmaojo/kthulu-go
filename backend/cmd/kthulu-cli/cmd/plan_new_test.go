@@ -7,6 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
+
+	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/blueprint"
 )
 
 func TestPlanCommand(t *testing.T) {
@@ -27,12 +29,12 @@ func TestPlanCommand(t *testing.T) {
 	data, err := os.ReadFile(planPath)
 	assert.NoError(t, err)
 
-	var blueprint ProjectBlueprint
-	err = yaml.Unmarshal(data, &blueprint)
+	var bp blueprint.ProjectBlueprint
+	err = yaml.Unmarshal(data, &bp)
 	assert.NoError(t, err)
 
-	assert.Equal(t, "my-test-app", blueprint.Name)
-	assert.Equal(t, "microservice", blueprint.Template)
-	assert.Contains(t, blueprint.Features, "auth")
-	assert.Equal(t, "sqlite", blueprint.Database)
+	assert.Equal(t, "my-test-app", bp.Name)
+	assert.Equal(t, "microservice", bp.Template)
+	assert.Contains(t, bp.Features, "auth")
+	assert.Equal(t, "sqlite", bp.Database)
 }

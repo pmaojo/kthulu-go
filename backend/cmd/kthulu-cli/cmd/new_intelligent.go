@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
+	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/blueprint"
 	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/generator"
 	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/resolver"
 	"github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/parser"
@@ -26,21 +27,6 @@ type ProjectTemplate struct {
 	Frontend    string
 	Auth        string
 	Enterprise  bool
-}
-
-type ProjectPlan struct {
-	Name        string                  `yaml:"name"`
-	Description string                  `yaml:"description"`
-	Template    string                  `yaml:"template"`
-	Features    []string                `yaml:"features"`
-	Modules     map[string]ModuleConfig `yaml:"modules"`
-	Database    string                  `yaml:"database"`
-	Frontend    string                  `yaml:"frontend"`
-	Auth        string                  `yaml:"auth"`
-}
-
-type ModuleConfig struct {
-	Fields []string `yaml:"fields"`
 }
 
 var projectTemplates = map[string]ProjectTemplate{
@@ -130,20 +116,21 @@ and prepare your development environment.
 }
 
 var (
-	newTemplate      string
-	newFeatures      []string
-	newDatabase      string
-	newFrontend      string
-	newAuth          string
-	newModulePath    string
-	newEnterprise    bool
-	newObservability bool
-	newOutputPath    string
-	newDryRun        bool
-	newInteractive   bool
-	newFromPlan      string
-	newModuleFields  map[string][]string
+	newTemplate        string
+	newFeatures        []string
+	newDatabase        string
+	newFrontend        string
+	newAuth            string
+	newModulePath      string
+	newEnterprise      bool
+	newObservability   bool
+	newOutputPath      string
+	newDryRun          bool
+	newInteractive     bool
+	newFromPlan        string
+	newModuleFields    map[string][]string
 	newFrontendModules []string
+	newRequirements    []blueprint.Requirement
 )
 
 const (
@@ -230,6 +217,24 @@ func runNewProjectIntelligent(cmd *cobra.Command, args []string) {
 	if err := templateGenerator.WriteProject(structure); err != nil {
 		fmt.Printf("❌ Error writing project: %v\n", err)
 		os.Exit(1)
+	}
+
+	// Step 7b: Write Requirements if present
+	if len(newRequirements) > 0 {
+		if err := writeRequirementsDoc(structure.RootPath, newRequirements); err != nil {
+			fmt.Printf("⚠️  Warning: Failed to write REQUIREMENTS.md: %v\n", err)
+		} else {
+			fmt.Println("   📄 Generated docs/REQUIREMENTS.md")
+		}
+	}
+
+	// Step 7c: Copy Plan file if used
+	if newFromPlan != "" {
+		if err := copyPlanFile(newFromPlan, structure.RootPath); err != nil {
+			fmt.Printf("⚠️  Warning: Failed to copy plan file: %v\n", err)
+		} else {
+			fmt.Println("   📄 Copied plan file to project root")
+		}
 	}
 
 	// Step 8: Run go mod tidy
@@ -322,27 +327,28 @@ func buildProjectConfig(projectName string) (*generator.GeneratorConfig, error) 
 		if err != nil {
 			return nil, fmt.Errorf("failed to read plan file: %w", err)
 		}
-		var plan ProjectPlan
-		if err := yaml.Unmarshal(planData, &plan); err != nil {
+		var bp blueprint.ProjectBlueprint
+		if err := yaml.Unmarshal(planData, &bp); err != nil {
 			return nil, fmt.Errorf("failed to parse plan file: %w", err)
 		}
-		fmt.Printf("📋 Loaded plan from %s (Template: %s)\n", newFromPlan, plan.Template)
+		fmt.Printf("📋 Loaded plan from %s (Template: %s)\n", newFromPlan, bp.Template)
 
 		// Override config from plan
 		if projectName == "" {
-			projectName = plan.Name
+			projectName = bp.Name
 		}
-		newTemplate = plan.Template
-		newFeatures = plan.Features
-		newDatabase = plan.Database
-		newFrontend = plan.Frontend
-		newAuth = plan.Auth
+		newTemplate = bp.Template
+		newFeatures = bp.Features
+		newDatabase = bp.Database
+		newFrontend = bp.Frontend
+		newAuth = bp.Auth
+		newRequirements = bp.Requirements
 
 		// Populate parsed features and fields
-		newFeatures = plan.Features // Start with base features list
+		newFeatures = bp.Features // Start with base features list
 		parsedModuleFields := make(map[string][]string)
 
-		for name, config := range plan.Modules {
+		for name, config := range bp.Modules {
 			newFeatures = append(newFeatures, name)
 			newFrontendModules = append(newFrontendModules, name) // Modules get frontend
 			if len(config.Fields) > 0 {
@@ -350,14 +356,6 @@ func buildProjectConfig(projectName string) (*generator.GeneratorConfig, error) 
 			}
 		}
 
-		// Store fields in a temporary global or return them? 
-		// buildProjectConfig returns GeneratorConfig, so I should set it there.
-		// However, buildProjectConfig constructs GeneratorConfig at the END.
-		// I need to pass this map down. 
-		// Since I cannot change the signature easily in replaced block without reading more,
-		// I will rely on newFeatures being global (yikes, but it is in this file).
-		// But I need a place for ModuleFields.
-		// I'll add a global 'newModuleFields' in this file to hold it temporarily, similar to 'newFeatures'.
 		newModuleFields = parsedModuleFields
 	}
 
@@ -470,6 +468,43 @@ func displayGenerationPlan(structure *generator.ProjectStructure) {
 	if len(structure.Files) > 5 {
 		fmt.Printf("     • ... and %d more files\n", len(structure.Files)-5)
 	}
+}
+
+func writeRequirementsDoc(rootPath string, requirements []blueprint.Requirement) error {
+	docsDir := filepath.Join(rootPath, "docs")
+	if err := os.MkdirAll(docsDir, 0755); err != nil {
+		return err
+	}
+
+	var builder strings.Builder
+	builder.WriteString("# Project Requirements\n\n")
+	builder.WriteString("| ID | Title | Priority | Status |\n")
+	builder.WriteString("|---|---|---|---|\n")
+
+	for _, req := range requirements {
+		builder.WriteString(fmt.Sprintf("| %s | %s | %s | %s |\n", req.ID, req.Title, req.Priority, req.Status))
+	}
+
+	builder.WriteString("\n## Details\n\n")
+	for _, req := range requirements {
+		builder.WriteString(fmt.Sprintf("### %s: %s\n", req.ID, req.Title))
+		if req.Description != "" {
+			builder.WriteString(req.Description + "\n\n")
+		}
+		builder.WriteString(fmt.Sprintf("- **Priority:** %s\n", req.Priority))
+		builder.WriteString(fmt.Sprintf("- **Status:** %s\n", req.Status))
+		builder.WriteString(fmt.Sprintf("- **Created:** %s\n\n", req.Created))
+	}
+
+	return os.WriteFile(filepath.Join(docsDir, "REQUIREMENTS.md"), []byte(builder.String()), 0644)
+}
+
+func copyPlanFile(src, destRoot string) error {
+	input, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(destRoot, "kthulu-plan.yaml"), input, 0644)
 }
 
 func displaySuccessMessage(projectName string, config *generator.GeneratorConfig, structure *generator.ProjectStructure) {
