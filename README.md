@@ -1,285 +1,109 @@
-# Kthulu Go — AI-assisted Software Foundry
+# Kthulu Go — AI-Powered Software Foundry
 
-<img width="1280" height="776" alt="17632490833207369194639774853762" src="https://github.com/user-attachments/assets/231fe84d-9dab-4485-8733-4791168ad931" />
+<img width="1280" height="776" alt="Kthulu Forge" src="https://github.com/user-attachments/assets/231fe84d-9dab-4485-8733-4791168ad931" />
 
-Kthulu Forge packages an AI-ready **Go backend** with a **React/Bun frontend** to help teams plan, model, and generate modular software projects. The platform exposes two primary interfaces:
+**Kthulu Go** is an intelligent software foundry powered by **Go**, **MCP (Model Context Protocol)**, and **AI**. It is not just a framework, but a Generation Engine designed to autonomously plan, scaffold, and evolve modular software architectures.
 
-- **Web UI** — a service canvas, scaffolding dashboards, and live tooling for orchestrating project blueprints.
-- **CLI** — a template-driven generator and operations companion for managing services, modules, and automation pipelines.
+The platform prioritizes:
 
-## Who Is Kthulu Forge For?
+1.  **The Generation Engine**: A powerful CLI that uses AI to translate natural language into robust, type-safe Go code.
+2.  **Modular Monolith Architecture**: Enforcing "Vertical Slice" architecture for high cohesion and scalability.
+3.  **MCP Native**: Exposing all CLI capabilities as MCP tools, allowing AI agents (like Claude or Gemini) to act as autonomous engineers.
 
-Kthulu Forge serves multidisciplinary software delivery teams that need reliable automation without sacrificing architectural rigor:
+## Who Is Kthulu For?
 
-- **Platform engineering groups** who maintain internal developer platforms and want reusable service templates, event-driven workflows, and enforceable standards.
-- **Solution architects and tech leads** responsible for aligning new initiatives with reference architectures, governance requirements, and traceable decisions.
-- **AI-assisted delivery teams** experimenting with generative workflows that must stay grounded in typed contracts, hexagonal boundaries, and SOLID-aligned modules.
-- **Consultancies and agencies** packaging industry-specific accelerators that demand repeatable scaffolds, seeded datasets, and rapid iteration loops.
-
-Teams can move from whiteboard to working service skeletons while preserving governance.
+- **Platform Engineers** building internal developer platforms (IDPs) with strict architectural standards.
+- **AI-Native Teams** who want to leverage agents to drastically reduce boilerplate and maintenance overhead.
+- **Go Developers** seeking a modern, opinionated framework that balances simplicity with enterprise readiness.
 
 ## Project Structure
 
+This repository is a **Monorepo** containing the seed of the foundry:
+
 ```
-kthulu-forge/
-├── backend/              # Go backend (REST API, database, business logic)
-├── frontend/             # React TypeScript frontend (Vite, Bun, Tailwind)
-├── docker-compose.yml    # Local development stack (Bun, Go, PostgreSQL)
-├── Dockerfile.fullstack  # Multi-stage build for production binary
-└── README.md            # This file
+kthulu-go/
+├── cmd/
+│   └── kthulu/          # The Kthulu CLI & Generation Engine
+├── pkg/                 # Shared libraries and public APIs
+├── internal/            # Private framework internals
+└── verify-v*/           # Generated verification apps (ephemeral)
 ```
 
 ## Getting Started
 
-### Prerequisites
+### Installation
 
-- **Docker** & **Docker Compose** (for full-stack development)
-- **Bun** (for local frontend development) — [install](https://bun.sh)
-- **Go 1.22+** (for backend development) — [install](https://golang.org)
-
-### Quick Start (Docker)
-
-Start the entire stack with one command:
+You can install the `kthulu` binary directly:
 
 ```sh
-# From repository root
-docker compose up --build
+# Build from source
+go build -o kthulu ./cmd/kthulu/main.go
+
+# Add to PATH
+export PATH="$(pwd):$PATH"
 ```
 
-This runs:
+### Creating a New Project
 
-- PostgreSQL database on `${DB_PORT}`
-- Go API server on `${API_PORT}`
-- Vite dev server (via Bun) on `${WEB_PORT}` (default 5173)
-
-See [DOCKER.md](./DOCKER.md) for more options.
-
-> **Quickstart tip:** When the frontend is running at `http://localhost:5173`, the header displays a connectivity badge ("API Connected" / "Offline"). Use it to confirm the UI can reach the Go API before exploring the panels.
-
-### Local Development
-
-#### Frontend (Bun + Vite + React)
+The core value of Kthulu is its ability to generate production-ready code.
 
 ```sh
-cd frontend
-bun install          # Install dependencies
-bun run dev          # Start dev server (hot reload)
-bun run build        # Build for production
-bun test             # Run tests
-bun run lint         # Lint code
+# Create a new Modular Monolith project
+kthulu create my-app
 ```
 
-#### Backend (Go)
+This generates a project structure optimized for vertical slicing:
 
-```sh
-cd backend/backend
-go run ./cmd/service  # Run API server
-go test ./...        # Run tests
+```
+my-app/
+├── cmd/server/          # Entrypoint
+├── internal/
+│   ├── modules/         # Vertical Slices (Feature Modules)
+│   │   ├── user/        # 'User' Feature
+│   │   │   ├── api/     # HTTP Handlers / Transport
+│   │   │   ├── core/    # Domain Logic & Services
+│   │   │   ├── store/   # Data Persistence
+│   │   │   └── module.go # FX Dependency Injection
+│   │   └── ...
+│   └── infrastructure/  # Shared tech (Loggers, Middleware)
+└── ...
 ```
 
-#### CLI installation & releases
+## Model Context Protocol (MCP)
 
-You can install the `kthulu-cli` binary in two ways:
+Kthulu Go is built first and foremost as an **MCP Server**. This means it is designed to be driven by AI.
 
-1. **Download the published artifact.** Every `v*` tag generates a GitHub Release with binaries and checksums for Linux, macOS, and Windows. Download the appropriate file for your platform, verify the checksum, and add the executable to your `PATH`.
-2. **`go install` (once the module has a canonical path).** Run `go install github.com/<org>/kthulu-go/backend/cmd/kthulu-cli@latest` to compile and place the tool in your `$GOBIN`.
-
-Both methods respect the version and build metadata injection performed during the release process.
-
-Need to run your **first automated release**? See [backend/docs/releases.md](backend/docs/releases.md) for preparation steps, required secrets, and how GoReleaser connects with the GitHub Actions workflow that publishes the multi-platform binaries.
-
-#### Database
-
-Run these helpers from the repository root—the commands are provided by the
-top-level `Makefile`, so you won't find a separate one under `backend/`.
-
-```sh
-make migrate-up       # Apply migrations
-make db-ping         # Test connection
-```
-
-## Technology Stack
-
-### Frontend
-
-- **Vite** — Fast build tool
-- **React 18** — UI library
-- **TypeScript** — Type safety
-- **Tailwind CSS** — Styling
-- **shadcn/ui** — Component library
-- **React Router** — Routing
-- **Bun** — Runtime & package manager
-
-### Backend
-
-- **Go 1.22** — Server language
-- **PostgreSQL** — Database
-- **Chi** — HTTP router
-- **GORM** — ORM
-- **JWT** — Authentication
-
-### DevOps
-
-- **Docker** — Containerization
-- **Docker Compose** — Local orchestration
-- **Kustomize** — Kubernetes configs
-- **Playwright** — E2E testing
-
-## Model Context Protocol (MCP) and AI Integration
-
-Kthulu Go leverages the **Model Context Protocol (MCP)**, an open standard for AI models to interact with external tools and services. MCP provides a structured, bidirectional communication layer that allows the AI to discover available tools, execute them with typed inputs, and consume their outputs in a predictable format.
-
-Our backend exposes all `kthulu-cli` functionalities as MCP tools. This means an AI agent can:
-
-- **Discover** available commands (`kthulu create`, `kthulu add module`, etc.).
-- **Understand** their parameters, flags, and options.
-- **Execute** scaffolding, code generation, or audit operations.
-- **Receive** structured output, including success messages, errors, and generated file paths.
-
-This architecture turns Kthulu Forge into a powerful, AI-native software foundry where agents can autonomously manage project lifecycles. For more details, see the official [MCP Specification](https://mcp.dev).
-
-### Using Kthulu with Claude Desktop
-
-To use Kthulu as an MCP server with Claude Desktop, add the following configuration to your `claude_desktop_config.json` file (typically located at `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS or `%APPDATA%/Claude/claude_desktop_config.json` on Windows):
+To use Kthulu with **Claude Desktop** or other MCP clients:
 
 ```json
 {
   "mcpServers": {
     "kthulu": {
-      "command": "/path/to/kthulu-cli",
-      "args": ["mcp", "--working-dir", "/path/to/your/project"]
+      "command": "/absolute/path/to/kthulu",
+      "args": ["mcp"]
     }
   }
 }
 ```
 
-Replace `/path/to/kthulu-cli` with the absolute path to your compiled binary (or `go run ...`) and `/path/to/your/project` with the directory where you want the AI to perform actions.
+Once connected, your AI assistant gains the ability to:
 
-## Frontend Experience
+- **Analyze** your codebase structure.
+- **Plan** new features and modules.
+- **Generate** code that complies with your project's architecture.
+- **Verify** integration and dependencies.
 
-The main UI (see `frontend/src/pages/Index.tsx`) organizes functionality into dedicated panels that can be opened from the sidebar:
+## Key Features
 
-- **Service Canvas** — A ReactFlow-driven modeling surface for designing services, entities, actors, workflows, and their relationships.
-- **Terminal** — Embedded command interface for backend and generator operations.
-- **Code Editor** — In-browser editor for inspecting and adjusting generated artifacts.
-- **Dashboard Preview** — High-level KPIs and activity metrics.
-- **Module Catalog** — Lists available backend/service modules fetched from the API.
-- **Component Scaffolder** — Launches component generation flows.
-- **Template Manager** — Manages template registries, renders, and cache operations.
-- **Audit Workbench** — Runs architecture and compliance audits.
-- **AI Chat / Assistant** — Conversational helpers for planning, refactoring, or code suggestions.
-- **Project Generator Dialog** — Accessible from the header “Generate” button for end-to-end project scaffolding.
-
-### Service Canvas workflow
-
-The `ServiceCanvas` component wraps the ReactFlow provider to render typed nodes (`service`, `entity`, `usecase`, `actor`, `workflow`) with a cyberpunk-styled background. A floating toolbar (`CanvasToolbar`) exposes actions to:
-
-1. **Add nodes** with predefined payloads (e.g., new services or entities) at randomized positions.
-2. **Apply templates** that hydrate the canvas with curated node/edge collections.
-3. **Clear the canvas** (resets ReactFlow state and underlying store) to start fresh.
-4. **Fit view** to recenter the viewport around current content.
-
-On mount, the canvas attempts to load module definitions via `kthuluApi.listModules()`. Successful responses replace the default sample graph with server-provided service nodes. Failures fall back to the local sample graph and surface a toast explaining that the API could not be reached. Users can connect nodes by dragging handles, navigate with the minimap/controls, and inspect details in the properties side panel triggered from the header.
-
-### Backend integrations required by the UI
-
-The frontend’s API client (`frontend/src/services/kthuluApi.ts`) targets the Go backend at `http://localhost:8080`. Ensure the corresponding services are running so each panel functions correctly:
-
-- **System health** — `GET /health` powers the connection badge and status checks.
-- **Project planning & generation** — `POST /api/v1/projects/plan` and `POST /api/v1/projects` feed the project generator dialog.
-- **Module catalog & planning** — Module listing, detail, validation, and injection routes (`/api/v1/modules/...`) back the Service Canvas and catalog views.
-- **Component generation lifecycle** — CRUD endpoints under `/api/v1/components` support the scaffolder UI.
-- **Template registry** — Extensive `/api/v1/templates` operations (list, render, cache, registry management, sync, verify) enable the Template Manager and toolbar templates.
-- **AI services** — `/api/v1/ai/*` endpoints supply suggestions and provider management for AI Chat/Assistant features.
-- **Audit engine** — `POST /api/v1/audit` runs audit scenarios surfaced in the workbench.
-- **Security configuration** — `GET/PUT /api/v1/security/config` provide insights and updates for security posture tooling.
-
-## Development Commands
-
-### From Project Root
-
-```sh
-# Full stack (Docker)
-docker compose up --build
-
-# Build production binary with embedded frontend
-docker build -f Dockerfile.fullstack -t kthulu:latest .
-```
-
-### From Backend Directory
-
-```sh
-cd backend/backend
-make dev               # Start full stack via Docker Compose
-make test              # Run backend + frontend tests
-make build-backend     # Build Go binary
-make migrate-up        # Apply database migrations
-make lint              # Lint code
-```
-
-### From Frontend Directory
-
-```sh
-cd frontend
-bun install            # Install dependencies
-bun run dev            # Start Vite dev server
-bun run build          # Build for production
-bun test               # Run Vitest tests
-bun run lint           # Lint TypeScript
-```
-
-## CLI Usage
-
-The repository ships with a comprehensive command-line interface in `backend/backend/cmd/kthulu-cli`. You can run it directly while developing or install it as a standalone binary:
-
-```sh
-# Run without installing
-cd backend/backend
-go run ./cmd/kthulu-cli --help
-
-# Build and expose a reusable binary
-go build -o bin/kthulu ./cmd/kthulu-cli
-export PATH="$(pwd)/bin:$PATH"   # or copy the binary somewhere on your PATH
-
-# Install globally from the module path
-go install github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli@latest
-```
-
-### Core commands
-
-| Command                                                               | Purpose                                                                                                                                              | Example                                                                     |
-| --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `kthulu create <name>`                                                | Scaffolds an intelligent project from curated templates with optional feature toggles, database/front-end choices, and enterprise add-ons.           | `kthulu create my-app --template=saas --features=user,invoice --enterprise` |
-| `kthulu plan [name]`                                                  | Generates a project blueprint architecture that can be reviewed and modified before generation. Includes requirement management.                     | `kthulu plan my-store --template=ecommerce --features=payment,inventory`    |
-| `kthulu add module <name>`                                            | Adds a complete new module (domain, repository, service, handlers) to an existing project, resolving dependencies and integrations.                  | `kthulu add module payment --with=stripe`                                   |
-| `kthulu add component <type>`                                         | Adds a specific component (handler, service, repository, domain) to an existing module.                                                              | `kthulu add component handler User --module users --with-tests`             |
-| `kthulu generate <type> <name>`                                       | Alias for adding components (handlers, use cases, entities, migrations, tests, etc.) with security, validation, and metrics toggles.                 | `kthulu generate handler Order --crud --auth`                               |
-| `kthulu ai "<prompt>"`                                                | Invokes the AI assistant to propose or apply code updates. Subcommands like `kthulu ai review` and `kthulu ai optimize` offer specialized workflows. | `kthulu ai "Add rate limiting to the API"`                                  |
-| `kthulu doctor`                                                       | Diagnoses your development environment and project configuration for prerequisites (Go, Git, Docker, Bun, etc.).                                     | `kthulu doctor --verbose`                                                   |
-| `kthulu analyze`                                                      | Analyzes project structure, identifies 'overrides' and 'extends' annotations, and verifies dependency consistency.                                   | `kthulu analyze . --graph`                                                  |
-| `kthulu doc`                                                          | Generates Swagger/OpenAPI documentation for the project. Automatically installs prerequisites if needed.                                             | `kthulu doc`                                                                |
-| `kthulu secure`                                                       | Scans dependencies for vulnerabilities and optionally patches them (auto-committing on CI when enabled).                                             | `kthulu secure --patch`                                                     |
-| `kthulu audit` / `kthulu deploy` / `kthulu status` / `kthulu upgrade` | Enterprise tooling for auditing compliance, cloud deployment orchestration, health checks, and framework upgrades.                                   | `kthulu deploy --cloud=gcp --region=us-central1`                            |
-| `kthulu migrate <subcommand>`                                         | Manages database migrations (`up`, `down`, `reset`, `status`, `version`, `validate`) using the shared configuration.                                 | `kthulu migrate up`                                                         |
-
-### Templates & advanced guidance
-
-- Project blueprints, feature snippets, and other scaffolding assets live under [`backend/backend/cmd/kthulu-cli/templates`](backend/backend/cmd/kthulu-cli/templates).
-- AI workflows rely on the Gemini integration by default—set `GEMINI_API_KEY` (or use `--mock` for offline exploration) and run CLI commands from the root of a generated project so dependency discovery works correctly.
-- For deeper dives into scripted workflows, Makefile integrations, and advanced scenarios, see [`backend/docs/CLI.md`](backend/docs/CLI.md) and the supplemental notes in [`backend/docs/cli/`](backend/docs/cli/).
-
-## API Documentation
-
-Once the server is running:
-
-```
-http://localhost:${API_PORT}/docs
-```
+- **Vertical Slice Architecture**: Code is organized by feature, not technical layer, making it easy to add, remove, or extract capabilities.
+- **Dependency Injection**: First-class support for `uber/fx`.
+- **Zero-Boilerplate**: The CLI handles wiring, config, and scaffolding.
+- **Database Agnostic**: Built-in support for SQLite, PostgreSQL, and MySQL via GORM.
 
 ## Contributing
 
-See [backend/CONTRIBUTING.md](./backend/CONTRIBUTING.md) for guidelines.
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
 
 ## License
 
-MIT — see [backend/LICENSE](./backend/LICENSE)
+MIT — see [LICENSE](./LICENSE)

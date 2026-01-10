@@ -1,0 +1,152 @@
+// @kthulu:handler:{{.Name}}
+package api
+
+import (
+	"encoding/json"
+	"net/http"
+	"strconv"
+	
+	"github.com/gorilla/mux"
+	"{{.CoreImport}}"
+	{{if .Protected}}"{{.ProjectModule}}/internal/infrastructure/middleware"{{end}}
+)
+
+type {{.Title}}Handler struct {
+	service core.{{.Title}}Service
+}
+
+func New{{.Title}}Handler(service core.{{.Title}}Service) *{{.Title}}Handler {
+	return &{{.Title}}Handler{service: service}
+}
+
+// RegisterRoutes registers all routes for {{.Name}}
+func (h *{{.Title}}Handler) RegisterRoutes(router *mux.Router) {
+	{{if .RoutePrefix}}sub := router.PathPrefix("{{.RoutePrefix}}").Subrouter(){{else}}sub := router{{end}}
+	{{if .Protected}}sub.Use(middleware.AuthMiddleware){{end}}
+
+	sub.HandleFunc("/{{.RoutePrefix}}", h.List).Methods("GET")
+	sub.HandleFunc("/{{.RoutePrefix}}", h.Create).Methods("POST")
+	sub.HandleFunc("/{{.RoutePrefix}}/{id}", h.GetByID).Methods("GET")
+	sub.HandleFunc("/{{.RoutePrefix}}/{id}", h.Update).Methods("PUT")
+	sub.HandleFunc("/{{.RoutePrefix}}/{id}", h.Delete).Methods("DELETE")
+}
+
+// Create handles the creation of a new {{.Name}}
+// @Summary      Create a new {{.Name}}
+// @Description  Creates a new {{.Name}} with the provided data
+// @Tags         {{.PluralTitle}}
+// @Accept       json
+// @Produce      json
+// @Param        input body core.{{.Title}} true "{{.Title}} object"
+// @Success      200  {object}  core.{{.Title}}
+// @Failure      400  {object}  map[string]string "Invalid input"
+// @Failure      500  {object}  map[string]string "Internal server error"
+// @Router       /{{.RoutePrefix}} [post]
+func (h *{{.Title}}Handler) Create(w http.ResponseWriter, r *http.Request) {
+	var entity core.{{.Title}}
+	if err := json.NewDecoder(r.Body).Decode(&entity); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	
+	if err := h.service.Create{{.Title}}(&entity); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(entity)
+}
+
+// GetByID retrieves a {{.Name}} by its ID
+// @Summary      Get {{.Name}}
+// @Description  Get a {{.Name}} by its ID
+// @Tags         {{.PluralTitle}}
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int  true  "{{.Title}} ID"
+	// @Success      200  {object}  core.{{.Title}}
+// @Failure      400  {object}  map[string]string "Invalid ID"
+// @Failure      404  {object}  map[string]string "{{.Title}} not found"
+// @Router       /{{.RoutePrefix}}/{id} [get]
+func (h *{{.Title}}Handler) GetByID(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := strconv.ParseUint(vars["id"], 10, 32)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+	
+	entity, err := h.service.Get{{.Title}}ByID(uint(id))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(entity)
+}
+
+// Update handles the update of a {{.Name}}
+func (h *{{.Title}}Handler) Update(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := strconv.ParseUint(vars["id"], 10, 32)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+	
+	var entity core.{{.Title}}
+	if err := json.NewDecoder(r.Body).Decode(&entity); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	
+	entity.ID = uint(id)
+	if err := h.service.Update{{.Title}}(&entity); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(entity)
+}
+
+// Delete handles the deletion of a {{.Name}}
+func (h *{{.Title}}Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := strconv.ParseUint(vars["id"], 10, 32)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+	
+	if err := h.service.Delete{{.Title}}(uint(id)); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// List retrieves all {{.Name}}s
+func (h *{{.Title}}Handler) List(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query().Get("q")
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
+
+	filter := core.SearchFilter{
+		Query: query,
+		Limit: limit,
+		Offset: offset,
+	}
+
+	entities, err := h.service.List{{.PluralTitle}}(filter)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(entities)
+}

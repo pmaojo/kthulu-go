@@ -1,1 +1,0 @@
-import{j as o}from"./index-6lgLSAPQ.js";import{u as r}from"./useAuth-CACOJsV7.js";const m=()=>{const{auth:e}=r();return o.jsx("div",{children:e.user?`Welcome ${e.user.email}`:"Home"})};export{m as default};

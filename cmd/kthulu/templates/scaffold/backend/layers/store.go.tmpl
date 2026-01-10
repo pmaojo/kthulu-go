@@ -1,0 +1,53 @@
+// @kthulu:store:{{.Name}}
+package store
+
+import (
+	"gorm.io/gorm"
+	"{{.CoreImport}}"
+)
+
+type {{.Title}}Repository struct {
+	db *gorm.DB
+}
+
+func New{{.Title}}Repository(db *gorm.DB) core.{{.Title}}Repository {
+	return &{{.Title}}Repository{db: db}
+}
+
+func (r *{{.Title}}Repository) Create(entity *core.{{.Title}}) error {
+	return r.db.Create(entity).Error
+}
+
+func (r *{{.Title}}Repository) GetByID(id uint) (*core.{{.Title}}, error) {
+	var entity core.{{.Title}}
+	err := r.db.First(&entity, id).Error
+	return &entity, err
+}
+
+func (r *{{.Title}}Repository) Update(entity *core.{{.Title}}) error {
+	return r.db.Save(entity).Error
+}
+
+func (r *{{.Title}}Repository) Delete(id uint) error {
+	return r.db.Delete(&core.{{.Title}}{}, id).Error
+}
+
+func (r *{{.Title}}Repository) List(filter core.SearchFilter) ([]*core.{{.Title}}, error) {
+	var entities []*core.{{.Title}}
+	query := r.db.Model(&core.{{.Title}}{})
+
+	if filter.Query != "" {
+		// Basic search implementation
+		// query = query.Where("name LIKE ?", "%"+filter.Query+"%")
+	}
+
+	if filter.Limit > 0 {
+		query = query.Limit(filter.Limit)
+	}
+	if filter.Offset > 0 {
+		query = query.Offset(filter.Offset)
+	}
+
+	err := query.Find(&entities).Error
+	return entities, err
+}
