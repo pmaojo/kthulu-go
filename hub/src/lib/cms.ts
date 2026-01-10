@@ -2,8 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
 
-const DOCS_DIR = path.join(process.cwd(), '..', 'docs');
-const REGISTRY_DIR = path.join(process.cwd(), '..', 'registry');
+export const DOCS_DIR = path.join(process.cwd(), '..', 'docs');
+export const REGISTRY_DIR = path.join(process.cwd(), '..', 'registry');
 
 export interface DocContent {
   slug: string[];

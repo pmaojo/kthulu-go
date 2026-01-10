@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   /* Kthulu Theme - Brutalista Neon */
   --background: 220 15% 8%;

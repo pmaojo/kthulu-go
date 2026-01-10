@@ -103,7 +103,7 @@ function MarketplaceCard({ item }: { item: any }) {
           <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">{item.frontmatter.author}</span>
         </div>
         <Link 
-          href={`/docs/marketplace/${item.slug.slice(1).join('/')}`}
+          href={`/docs/marketplace/${item.slug.join('/')}`}
           className="kthulu-btn !py-2 !px-4 !text-[10px] !rounded-lg"
         >
           Details <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
