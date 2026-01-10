@@ -9,7 +9,9 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 
+	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/blueprint"
 	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/generator"
 	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/internal/resolver"
 	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/templates"
@@ -639,10 +641,56 @@ func updateProjectConfig(dir string, plan *resolver.ResolutionPlan) error {
 	// Update go.mod with any new dependencies
 	fmt.Println("   📝 Updating go.mod...")
 
-	// This could read the existing go.mod and add new dependencies based on the plan
-	// For now, we'll just indicate that the update was attempted
+	// Try to update kthulu-plan.yaml if it exists
+	planPath := filepath.Join(dir, "kthulu-plan.yaml")
+	if _, err := os.Stat(planPath); err == nil {
+		fmt.Println("   📝 Updating kthulu-plan.yaml...")
+		if err := updatePlanFile(planPath, plan); err != nil {
+			fmt.Printf("   ⚠️  Failed to update plan file: %v\n", err)
+		}
+	}
 
 	return nil
+}
+
+func updatePlanFile(path string, plan *resolver.ResolutionPlan) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	var bp blueprint.ProjectBlueprint
+	if err := yaml.Unmarshal(data, &bp); err != nil {
+		return err
+	}
+
+	// Add new modules to features list if not present
+	existingFeatures := make(map[string]bool)
+	for _, f := range bp.Features {
+		existingFeatures[f] = true
+	}
+
+	for _, mod := range plan.RequiredModules {
+		if !existingFeatures[mod] {
+			bp.Features = append(bp.Features, mod)
+			existingFeatures[mod] = true
+		}
+	}
+
+	// Make sure map is initialized
+	if bp.Modules == nil {
+		bp.Modules = make(map[string]blueprint.ModuleConfig)
+	}
+
+	// We could add ModuleConfig here if we had field info passed down to updateProjectConfig
+	// For now, we at least register the module name in Features
+
+	newData, err := yaml.Marshal(&bp)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(path, newData, 0644)
 }
 
 func displayModuleSuccessMessage(moduleName string, plan *resolver.ResolutionPlan) {
