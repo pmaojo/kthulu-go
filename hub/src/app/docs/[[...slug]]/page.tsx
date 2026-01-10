@@ -1,4 +1,4 @@
-import { getDocBySlug } from '@/lib/cms';
+import { getDocBySlug, REGISTRY_DIR } from '@/lib/cms';
 import { notFound } from 'next/navigation';
 import { Sidebar } from '@/components/Navigation';
 import ReactMarkdown from 'react-markdown';
@@ -7,7 +7,18 @@ import { Book, Clock, User } from 'lucide-react';
 
 export default async function DocPage({ params }: { params: { slug: string[] } }) {
   const { slug } = await params;
-  const doc = getDocBySlug(slug);
+
+  let doc;
+
+  // Handle Marketplace routes: /docs/marketplace/starters/my-starter
+  if (slug[0] === 'marketplace' && slug.length > 2) {
+    // Strip 'marketplace' and use the rest of the slug
+    const marketplaceSlug = slug.slice(1);
+    doc = getDocBySlug(marketplaceSlug, REGISTRY_DIR);
+  } else {
+    // Normal docs
+    doc = getDocBySlug(slug);
+  }
 
   if (!doc) {
     notFound();
