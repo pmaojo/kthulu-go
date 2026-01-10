@@ -1,8 +1,11 @@
 run:
-	go run ./backend/cmd/service
+	go run ./cmd/server
+
+dev:
+	kthulu dev
 
 build:
-	go build -o service ./backend/cmd/service
+	go build -o service ./cmd/server
 
 test-bdd:
 	go test -v ./tests/bdd/...
