@@ -51,31 +51,35 @@ func (m *Manager) Analyze() error {
 		return fmt.Errorf("go.mod not found - are you in the project root?")
 	}
 
-	// Check for Dockerfile
-	if _, err := os.Stat(filepath.Join(m.ProjectRoot, "Dockerfile")); os.IsNotExist(err) {
-		fmt.Println("⚠️  Dockerfile not found, generating default...")
-
-		// Detect main package
-		buildPath := "cmd/server/main.go"
-		if _, err := os.Stat(filepath.Join(m.ProjectRoot, buildPath)); os.IsNotExist(err) {
-			// Try root
-			if _, err := os.Stat(filepath.Join(m.ProjectRoot, "main.go")); err == nil {
-				buildPath = "main.go"
-			} else {
-				// Try to find any main
-				// For now, default to .
-				buildPath = "."
-			}
-		}
-
-		// Inject build path into template
-		tmpl := fmt.Sprintf(DockerfileTemplate, buildPath)
-
-		if err := os.WriteFile(filepath.Join(m.ProjectRoot, "Dockerfile"), []byte(tmpl), 0644); err != nil {
-			return fmt.Errorf("failed to generate Dockerfile: %w", err)
-		}
+	if m.Cloud == "wasmer" {
+		// No need to warn about CGO anymore as we default to pure-Go SQLite
 	} else {
-		fmt.Println("✅ Dockerfile found")
+		// Check for Dockerfile (only for non-wasmer deployments)
+		if _, err := os.Stat(filepath.Join(m.ProjectRoot, "Dockerfile")); os.IsNotExist(err) {
+			fmt.Println("⚠️  Dockerfile not found, generating default...")
+
+			// Detect main package
+			buildPath := "cmd/server/main.go"
+			if _, err := os.Stat(filepath.Join(m.ProjectRoot, buildPath)); os.IsNotExist(err) {
+				// Try root
+				if _, err := os.Stat(filepath.Join(m.ProjectRoot, "main.go")); err == nil {
+					buildPath = "main.go"
+				} else {
+					// Try to find any main
+					// For now, default to .
+					buildPath = "."
+				}
+			}
+
+			// Inject build path into template
+			tmpl := fmt.Sprintf(DockerfileTemplate, buildPath)
+
+			if err := os.WriteFile(filepath.Join(m.ProjectRoot, "Dockerfile"), []byte(tmpl), 0644); err != nil {
+				return fmt.Errorf("failed to generate Dockerfile: %w", err)
+			}
+		} else {
+			fmt.Println("✅ Dockerfile found")
+		}
 	}
 
 	return nil
@@ -83,6 +87,17 @@ func (m *Manager) Analyze() error {
 
 func (m *Manager) GenerateConfig() error {
 	fmt.Println("📄 Generating cloud configurations...")
+
+	if m.Cloud == "wasmer" {
+		data := TemplateData{
+			AppName: m.AppName,
+		}
+		if err := m.generateFile(filepath.Join(m.ProjectRoot, "wasmer.toml"), WasmerConfigTemplate, data); err != nil {
+			return err
+		}
+		fmt.Println("✅ Generated wasmer.toml")
+		return nil
+	}
 
 	deployDir := filepath.Join(m.ProjectRoot, "deployments", m.Cloud)
 	if err := os.MkdirAll(deployDir, 0755); err != nil {
@@ -113,6 +128,64 @@ func (m *Manager) GenerateConfig() error {
 }
 
 func (m *Manager) Build() error {
+	if m.Cloud == "wasmer" {
+		fmt.Println("🏗️  Building for Wasmer Edge (WASI)...")
+
+		// Create build directory
+		if err := os.MkdirAll(filepath.Join(m.ProjectRoot, "build"), 0755); err != nil {
+			return err
+		}
+
+		// Build Backend
+		// GOOS=wasip1 GOARCH=wasm go build -o build/app.wasm cmd/server/main.go
+		// We need to find main.go path again or assume cmd/server/main.go
+		mainPath := "cmd/server/main.go"
+		if _, err := os.Stat(mainPath); os.IsNotExist(err) {
+			if _, err := os.Stat("main.go"); err == nil {
+				mainPath = "main.go"
+			}
+		}
+
+		cmd := exec.Command("go", "build", "-o", "build/app.wasm", mainPath)
+		cmd.Env = append(os.Environ(), "GOOS=wasip1", "GOARCH=wasm")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		fmt.Printf("   Compiling %s -> build/app.wasm...\n", mainPath)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("wasm build failed: %w", err)
+		}
+
+		// Build Frontend if it exists
+		if _, err := os.Stat("frontend/package.json"); err == nil {
+			fmt.Println("   Building Frontend...")
+			// npm install && npm run build
+			// Check for npm
+			if _, err := exec.LookPath("npm"); err == nil {
+				cmd := exec.Command("npm", "install")
+				cmd.Dir = "frontend"
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+				if err := cmd.Run(); err != nil {
+					fmt.Println("⚠️  npm install failed")
+				} else {
+					cmd = exec.Command("npm", "run", "build")
+					cmd.Dir = "frontend"
+					cmd.Stdout = os.Stdout
+					cmd.Stderr = os.Stderr
+					if err := cmd.Run(); err != nil {
+						fmt.Println("⚠️  npm run build failed")
+					}
+				}
+			} else {
+				fmt.Println("⚠️  npm not found, skipping frontend build")
+			}
+		}
+
+		fmt.Println("✅ Wasmer build complete")
+		return nil
+	}
+
 	fmt.Println("🏗️  Building container image...")
 
 	// Check if docker is available
@@ -136,6 +209,27 @@ func (m *Manager) Build() error {
 
 func (m *Manager) Deploy() error {
 	fmt.Printf("☁️  Deploying to %s...\n", m.Cloud)
+
+	if m.Cloud == "wasmer" {
+		if _, err := exec.LookPath("wasmer"); err != nil {
+			fmt.Println("⚠️  'wasmer' CLI not found.")
+			fmt.Println("👉 Install it via: curl https://get.wasmer.io -sSfL | sh")
+			fmt.Println("👉 Then run: wasmer deploy")
+			return nil
+		}
+
+		cmd := exec.Command("wasmer", "deploy")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		// Pass stdin for interactive login if needed? usually non-interactive in CI, interactive in CLI.
+		cmd.Stdin = os.Stdin
+
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("wasmer deploy failed: %w", err)
+		}
+		fmt.Println("✅ Deployed to Wasmer Edge!")
+		return nil
+	}
 
 	if m.Cloud == "kubernetes" || m.Cloud == "aws" || m.Cloud == "gcp" || m.Cloud == "azure" {
 		// Assume kubectl usage for simplicity as implied by context
@@ -163,6 +257,10 @@ func (m *Manager) Deploy() error {
 }
 
 func (m *Manager) SetupMonitoring() error {
+	if m.Cloud == "wasmer" {
+		fmt.Println("ℹ️  Monitoring managed by Wasmer Edge dashboard.")
+		return nil
+	}
 	fmt.Println("📊 Setting up monitoring...")
 	// For now, just print what would happen
 	fmt.Println("ℹ️  Prometheus metrics are exposed at /metrics")
@@ -170,6 +268,11 @@ func (m *Manager) SetupMonitoring() error {
 }
 
 func (m *Manager) ConfigureAutoScaling() error {
+	if m.Cloud == "wasmer" {
+		fmt.Println("ℹ️  Auto-scaling is built-in for Serverless Edge.")
+		return nil
+	}
+
 	if m.Scale != "auto" {
 		fmt.Println("ℹ️  Auto-scaling skipped (strategy: " + m.Scale + ")")
 		return nil

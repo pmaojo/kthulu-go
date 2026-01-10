@@ -44,6 +44,7 @@ var deployCmd = &cobra.Command{
 	Long: `Deploy your Kthulu application to any cloud provider with zero configuration.
 
 Supported Platforms:
+  • Wasmer Edge (Instant Preview)
   • AWS (EKS, Fargate, Lambda)
   • Google Cloud (GKE, Cloud Run)
   • Azure (AKS, Container Instances) 
@@ -51,6 +52,7 @@ Supported Platforms:
   • Docker Swarm
 
 Examples:
+  kthulu deploy --cloud=wasmer
   kthulu deploy --cloud=aws --scale=auto
   kthulu deploy --cloud=gcp --region=us-central1
   kthulu deploy --kubernetes --namespace=production`,
@@ -119,7 +121,7 @@ func init() {
 	auditCmd.Flags().Bool("fix", false, "Automatically fix found issues")
 
 	// Deploy command flags
-	deployCmd.Flags().String("cloud", "", "Cloud provider (aws, gcp, azure)")
+	deployCmd.Flags().String("cloud", "", "Cloud provider (aws, gcp, azure, wasmer)")
 	deployCmd.Flags().String("scale", "auto", "Scaling strategy (auto, manual, fixed)")
 	deployCmd.Flags().String("region", "", "Deployment region")
 	deployCmd.Flags().String("namespace", "default", "Kubernetes namespace")

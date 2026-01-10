@@ -95,3 +95,29 @@ EXPOSE 8080
 
 CMD ["./main"]
 `
+
+const WasmerConfigTemplate = `[package]
+name = "{{.AppName}}"
+version = "0.1.0"
+description = "Kthulu App on Wasmer Edge"
+
+[[module]]
+name = "server"
+source = "build/app.wasm"
+abi = "wasi"
+
+[[command]]
+name = "server"
+module = "server"
+runner = "https://webc.org/runner/wasi"
+annotations = { "wasi.entrypoint" = ["server"] }
+
+[app]
+name = "{{.AppName}}"
+
+[[app.service]]
+name = "server"
+type = "http"
+port = 8080
+command = "server"
+`

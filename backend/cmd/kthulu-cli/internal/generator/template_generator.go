@@ -389,8 +389,11 @@ func (g *TemplateGenerator) generateGoMod() string {
 	addDep("go.uber.org/fx v1.20.0")
 	addDep("github.com/gorilla/mux v1.8.0")
 	addDep("gorm.io/gorm v1.25.5")
-	addDep(fmt.Sprintf("gorm.io/driver/%s v1.5.4", g.config.Database))
-	addDep("gorm.io/driver/sqlite v1.5.4")
+	if g.config.Database == "sqlite" || g.config.Database == "" {
+		addDep("github.com/glebarez/sqlite v1.11.0")
+	} else {
+		addDep(fmt.Sprintf("gorm.io/driver/%s v1.5.4", g.config.Database))
+	}
 	addDep("github.com/golang-jwt/jwt/v5 v5.2.0")
 	addDep("github.com/pressly/goose/v3 v3.24.3")
 
@@ -480,7 +483,7 @@ func (g *TemplateGenerator) generateCoreProviders() string {
 		connectionBuilder.WriteString(fmt.Sprintf("\t\tlog.Printf(\"Connecting to MySQL at %%s:%%s/%%s\", getEnv(\"DB_HOST\", \"localhost\"), getEnv(\"DB_PORT\", \"3306\"), getEnv(\"DB_NAME\", \"%s\"))\n", dbName))
 		connectionBuilder.WriteString("\t\treturn gorm.Open(mysql.Open(dsn), &gorm.Config{})\n")
 	default:
-		driverImport = "\"gorm.io/driver/sqlite\""
+		driverImport = "\"github.com/glebarez/sqlite\""
 		imports = append(imports, "\"path/filepath\"")
 		connectionBuilder.WriteString(fmt.Sprintf("\t\tdbPath := getEnv(\"SQLITE_PATH\", \"data/%s.db\")\n", dbName))
 		connectionBuilder.WriteString("\t\tif err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {\n")
@@ -925,8 +928,8 @@ func (g *TemplateGenerator) generateMainTestFile() string {
 }
 
 func (g *TemplateGenerator) generateMigrateMainFile() string {
-	driverImport := `_ "github.com/mattn/go-sqlite3"`
-	openDriver := "sqlite3"
+	driverImport := `_ "modernc.org/sqlite"`
+	openDriver := "sqlite"
 	openDSN := "app.db"
 
 	switch g.config.Database {
