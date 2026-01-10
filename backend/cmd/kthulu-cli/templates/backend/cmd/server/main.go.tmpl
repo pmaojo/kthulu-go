@@ -27,6 +27,7 @@ func NewDB() (*gorm.DB, error) {
 func NewRouter(logger *slog.Logger) *mux.Router {
 	r := mux.NewRouter()
 	r.Use(middleware.ObservabilityMiddleware(logger))
+	r.Use(middleware.RecoveryMiddleware(logger))
 	r.Handle("/metrics", promhttp.Handler())
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

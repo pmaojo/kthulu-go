@@ -225,6 +225,10 @@ func (g *TemplateGenerator) generateBaseStructure(structure *ProjectStructure) e
 	}
 
 	structure.Directories = append(structure.Directories, baseDirs...)
+	structure.Directories = append(structure.Directories,
+		"internal/infrastructure/middleware",
+		"internal/infrastructure/observability",
+	)
 
 	// Generate main.go
 	mainFile := GeneratedFile{
@@ -268,6 +272,27 @@ func (g *TemplateGenerator) generateBaseStructure(structure *ProjectStructure) e
 		Content: g.generateCoreProvidersTest(),
 	}
 	structure.Files = append(structure.Files, coreProvidersTest)
+
+	// Generate Infrastructure Files
+	infraFiles := map[string]string{
+		"internal/infrastructure/middleware/recovery.go":   "backend/internal/infrastructure/middleware/recovery.go.tmpl",
+		"internal/infrastructure/middleware/middleware.go": "backend/internal/infrastructure/middleware/middleware.go.tmpl",
+		"internal/infrastructure/observability/logger.go":  "backend/internal/infrastructure/observability/logger.go.tmpl",
+		"internal/infrastructure/observability/metrics.go": "backend/internal/infrastructure/observability/metrics.go.tmpl",
+	}
+
+	for path, tmpl := range infraFiles {
+		content, err := g.executeTemplate(path, tmpl, map[string]interface{}{
+			"ModuleName": g.modulePath(),
+		})
+		if err != nil {
+			return fmt.Errorf("failed to generate %s: %w", path, err)
+		}
+		structure.Files = append(structure.Files, GeneratedFile{
+			Path:    path,
+			Content: content,
+		})
+	}
 
 	// Generate cmd/migrate/main.go
 	migrateMain := GeneratedFile{

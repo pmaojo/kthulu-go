@@ -24,7 +24,7 @@ var devCmd = &cobra.Command{
 	Long: `Runs your backend in development mode with AI-powered error analysis.
     
 If the application crashes or panics, Kthulu will intercept the log,
-analyze the stack trace using AI, and suggest a fix immediately.`,
+analyze the stack trace using AI, and automatically fix the issue in real-time.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		entrypoint, _ := cmd.Flags().GetString("entrypoint")
 		provider, _ := cmd.Flags().GetString("provider")
@@ -87,20 +87,53 @@ func runProcessAndMonitor(entrypoint, provider, model string) bool {
 	wg.Add(2)
 
 	go scanStdout(&wg, stdoutPipe)
+
+	// Channel to signal that a panic has been captured
+	panicChan := make(chan string, 1)
 	
+	// Buffer and Mutex for thread-safe access
 	panicBuffer := &strings.Builder{}
-	capturePanic := false
-	go scanStderr(&wg, stderrPipe, panicBuffer, &capturePanic)
+	var bufferMu sync.Mutex
 
-	wg.Wait()
-	_ = cmd.Wait()
-	
-	if capturePanic && panicBuffer.Len() > 0 {
-		analyzeErrorLoop(panicBuffer.String(), provider, model)
-		return true
+	go scanStderr(&wg, stderrPipe, panicBuffer, &bufferMu, panicChan)
+
+	// Channel to signal process exit
+	doneChan := make(chan error, 1)
+	go func() {
+		doneChan <- cmd.Wait()
+	}()
+
+	select {
+	case logOutput := <-panicChan:
+		// Panic detected! Kill process immediately to stop the bleeding/loop
+		color.HiRed("\n🚨 DETECTED CRITICAL ERROR! INITIATING SELF-HEALING... 🚨\n")
+		if cmd.Process != nil {
+			_ = cmd.Process.Kill()
+			_ = cmd.Wait() // Wait for process to exit
+		}
+
+		performSelfHealing(logOutput, provider, model)
+		return true // Trigger restart
+
+	case err := <-doneChan:
+		// Process exited on its own (maybe crashed or stopped)
+		wg.Wait() // Wait for logs to finish processing
+
+		if err != nil {
+			// Check if we captured a panic but the timer didn't fire yet
+			bufferMu.Lock()
+			captured := panicBuffer.String()
+			bufferMu.Unlock()
+
+			if len(captured) > 0 && isCriticalError(captured) {
+				performSelfHealing(captured, provider, model)
+				return true
+			}
+			color.Red("❌ Process exited with error: %v", err)
+		}
+
+		return false // Exit loop on normal termination or unknown error
 	}
-
-	return false
 }
 
 func handleInterrupts(cmd *exec.Cmd) {
@@ -123,20 +156,33 @@ func scanStdout(wg *sync.WaitGroup, pipe io.ReadCloser) {
 	}
 }
 
-func scanStderr(wg *sync.WaitGroup, pipe io.ReadCloser, buffer *strings.Builder, capture *bool) {
+func scanStderr(wg *sync.WaitGroup, pipe io.ReadCloser, buffer *strings.Builder, mu *sync.Mutex, panicChan chan<- string) {
 	defer wg.Done()
 	scanner := bufio.NewScanner(pipe)
+	var capture bool
+	var once sync.Once
+
 	for scanner.Scan() {
 		line := scanner.Text()
 		fmt.Fprintln(os.Stderr, line)
 
 		if isCriticalError(line) {
-			*capture = true
-			color.HiRed("\n🚨 DETECTED CRITICAL ERROR! ANALYZING... 🚨\n")
+			capture = true
+			// Trigger panic handling after a short delay to allow stack trace to accumulate
+			once.Do(func() {
+				time.AfterFunc(500*time.Millisecond, func() {
+					mu.Lock()
+					logs := buffer.String()
+					mu.Unlock()
+					panicChan <- logs
+				})
+			})
 		}
 
-		if *capture {
+		if capture {
+			mu.Lock()
 			buffer.WriteString(line + "\n")
+			mu.Unlock()
 		}
 	}
 }
@@ -144,20 +190,23 @@ func scanStderr(wg *sync.WaitGroup, pipe io.ReadCloser, buffer *strings.Builder,
 func isCriticalError(line string) bool {
 	return strings.Contains(line, "panic:") || 
 		strings.Contains(line, "fatal error:") || 
-		strings.Contains(line, "Error:")
+		strings.Contains(line, "Error:") ||
+		strings.Contains(line, "Panic recovered")
 }
 
-func analyzeErrorLoop(logOutput, provider, model string) {
-	fmt.Println("🤖 Kthulu AI is diagnosing the crash...")
+func performSelfHealing(logOutput, provider, model string) {
+	fmt.Println("🤖 Kthulu AI is diagnosing and fixing the crash...")
 
 	prompt := fmt.Sprintf(`
 You are a Golang expert debugger.
 The running application just crashed with the following stderr output.
-Explain what went wrong in 1 sentence and provide the fix code block.
+Explain what went wrong in 1 sentence and provide the corrected code.
 
 STDERR:
 %s
-`, logOutput)
+
+%s
+`, logOutput, ApplyInstruction) // Add ApplyInstruction to prompt
 
 	// Create AI Client
 	client, err := createAIClient(provider, model)
@@ -168,15 +217,26 @@ STDERR:
 	defer client.Close()
 
 	uc := usecase.NewAIUseCase(client)
-	diagnosis, err := uc.Suggest(context.Background(), prompt, true, ".") // Include local context!
+	// We include context to help the AI understand where the error might be
+	diagnosis, err := uc.Suggest(context.Background(), prompt, true, ".")
 	
 	if err != nil {
 		color.Red("⚠️  AI Diagnosis failed: %v", err)
 		return
 	}
 
-	color.HiCyan("\n🏥 AI DIAGNOSIS:")
+	color.HiCyan("\n🏥 AI DIAGNOSIS & FIX:")
 	fmt.Println(diagnosis)
 	fmt.Println("\n---------------------------------------------------")
-	color.HiGreen("Tip: Apply the fix above and saving will trigger restart.")
+
+	// Apply the fix
+	color.HiGreen("⚡ Applying fixes...")
+	count, err := applyAIChanges(diagnosis)
+	if err != nil {
+		color.Red("❌ Failed to apply changes: %v", err)
+	} else if count > 0 {
+		color.HiGreen("✅ Applied %d fix(es). Restarting server...", count)
+	} else {
+		color.Yellow("⚠️  No fixes were applied (AI did not return file blocks).")
+	}
 }
