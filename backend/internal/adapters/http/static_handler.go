@@ -37,6 +37,9 @@ func (h *StaticHandler) RegisterRoutes(r chi.Router) {
 	r.Handle("/robots.txt", h.serveStaticFiles())
 	r.Handle("/manifest.json", h.serveStaticFiles())
 
+	// Hub app routes
+	r.Handle("/hub/*", h.serveHub())
+
 	// Catch-all route for SPA (Single Page Application)
 	// This must be registered last to avoid conflicts with API routes
 	r.NotFound(h.serveSPA())
@@ -71,6 +74,67 @@ func (h *StaticHandler) serveStaticFiles() http.HandlerFunc {
 
 		// Serve the file
 		fileServer.ServeHTTP(w, r)
+	}
+}
+
+// serveHub creates a handler for the Hub application (Next.js export)
+func (h *StaticHandler) serveHub() http.HandlerFunc {
+	fileServer := http.FileServer(http.Dir(h.staticDir))
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Security: prevent directory traversal
+		if strings.Contains(r.URL.Path, "..") {
+			http.Error(w, "Invalid path", http.StatusBadRequest)
+			return
+		}
+
+		// Try to serve the exact file
+		filePath := filepath.Join(h.staticDir, r.URL.Path)
+		info, err := os.Stat(filePath)
+
+		if err == nil && !info.IsDir() {
+			// File exists, serve it
+			fileServer.ServeHTTP(w, r)
+			return
+		}
+
+		// If it's a directory, let FileServer handle it (it looks for index.html)
+		if err == nil && info.IsDir() {
+			// Check if index.html exists in that directory
+			indexPath := filepath.Join(filePath, "index.html")
+			if _, err := os.Stat(indexPath); err == nil {
+				fileServer.ServeHTTP(w, r)
+				return
+			}
+		}
+
+		// If file not found, try appending .html (Next.js export behavior)
+		if os.IsNotExist(err) && !strings.HasSuffix(filePath, ".html") {
+			htmlPath := filePath + ".html"
+			if _, err := os.Stat(htmlPath); err == nil {
+				// Serve the .html file but keep the URL clean
+				r.URL.Path += ".html"
+				fileServer.ServeHTTP(w, r)
+				return
+			}
+		}
+
+		// If still not found, check if it's a dynamic route fallback
+		// For /hub/foo/bar, try /hub/foo/[param].html if we could guess, but since we can't easily,
+		// we fallback to checking if there is a custom 404 or just return 404.
+		// However, users report 404 on detail pages. If they exported with trailingSlash: true, they get directories.
+		// If trailingSlash: false (default), they get .html files.
+		// We handled .html above.
+
+		// Fallback for Hub SPA-like behavior if appropriate (e.g. if using a catch-all route)
+		// But Next.js export is static.
+		// We'll let it 404 if we can't find it, but maybe log it.
+		// Or serve /hub/index.html? No, that would be wrong for detail pages unless it's a true SPA.
+
+		// Note: User complaint "styles don't work" is likely fixed by basePath in next.config.ts
+		// "404 on detail pages" might be fixed by the .html appending logic above.
+
+		http.NotFound(w, r)
 	}
 }
 
