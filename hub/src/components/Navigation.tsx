@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { Home, Book, ShoppingBag, Github, Menu, X, Zap, Shield, Cloud } from 'lucide-react';
+import { Home, Book, ShoppingBag, Github, Zap, Shield, Cloud } from 'lucide-react';
+import { MobileMenu } from './MobileMenu';
 
 export function Header() {
   return (
@@ -27,9 +28,7 @@ export function Header() {
         >
           <Github size={20} />
         </a>
-        <button className="md:hidden p-2">
-          <Menu size={20} />
-        </button>
+        <MobileMenu />
       </div>
     </header>
   );
