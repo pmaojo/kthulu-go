@@ -100,6 +100,20 @@ Once connected, your AI assistant gains the ability to:
 - **Zero-Boilerplate**: The CLI handles wiring, config, and scaffolding.
 - **Database Agnostic**: Built-in support for SQLite, PostgreSQL, and MySQL via GORM.
 
+## CLI Command Reference
+
+| Command | Description |
+|Utils|---|
+| `kthulu create <name>` | Scaffolds a new project with Modular Monolith structure. |
+| `kthulu dev` | Starts the development server with **AI Self-Healing**. |
+| `kthulu add module <name>` | Adds a new feature module (Vertical Slice). |
+| `kthulu add component <type>` | Adds a component (handler, service, store) to a module. |
+| `kthulu doc` | Generates OpenAPI/Swagger documentation. |
+| `kthulu secure` | Audits dependencies for vulnerabilities. |
+| `kthulu audit` | Runs enterprise compliance checks. |
+| `kthulu analyze` | Analyzes project structure and dependencies. |
+| `kthulu ai suggest` | Asks the AI for code improvements or refactoring. |
+
 ## Contributing
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.

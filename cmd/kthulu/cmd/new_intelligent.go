@@ -523,7 +523,7 @@ func displaySuccessMessage(projectName string, config *generator.GeneratorConfig
 	}
 
 	fmt.Printf("   kthulu migrate up           # Run database migrations\n")
-	fmt.Printf("   go run cmd/server/main.go   # Start development server\n")
+	fmt.Printf("   kthulu dev                  # Start dev server with AI self-healing\n")
 
 	if config.Frontend == "react" {
 		fmt.Printf("\n💻 Frontend development:\n")
