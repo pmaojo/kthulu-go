@@ -1,0 +1,45 @@
+import { {{ .Name }} } from "./types"; // Assuming types are generated or imported
+
+const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
+
+export interface {{ .Name }} {
+  id: number;
+{{- range .Fields }}
+  {{ if ne .Name "id" }}{{ if ne .Name "ID" }}
+  {{ .Name }}: {{ if eq .InputType "number" }}number{{ else if eq .InputType "checkbox" }}boolean{{ else }}string{{ end }};
+  {{- end }}{{ end }}
+{{- end }}
+}
+
+export async function get{{ .PluralName }}(): Promise<{{ .Name }}[]> {
+  const res = await fetch(`${API_URL}/{{ .Module }}/{{ .PluralName | ToLower }}`);
+  if (!res.ok) throw new Error('Failed to fetch {{ .PluralName }}');
+  return res.json();
+}
+
+export async function create{{ .Name }}(data: Omit<{{ .Name }}, 'id'>): Promise<{{ .Name }}> {
+  const res = await fetch(`${API_URL}/{{ .Module }}/{{ .PluralName | ToLower }}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to create {{ .Name }}');
+  return res.json();
+}
+
+export async function update{{ .Name }}(id: number, data: Partial<{{ .Name }}>): Promise<{{ .Name }}> {
+  const res = await fetch(`${API_URL}/{{ .Module }}/{{ .PluralName | ToLower }}/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to update {{ .Name }}');
+  return res.json();
+}
+
+export async function delete{{ .Name }}(id: number): Promise<void> {
+  const res = await fetch(`${API_URL}/{{ .Module }}/{{ .PluralName | ToLower }}/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete {{ .Name }}');
+}
