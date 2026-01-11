@@ -324,9 +324,9 @@ func (g *TemplateGenerator) generateBaseStructure(structure *ProjectStructure) e
 		"internal/infrastructure/middleware/middleware.go": "backend/internal/infrastructure/middleware/middleware.go.tmpl",
 		"internal/infrastructure/observability/logger.go":  "backend/internal/infrastructure/observability/logger.go.tmpl",
 		"internal/infrastructure/observability/metrics.go": "backend/internal/infrastructure/observability/metrics.go.tmpl",
-		"internal/infrastructure/server/server.go":         "backend/internal/infrastructure/server/server.go.tmpl",
-		"internal/infrastructure/static/fs.go":             "backend/internal/infrastructure/static/fs.go.tmpl",
-		"internal/infrastructure/config/config.go":         "backend/internal/infrastructure/config/config.go.tmpl",
+		"internal/infrastructure/server/server.go":         "scaffold/backend/internal/infrastructure/server/server.go.tmpl",
+		"internal/infrastructure/static/fs.go":             "scaffold/backend/internal/infrastructure/static/fs.go.tmpl",
+		"internal/infrastructure/config/config.go":         "scaffold/backend/internal/infrastructure/config/config.go.tmpl",
 	}
 
 	// Generate placeholder static file to prevent go:embed error
