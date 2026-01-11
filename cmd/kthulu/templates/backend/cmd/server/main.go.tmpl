@@ -6,9 +6,12 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/quic-go/quic-go/http3"
+	"golang.org/x/crypto/acme/autocert"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/fx"
 	"gorm.io/driver/sqlite"
@@ -37,24 +40,101 @@ func NewRouter(logger *slog.Logger) *mux.Router {
 }
 
 func NewHTTPServer(lc fx.Lifecycle, router *mux.Router, logger *slog.Logger) *http.Server {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
 	srv := &http.Server{
-		Addr:    ":8080",
+		Addr:    ":" + port,
 		Handler: router,
 	}
 
+	certFile := os.Getenv("HTTPS_CERT_FILE")
+	keyFile := os.Getenv("HTTPS_KEY_FILE")
+	domains := os.Getenv("HTTPS_DOMAINS")
+
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			logger.Info("Starting HTTP server", "addr", srv.Addr)
 			go func() {
-				if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-					logger.Error("HTTP server failed", "error", err)
+				var err error
+				if domains != "" {
+					logger.Info("Starting HTTPS server with AutoCert", "domains", domains)
+					certDir := os.Getenv("HTTPS_CERT_DIR")
+					if certDir == "" {
+						certDir = "certs"
+					}
+
+					m := &autocert.Manager{
+						Cache:      autocert.DirCache(certDir),
+						Prompt:     autocert.AcceptTOS,
+						HostPolicy: autocert.HostWhitelist(strings.Split(domains, ",")...),
+					}
+
+					// Configure server for TLS
+					srv.TLSConfig = m.TLSConfig()
+
+					// Start HTTP Challenge Server / Redirector
+					go func() {
+						logger.Info("Starting HTTP Challenge Server on :80")
+						if err := http.ListenAndServe(":80", m.HTTPHandler(nil)); err != nil {
+							logger.Error("HTTP Challenge Server failed", "error", err)
+						}
+					}()
+
+					// Default to 443 if using AutoCert and port wasn't explicitly set
+					if port == "8080" && os.Getenv("PORT") == "" {
+						srv.Addr = ":443"
+					}
+
+					// HTTP/3 Support
+					if os.Getenv("HTTP3_ENABLED") == "true" {
+						go func() {
+							logger.Info("Starting HTTP/3 server", "addr", srv.Addr)
+							h3Srv := http3.Server{
+								Addr:      srv.Addr,
+								Handler:   router,
+								TLSConfig: srv.TLSConfig,
+							}
+							if err := h3Srv.ListenAndServeTLS(certFile, keyFile); err != nil {
+								logger.Error("HTTP/3 server failed", "error", err)
+							}
+						}()
+					}
+
+					logger.Info("Starting HTTPS server", "addr", srv.Addr)
+					err = srv.ListenAndServeTLS("", "")
+				} else if certFile != "" && keyFile != "" {
+					// HTTP/3 Support
+					if os.Getenv("HTTP3_ENABLED") == "true" {
+						go func() {
+							logger.Info("Starting HTTP/3 server", "addr", srv.Addr)
+							h3Srv := http3.Server{
+								Addr:    srv.Addr,
+								Handler: router,
+							}
+							if err := h3Srv.ListenAndServeTLS(certFile, keyFile); err != nil {
+								logger.Error("HTTP/3 server failed", "error", err)
+							}
+						}()
+					}
+
+					logger.Info("Starting HTTPS server", "addr", srv.Addr)
+					err = srv.ListenAndServeTLS(certFile, keyFile)
+				} else {
+					logger.Info("Starting HTTP server", "addr", srv.Addr)
+					err = srv.ListenAndServe()
+				}
+
+				if err != nil && err != http.ErrServerClosed {
+					logger.Error("Server failed", "error", err)
 					os.Exit(1)
 				}
 			}()
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
-			logger.Info("Stopping HTTP server")
+			logger.Info("Stopping server")
 			return srv.Shutdown(ctx)
 		},
 	})
