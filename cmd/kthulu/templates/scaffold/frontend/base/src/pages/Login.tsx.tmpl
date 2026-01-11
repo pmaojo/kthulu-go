@@ -1,0 +1,43 @@
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useAuth } from "@/lib/auth";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+export default function Login() {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    // Simulate API call
+    setTimeout(() => {
+      login();
+      setLoading(false);
+      navigate('/');
+    }, 1000);
+  };
+
+  return (
+    <div className="flex h-screen w-full items-center justify-center bg-gray-50">
+      <div className="w-full max-w-sm p-8 bg-white rounded-lg shadow-md">
+        <h1 className="text-2xl font-bold text-center mb-6">Kthulu Admin</h1>
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Email</label>
+            <Input type="email" placeholder="admin@example.com" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Password</label>
+            <Input type="password" placeholder="••••••••" />
+          </div>
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "Logging in..." : "Login"}
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
+}

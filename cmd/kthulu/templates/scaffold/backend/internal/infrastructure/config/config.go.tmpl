@@ -1,0 +1,29 @@
+package config
+
+import (
+	"os"
+	"time"
+)
+
+type Config struct {
+	Domain      string
+	Environment string
+	HTTPPort    string
+	SSLEmail    string // For Let's Encrypt
+}
+
+func New() *Config {
+	return &Config{
+		Domain:      os.Getenv("DOMAIN"),
+		Environment: getEnv("ENV", "development"),
+		HTTPPort:    getEnv("PORT", "8080"),
+		SSLEmail:    os.Getenv("SSL_EMAIL"),
+	}
+}
+
+func getEnv(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}

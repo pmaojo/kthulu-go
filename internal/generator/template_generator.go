@@ -269,6 +269,10 @@ func (g *TemplateGenerator) generateBaseStructure(structure *ProjectStructure) e
 	structure.Directories = append(structure.Directories,
 		"internal/infrastructure/middleware",
 		"internal/infrastructure/observability",
+		"internal/infrastructure/server",
+		"internal/infrastructure/static",
+		"internal/infrastructure/static/dist",
+		"internal/infrastructure/config",
 	)
 
 	// Generate main.go
@@ -320,7 +324,16 @@ func (g *TemplateGenerator) generateBaseStructure(structure *ProjectStructure) e
 		"internal/infrastructure/middleware/middleware.go": "backend/internal/infrastructure/middleware/middleware.go.tmpl",
 		"internal/infrastructure/observability/logger.go":  "backend/internal/infrastructure/observability/logger.go.tmpl",
 		"internal/infrastructure/observability/metrics.go": "backend/internal/infrastructure/observability/metrics.go.tmpl",
+		"internal/infrastructure/server/server.go":         "backend/internal/infrastructure/server/server.go.tmpl",
+		"internal/infrastructure/static/fs.go":             "backend/internal/infrastructure/static/fs.go.tmpl",
+		"internal/infrastructure/config/config.go":         "backend/internal/infrastructure/config/config.go.tmpl",
 	}
+
+	// Generate placeholder static file to prevent go:embed error
+	structure.Files = append(structure.Files, GeneratedFile{
+		Path:    "internal/infrastructure/static/dist/index.html",
+		Content: "<h1>Welcome to Kthulu Omega Engine</h1>",
+	})
 
 	for path, tmpl := range infraFiles {
 		content, err := g.executeTemplate(path, tmpl, map[string]interface{}{
