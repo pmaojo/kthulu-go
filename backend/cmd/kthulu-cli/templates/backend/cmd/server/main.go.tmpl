@@ -1,34 +1,35 @@
 package main
 
 import (
-	"context"
-	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
-	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/fx"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/driver/sqlite"
 
+	// "{{.ModuleName}}/internal/core" // Core providers temporarily disabled for custom wiring
 	"{{.ModuleName}}/internal/infrastructure/observability"
 	"{{.ModuleName}}/internal/infrastructure/middleware"
-)
+	"{{.ModuleName}}/internal/infrastructure/server"
+	"{{.ModuleName}}/internal/infrastructure/static"
+	"{{.ModuleName}}/internal/infrastructure/config"
 
-func NewDB() (*gorm.DB, error) {
-	// Default to SQLite for simplicity in scaffolded projects,
-	// can be swapped for Postgres by the user or detected config
-	return gorm.Open(sqlite.Open("app.db"), &gorm.Config{})
-}
+	{{.ModuleImports}}
+)
 
 func NewRouter(logger *slog.Logger) *mux.Router {
 	r := mux.NewRouter()
 	r.Use(middleware.ObservabilityMiddleware(logger))
 	r.Use(middleware.RecoveryMiddleware(logger))
 	r.Handle("/metrics", promhttp.Handler())
+
+	// Serve embedded static assets with compression support
+	// We use StripPrefix so the file server sees relative paths (e.g. /assets/js/main.js -> js/main.js)
+	r.PathPrefix("/assets/").Handler(http.StripPrefix("/assets/", static.ServeMiddleware(http.NotFoundHandler())))
+
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
@@ -36,30 +37,9 @@ func NewRouter(logger *slog.Logger) *mux.Router {
 	return r
 }
 
-func NewHTTPServer(lc fx.Lifecycle, router *mux.Router, logger *slog.Logger) *http.Server {
-	srv := &http.Server{
-		Addr:    ":8080",
-		Handler: router,
-	}
-
-	lc.Append(fx.Hook{
-		OnStart: func(ctx context.Context) error {
-			logger.Info("Starting HTTP server", "addr", srv.Addr)
-			go func() {
-				if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-					logger.Error("HTTP server failed", "error", err)
-					os.Exit(1)
-				}
-			}()
-			return nil
-		},
-		OnStop: func(ctx context.Context) error {
-			logger.Info("Stopping HTTP server")
-			return srv.Shutdown(ctx)
-		},
-	})
-
-	return srv
+func NewDB(cfg *config.Config) (*gorm.DB, error) {
+	// Standard SQLite connection.
+	return gorm.Open(sqlite.Open("app.db"), &gorm.Config{})
 }
 
 func main() {
@@ -67,11 +47,34 @@ func main() {
 
 	fx.New(
 		fx.Provide(
+			config.New,
 			observability.NewLogger,
-			NewDB,
 			NewRouter,
-			NewHTTPServer,
+			NewDB, // Restored explicit DB provider
+			server.NewServer,
 		),
-		fx.Invoke(func(*http.Server) {}),
+		fx.Options(
+			// core.CoreRepositoryProviders(), // Commented out to avoid build errors if core not fully generated
+		),
+		{{.ModuleProviders}}
+		fx.Invoke(func(
+			srv *server.OmegaServer,
+			apiRouter *mux.Router,
+			{{.InvokeParams}}) {
+				// Register HTTP routes
+				{{.ModuleRoutes}}
+
+				// Example: Register gRPC services here
+				// grpcServer := srv.GetGRPCServer()
+				// pb.RegisterMyServiceServer(grpcServer, myService)
+
+				// Wire up gRPC Gateway for transparent transcoding
+				// This allows REST clients to hit gRPC services
+				gwMux := srv.GetGatewayMux()
+				apiRouter.PathPrefix("/").Handler(gwMux)
+
+				// Example: Register gRPC Gateway Services
+				// pb.RegisterMyServiceHandlerFromEndpoint(ctx, gwMux, "localhost:443", opts)
+		}),
 	).Run()
 }
