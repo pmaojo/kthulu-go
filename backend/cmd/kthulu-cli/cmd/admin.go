@@ -51,6 +51,13 @@ var generateAdminCmd = &cobra.Command{
 
 		runGeneration := func() error {
 			fmt.Println("Running generation...")
+
+			// 0. Ensure Frontend Exists
+			scaffolder := generator.NewFrontendScaffolder(projectRoot)
+			if err := scaffolder.EnsureFrontend(); err != nil {
+				return fmt.Errorf("failed to scaffold frontend: %w", err)
+			}
+
 			p := parser.NewEntityParser(projectRoot)
 
 			files, err := os.ReadDir(domainPath)
@@ -59,6 +66,7 @@ var generateAdminCmd = &cobra.Command{
 			}
 
 			gen := generator.NewAdminGenerator(projectRoot)
+			injector := generator.NewRouteInjector(projectRoot)
 
 			for _, file := range files {
 				if file.IsDir() || !strings.HasSuffix(file.Name(), ".go") {
@@ -87,6 +95,11 @@ var generateAdminCmd = &cobra.Command{
 					uiDef := generator.MapEntityToUI(entity)
 					if err := gen.GenerateAdminModule(uiDef); err != nil {
 						return fmt.Errorf("failed to generate admin for %s: %w", entity.Name, err)
+					}
+
+					// Inject Routes
+					if err := injector.InjectRoute(entity.Module, entity.Name); err != nil {
+						fmt.Printf("Warning: Failed to inject route for %s: %v\n", entity.Name, err)
 					}
 				}
 			}
