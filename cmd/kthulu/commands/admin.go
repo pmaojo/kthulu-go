@@ -1,4 +1,4 @@
-package cmd
+package commands
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/cobra"
 	"github.com/pmaojo/kthulu-go/internal/generator"
-	"github.com/pmaojo/kthulu-go/backend/internal/adapters/cli/parser"
+	"github.com/pmaojo/kthulu-go/internal/adapters/cli/parser"
 )
 
 var adminCmd = &cobra.Command{

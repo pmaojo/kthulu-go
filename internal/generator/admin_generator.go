@@ -8,7 +8,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/templates"
+	"github.com/pmaojo/kthulu-go/cmd/kthulu/templates"
 )
 
 // AdminGenerator handles the generation of admin UI components

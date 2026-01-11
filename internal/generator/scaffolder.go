@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pmaojo/kthulu-go/backend/cmd/kthulu-cli/templates"
+	"github.com/pmaojo/kthulu-go/cmd/kthulu/templates"
 )
 
 type FrontendScaffolder struct {
