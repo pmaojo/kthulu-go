@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -115,6 +116,9 @@ User Description:
 	}
 
 	// 5. Save to file
+	if err := os.MkdirAll(filepath.Dir(outputFile), 0755); err != nil {
+		return fmt.Errorf("failed to create directory for plan: %w", err)
+	}
 	if err := os.WriteFile(outputFile, []byte(cleanYaml), 0644); err != nil {
 		return fmt.Errorf("failed to save plan: %w", err)
 	}

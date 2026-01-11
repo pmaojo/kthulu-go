@@ -156,8 +156,17 @@ func init() {
 
 func runNewProjectIntelligent(cmd *cobra.Command, args []string) {
 	var projectName string
+	var rawInput string
+
 	if len(args) > 0 {
-		projectName = args[0]
+		rawInput = args[0]
+		// Sanitize project name to be a valid module name (last element of path)
+		projectName = filepath.Base(rawInput)
+		
+		// If input looks like a path and output path wasn't explicitly set, use the input as output path
+		if (strings.Contains(rawInput, "/") || strings.Contains(rawInput, "\\")) && newOutputPath == "" {
+			newOutputPath = rawInput
+		}
 	} else if newFromPlan != "" {
 		// Will be extracted from plan
 	} else {
@@ -407,22 +416,18 @@ func buildProjectConfig(projectName string) (*generator.GeneratorConfig, error) 
 }
 
 func getOutputPath(projectName string) string {
-	basePath := ""
+	cwd, _ := os.Getwd()
+	
+	// If explicit output path is provided
 	if newOutputPath != "" {
-		basePath = newOutputPath
-	} else {
-		basePath, _ = os.Getwd()
+		if filepath.IsAbs(newOutputPath) {
+			return newOutputPath
+		}
+		return filepath.Join(cwd, newOutputPath)
 	}
 
-	// Clean the path to interpret dots and etc
-	basePath = filepath.Clean(basePath)
-
-	// If the base path already ends with the project name, assume the user meant that explicit directory
-	if filepath.Base(basePath) == projectName {
-		return basePath
-	}
-
-	return filepath.Join(basePath, projectName)
+	// Default: Create folder in current directory
+	return filepath.Join(cwd, projectName)
 }
 
 func runInteractiveMode(config *generator.GeneratorConfig) error {
