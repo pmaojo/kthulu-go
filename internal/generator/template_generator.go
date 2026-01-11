@@ -1046,6 +1046,9 @@ func (g *TemplateGenerator) WriteProject(structure *ProjectStructure) error {
 		}
 
 		// Write file content
+		if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
+			return fmt.Errorf("failed to create directory for %s: %w", filePath, err)
+		}
 		if err := os.WriteFile(filePath, []byte(file.Content), 0644); err != nil {
 			return fmt.Errorf("failed to write file %s: %w", filePath, err)
 		}

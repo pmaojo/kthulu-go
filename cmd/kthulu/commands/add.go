@@ -618,6 +618,9 @@ func generateSpecificModule(config *generator.GeneratorConfig, moduleName string
 
 	for relPath, content := range files {
 		filePath := filepath.Join(moduleDir, relPath)
+		if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
+			return fmt.Errorf("failed to create directory for %s: %w", filePath, err)
+		}
 		if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
 			return fmt.Errorf("failed to write file %s: %w", filePath, err)
 		}
