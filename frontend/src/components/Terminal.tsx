@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo } from 'react';
 import { Play, Square, RotateCcw, Download, Upload, FileCode, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -117,6 +117,51 @@ const parseCliArgs = (cliArgs: string[]) => {
   if (targets.length) payload.targets = targets;
   return payload;
 };
+
+const getTypeColor = (type: string) => {
+  switch (type) {
+    case 'error': return 'text-destructive';
+    case 'warning': return 'text-accent';
+    case 'success': return 'text-primary';
+    default: return 'text-muted-foreground';
+  }
+};
+
+const getTypeBadge = (type: string) => {
+  switch (type) {
+    case 'error': return 'destructive';
+    case 'warning': return 'secondary';
+    case 'default': return 'default'; // Corrected from 'success' -> 'default' based on Badge variants usually available
+    case 'success': return 'default';
+    default: return 'outline';
+  }
+};
+
+const ConsoleLine = memo(({ line }: { line: string }) => (
+  <div
+    className={line.startsWith('$') ? 'text-primary' : 'text-muted-foreground'}
+  >
+    {line}
+  </div>
+));
+ConsoleLine.displayName = 'ConsoleLine';
+
+const LogEntryItem = memo(({ entry }: { entry: LogEntry }) => (
+  <div className="flex items-start gap-3 p-2 hover:bg-kthulu-surface2 rounded-sm">
+    <Badge variant={getTypeBadge(entry.type)} className="text-xs font-mono min-w-fit">
+      {entry.type.toUpperCase()}
+    </Badge>
+    <div className="flex-1">
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-muted-foreground font-mono">{entry.time}</span>
+        <span className={`text-sm font-mono ${getTypeColor(entry.type)}`}>
+          {entry.message}
+        </span>
+      </div>
+    </div>
+  </div>
+));
+LogEntryItem.displayName = 'LogEntryItem';
 
 export function Terminal() {
   const [currentCommand, setCurrentCommand] = useState('');
@@ -305,24 +350,6 @@ export function Terminal() {
     setLogEntries(initialLogEntries);
   };
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'error': return 'text-destructive';
-      case 'warning': return 'text-accent';
-      case 'success': return 'text-primary';
-      default: return 'text-muted-foreground';
-    }
-  };
-
-  const getTypeBadge = (type: string) => {
-    switch (type) {
-      case 'error': return 'destructive';
-      case 'warning': return 'secondary';
-      case 'success': return 'default';
-      default: return 'outline';
-    }
-  };
-
   return (
     <div className="h-full bg-kthulu-surface1 flex flex-col">
       {/* Header */}
@@ -364,12 +391,7 @@ export function Terminal() {
           >
             <div className="space-y-1">
               {consoleOutput.map((line, index) => (
-                <div 
-                  key={index}
-                  className={line.startsWith('$') ? 'text-primary' : 'text-muted-foreground'}
-                >
-                  {line}
-                </div>
+                <ConsoleLine key={index} line={line} />
               ))}
               {isRunning && (
                 <div className="flex items-center gap-2 text-accent">
@@ -447,19 +469,7 @@ export function Terminal() {
           <ScrollArea className="h-full">
             <div className="space-y-2">
               {logEntries.map((entry, index) => (
-                <div key={index} className="flex items-start gap-3 p-2 hover:bg-kthulu-surface2 rounded-sm">
-                  <Badge variant={getTypeBadge(entry.type)} className="text-xs font-mono min-w-fit">
-                    {entry.type.toUpperCase()}
-                  </Badge>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground font-mono">{entry.time}</span>
-                      <span className={`text-sm font-mono ${getTypeColor(entry.type)}`}>
-                        {entry.message}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                <LogEntryItem key={index} entry={entry} />
               ))}
             </div>
           </ScrollArea>
