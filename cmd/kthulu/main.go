@@ -1,7 +1,7 @@
 package main
 
-import "github.com/pmaojo/kthulu-go/cmd/kthulu/cmd"
+import 	"github.com/pmaojo/kthulu-go/cmd/kthulu/commands"
 
 func main() {
-	cmd.Execute()
+	commands.Execute()
 }
