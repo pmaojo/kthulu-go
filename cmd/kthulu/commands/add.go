@@ -18,6 +18,8 @@ import (
 	"github.com/pmaojo/kthulu-go/internal/adapters/cli/parser"
 )
 
+const DefaultModulesPath = "internal/modules"
+
 var addCmd = &cobra.Command{
 	Use:   "add [module|component]",
 	Short: "➕ Add modules or components to your project",
@@ -56,8 +58,9 @@ Examples:
 		yes, _ := cmd.Flags().GetBool("yes")
 		prefix, _ := cmd.Flags().GetString("prefix")
 		protected, _ := cmd.Flags().GetBool("protected")
+		admin, _ := cmd.Flags().GetBool("admin")
 
-		return runAddModule(module, fields, withIntegrations, compliance, force, yes, prefix, protected)
+		return runAddModule(module, fields, withIntegrations, compliance, force, yes, prefix, protected, admin)
 	},
 }
 
@@ -99,6 +102,7 @@ func init() {
 	addModuleCmd.Flags().BoolP("yes", "y", false, "Skip confirmation prompts")
 	addModuleCmd.Flags().String("prefix", "", "Route prefix (e.g. /api/v1)")
 	addModuleCmd.Flags().Bool("protected", false, "Protect routes with authentication middleware")
+	addModuleCmd.Flags().Bool("admin", false, "Generate Admin CRUD pages")
 
 	// Add component flags
 	addComponentCmd.Flags().Bool("with-tests", true, "Generate tests")
@@ -108,7 +112,62 @@ func init() {
 	// Add subcommands
 	addCmd.AddCommand(addModuleCmd)
 	addCmd.AddCommand(addComponentCmd)
-	addCmd.AddCommand(addAuthCmd)
+	addCmd.AddCommand(addAdminCmd)
+}
+
+var addAdminCmd = &cobra.Command{
+	Use:   "admin",
+	Short: "Add a full Admin Dashboard module",
+	Long:  `Scaffolds a complete Admin Dashboard with Dashboard, Users, and Settings pages.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return runAddAdmin()
+	},
+}
+
+func runAddAdmin() error {
+	fmt.Println("👑 Adding Admin Dashboard Module...")
+
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("error getting current directory: %w", err)
+	}
+
+	if !isKthuluProject(currentDir) {
+		return fmt.Errorf("not in a Kthulu project directory. Run 'kthulu create <project>' first")
+	}
+
+	// Initialize generator
+	// Detect project module from go.mod
+	projectModule, _ := getProjectModule(currentDir)
+	config := &generator.GeneratorConfig{
+		ProjectName:   filepath.Base(currentDir),
+		ProjectModule: projectModule,
+		OutputPath:    currentDir,
+	}
+	
+	gen := generator.NewTemplateGenerator(nil)
+	gen.SetConfig(config)
+
+	// Create structure container
+	structure := &generator.ProjectStructure{
+		RootPath:    currentDir,
+		Directories: []string{},
+		Files:       []generator.GeneratedFile{},
+	}
+
+	// Generate Admin Module
+	if err := gen.GenerateAdminModule(structure); err != nil {
+		return fmt.Errorf("failed to generate admin module: %w", err)
+	}
+
+	// Write files
+	if err := gen.WriteProject(structure); err != nil {
+		return fmt.Errorf("failed to write admin files: %w", err)
+	}
+	
+	fmt.Println("✅ Admin Dashboard added successfully!")
+	fmt.Println("👉 Check frontend/src/modules/admin/presentation/")
+	return nil
 }
 
 func runAddAuthModule() error {
@@ -138,7 +197,7 @@ func runAddAuthModule() error {
 	}
 
 	// Auto register in main.go
-	if err := generator.InjectModuleRegistration(base, "auth", projectModule, "internal/modules"); err != nil {
+	if err := generator.InjectModuleRegistration(base, "auth", projectModule, DefaultModulesPath); err != nil {
 		fmt.Printf("⚠️  Failed to register auth module: %v\n", err)
 	} else {
 		fmt.Println("🔌 Registered auth module in main.go")
@@ -175,7 +234,7 @@ func installDependency(pkg string) error {
 	return cmd.Run()
 }
 
-func runAddModule(module string, fields []string, integrations []string, compliance string, force, yes bool, prefix string, protected bool) error {
+func runAddModule(module string, fields []string, integrations []string, compliance string, force, yes bool, prefix string, protected bool, admin bool) error {
 	fmt.Printf("🧠 Intelligently adding module: %s\n", module)
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
@@ -323,6 +382,10 @@ func runAddModule(module string, fields []string, integrations []string, complia
 		config.CustomValues["protected"] = "true"
 	}
 
+	if admin {
+		config.CustomValues["with_admin"] = "true"
+	}
+
 	// Add compliance configuration
 	if compliance != "" {
 		config.CustomValues["compliance"] = compliance
@@ -453,18 +516,23 @@ func runAddComponent(componentType, name, module string, withTests, withMigratio
 		return fmt.Errorf("unknown component type: %s. Supported: handler, service, repository, domain", componentType)
 	}
 
-	// Write file
-	targetDir := filepath.Join(modulePath, subdir)
-	if err := os.MkdirAll(targetDir, 0755); err != nil {
-		return fmt.Errorf("failed to create directory %s: %w", targetDir, err)
+	// Create project structure for generation
+	structure := &generator.ProjectStructure{
+		RootPath: currentDir,
+		Files: []generator.GeneratedFile{
+			{
+				Path:    filepath.Join(relPath, module, subdir, filename),
+				Content: content,
+			},
+		},
 	}
 
-	targetPath := filepath.Join(targetDir, filename)
-	if err := os.WriteFile(targetPath, []byte(content), 0644); err != nil {
-		return fmt.Errorf("failed to write file %s: %w", targetPath, err)
+	// Write file using unified generator
+	if err := gen.WriteProject(structure); err != nil {
+		return fmt.Errorf("failed to write component file: %w", err)
 	}
 
-	fmt.Printf("✅ Created %s\n", targetPath)
+	fmt.Printf("✅ Created %s\n", filepath.Join(relPath, module, subdir, filename))
 
 	if withTests {
 		fmt.Println("⚠️  Test generation not yet implemented")
@@ -560,16 +628,24 @@ func detectModuleFromDir(dir string) string {
 }
 
 func detectModuleLocation(projectRoot string) string {
+	// Priority 0: Check configuration file (kthulu-plan.yaml)
+	if data, err := os.ReadFile(filepath.Join(projectRoot, "kthulu-plan.yaml")); err == nil {
+		var bp blueprint.ProjectBlueprint
+		if err := yaml.Unmarshal(data, &bp); err == nil && bp.Structure.ModulesPath != "" {
+			return bp.Structure.ModulesPath
+		}
+	}
+
 	// Priority 1: Check if it's an enterprise project style (internal/adapters/http/modules)
 	if _, err := os.Stat(filepath.Join(projectRoot, "internal", "adapters", "http", "modules")); err == nil {
 		return "internal/adapters/http/modules"
 	}
 	// Priority 2: Check for the simpler style (internal/modules)
-	if _, err := os.Stat(filepath.Join(projectRoot, "internal", "modules")); err == nil {
-		return "internal/modules"
+	if _, err := os.Stat(filepath.Join(projectRoot, DefaultModulesPath)); err == nil {
+		return DefaultModulesPath
 	}
 	// Default to internal/modules for new additions if neither exists (fallback)
-	return "internal/modules"
+	return DefaultModulesPath
 }
 
 func displayDependencyPlan(moduleName string, plan *resolver.ResolutionPlan) {

@@ -1,0 +1,83 @@
+package core
+
+import (
+    "fmt"
+    "log"
+    "os"
+    "go.uber.org/fx"
+    "gorm.io/gorm"
+{{- if eq .Database "postgres"}}
+    "gorm.io/driver/postgres"
+{{- else if eq .Database "mysql"}}
+    "gorm.io/driver/mysql"
+{{- else}}
+    "gorm.io/driver/sqlite"
+    "path/filepath"
+{{- end}}
+{{- range .DomainImports}}
+    {{.}}
+{{- end}}
+)
+
+func CoreRepositoryProviders() fx.Option {
+    return fx.Options(
+        fx.Provide(NewDatabase),
+    )
+}
+
+func NewDatabase() (*gorm.DB, error) {
+    if os.Getenv("KTHULU_TEST_MODE") == "1" {
+        log.Println("Using in-memory SQLite database for tests")
+        db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+        if err != nil { return nil, err }
+        {{- if .AutoMigrateCall}}
+        {{.AutoMigrateCall}}
+        {{- else}}
+        return db, nil
+        {{- end}}
+    }
+
+{{- if eq .Database "postgres"}}
+    dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+        getEnv("DB_HOST", "localhost"),
+        getEnv("DB_PORT", "5432"),
+        getEnv("DB_USER", "postgres"),
+        getEnv("DB_PASSWORD", "postgres"),
+        getEnv("DB_NAME", "{{.DBName}}"),
+    )
+    log.Printf("Connecting to PostgreSQL at %s:%s/%s", getEnv("DB_HOST", "localhost"), getEnv("DB_PORT", "5432"), getEnv("DB_NAME", "{{.DBName}}"))
+    db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+{{- else if eq .Database "mysql"}}
+    dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true",
+        getEnv("DB_USER", "root"),
+        getEnv("DB_PASSWORD", "password"),
+        getEnv("DB_HOST", "localhost"),
+        getEnv("DB_PORT", "3306"),
+        getEnv("DB_NAME", "{{.DBName}}"),
+    )
+    log.Printf("Connecting to MySQL at %s:%s/%s", getEnv("DB_HOST", "localhost"), getEnv("DB_PORT", "3306"), getEnv("DB_NAME", "{{.DBName}}"))
+    db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+{{- else}}
+    dbPath := getEnv("SQLITE_PATH", "data/{{.DBName}}.db")
+    if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
+        return nil, err
+    }
+    log.Printf("Using SQLite database at %s", dbPath)
+    db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
+{{- end}}
+
+    if err != nil { return nil, err }
+
+    {{- if .AutoMigrateCall}}
+    {{.AutoMigrateCall}}
+    {{- else}}
+    return db, nil
+    {{- end}}
+}
+
+func getEnv(key, fallback string) string {
+    if value := os.Getenv(key); value != "" {
+        return value
+    }
+    return fallback
+}

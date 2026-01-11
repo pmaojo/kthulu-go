@@ -1,0 +1,74 @@
+import { Activity, CreditCard, DollarSign, Users } from 'lucide-react';
+
+const StatCard = ({ title, value, change, icon: Icon, color }: any) => (
+  <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 theme-transition hover:shadow-md">
+    <div className="flex justify-between items-start">
+      <div>
+        <p className="text-sm font-medium text-slate-500">{title}</p>
+        <h3 className="text-2xl font-bold text-slate-800 mt-1">{value}</h3>
+      </div>
+      <div className={`p-2 rounded-lg ${color} bg-opacity-10`}>
+        <Icon size={20} className={color.replace('bg-', 'text-')} />
+      </div>
+    </div>
+    <div className="mt-4 flex items-center text-sm">
+      <span className={change.startsWith('+') ? 'text-green-500' : 'text-red-500'}>
+        {change}
+      </span>
+      <span className="text-slate-400 ml-2">vs last month</span>
+    </div>
+  </div>
+);
+
+export default function DashboardPage() {
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard title="Total Users" value="12,345" change="+12.5%" icon={Users} color="bg-blue-500" />
+        <StatCard title="Revenue" value="$45,231" change="+8.2%" icon={DollarSign} color="bg-green-500" />
+        <StatCard title="Active Sessions" value="1,203" change="-3.1%" icon={Activity} color="bg-purple-500" />
+        <StatCard title="Sales" value="482" change="+18.7%" icon={CreditCard} color="bg-orange-500" />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+          <h3 className="text-lg font-bold text-slate-800 mb-4">Recent Activity</h3>
+          <div className="space-y-4">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex items-center gap-4 pb-4 border-b border-slate-50 last:border-0 last:pb-0">
+                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+                  <Activity size={18} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-800">New user registered</p>
+                  <p className="text-xs text-slate-400">2 minutes ago</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+          <h3 className="text-lg font-bold text-slate-800 mb-4">System Status</h3>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-slate-600">Server Uptime</span>
+              <span className="text-sm font-medium text-green-500">99.9%</span>
+            </div>
+            <div className="w-full bg-slate-100 rounded-full h-2">
+              <div className="bg-green-500 h-2 rounded-full" style={ { width: '99.9%' } }></div>
+            </div>
+            
+            <div className="flex justify-between items-center mt-4">
+              <span className="text-sm text-slate-600">CPU Usage</span>
+              <span className="text-sm font-medium text-yellow-500">45%</span>
+            </div>
+            <div className="w-full bg-slate-100 rounded-full h-2">
+              <div className="bg-yellow-500 h-2 rounded-full" style={ { width: '45%' } }></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

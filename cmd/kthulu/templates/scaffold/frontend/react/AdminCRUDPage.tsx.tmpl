@@ -1,0 +1,64 @@
+import { useState } from 'react';
+import { Plus, Search, Filter } from 'lucide-react';
+import {{ .Title }}List from './components/{{ .Title }}List';
+import {{ .Title }}Form from './components/{{ .Title }}Form';
+
+export default function Admin{{ .Title }}Page() {
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">{{ .PluralName | capitalize }}</h1>
+          <p className="text-slate-500">Manage {{ .Name | pluralize }}</p>
+        </div>
+        <button 
+          onClick={() => setIsFormOpen(true)}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-sm hover:shadow-md"
+        >
+          <Plus size={18} />
+          <span>Add {{ .Title }}</span>
+        </button>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <input 
+              type="text" 
+              placeholder="Search {{ .PluralName | lower }}..." 
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            />
+          </div>
+          <button className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors">
+            <Filter size={18} />
+            <span>Filter</span>
+          </button>
+        </div>
+
+        <{{ .Title }}List />
+      </div>
+
+      {isFormOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-slate-800">Add New {{ .Title }}</h2>
+              <button 
+                onClick={() => setIsFormOpen(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-6">
+              <{{ .Title }}Form onSuccess={() => setIsFormOpen(false)} />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

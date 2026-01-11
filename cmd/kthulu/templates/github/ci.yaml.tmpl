@@ -1,0 +1,79 @@
+name: build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        check-latest: true
+
+    - name: Build
+      run: go build -v ./...
+
+    - name: Test
+      run: go test -v ./...
+
+    - name: Vet
+      run: go vet ./...
+      
+    - name: Formatter Check
+      run: |
+         diff=$(gofmt -l .)
+         if [ -n "$diff" ]; then
+           echo "Run gofmt to format the following files:"
+           echo "$diff"
+           exit 1
+         fi
+
+  frontend-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    steps:
+    - uses: actions/checkout@v3
+    - name: Use Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Check if frontend exists
+      id: check_frontend
+      shell: bash
+      run: |
+        if [ -d "frontend" ]; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Install dependencies
+      if: steps.check_frontend.outputs.exists == 'true'
+      run: npm ci
+
+    - name: Build
+      if: steps.check_frontend.outputs.exists == 'true'
+      run: npm run build
+
+    # Install Playwright browsers (optional, adds time)
+    # - name: Install Playwright Browsers
+    #   if: steps.check_frontend.outputs.exists == 'true'
+    #   run: npx playwright install --with-deps
+
+    # - name: Run Playwright tests
+    #   if: steps.check_frontend.outputs.exists == 'true'
+    #   run: npx playwright test

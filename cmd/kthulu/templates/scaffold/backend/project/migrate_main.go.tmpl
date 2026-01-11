@@ -6,6 +6,8 @@ import (
 
 	{{if .DriverImport}}{{.DriverImport}}{{end}}
 	"github.com/pressly/goose/v3"
+
+	"{{.ModulePath}}/internal/config"
 )
 
 func main() {
@@ -13,11 +15,16 @@ func main() {
 		log.Fatal("usage: migrate [command]")
 	}
 
+	cfg, err := config.NewConfig()
+	if err != nil {
+		log.Fatalf("failed to load config: %v", err)
+	}
+
 	command := os.Args[1]
 	dir := "migrations"
 
-	// TODO: Load configuration for DSN
-	db, err := goose.OpenDBWithDriver("{{.OpenDriver}}", "{{.OpenDSN}}")
+	// Connect to database using configuration
+	db, err := goose.OpenDBWithDriver("{{.OpenDriver}}", cfg.Database.URL)
 	if err != nil {
 		log.Fatalf("goose: failed to open DB: %v\n", err)
 	}

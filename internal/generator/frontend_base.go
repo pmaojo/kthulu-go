@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"path"
 )
 
 // generateFrontendBase generates the base React files
@@ -20,6 +21,11 @@ func (g *TemplateGenerator) generateFrontendBase(structure *ProjectStructure) er
 		"frontend/src/index.css":         "index.css.tmpl",
 		"frontend/src/App.tsx":           "App.tsx.tmpl",
 		"frontend/src/services/api.ts":   "api.ts.tmpl",
+		"frontend/playwright.config.ts":  "e2e/playwright.config.ts.tmpl",
+		"frontend/tests/e2e/auth.spec.ts": "e2e/auth.spec.ts.tmpl",
+		// Admin UI
+		"frontend/src/components/layouts/AdminLayout.tsx": "AdminLayout.tsx.tmpl",
+		"frontend/src/config/navigation.ts":               "config/navigation.ts.tmpl",
 	}
 
 	// Convention over Configuration:
@@ -56,7 +62,42 @@ func (g *TemplateGenerator) generateFrontendBase(structure *ProjectStructure) er
 		"frontend/src",
 		"frontend/src/modules",
 		"frontend/src/services",
+		"frontend/src/components/layouts",
+		"frontend/src/config",
+		"frontend/tests/e2e",
 	)
+
+	return nil
+}
+
+// GenerateAdminModule generates the Admin Dashboard module in the frontend
+func (g *TemplateGenerator) GenerateAdminModule(structure *ProjectStructure) error {
+	fmt.Println("  🎨 Generating Admin Dashboard module...")
+
+	moduleDir := "frontend/src/modules/admin/presentation"
+
+	// Ensure directories exist
+	structure.Directories = append(structure.Directories, moduleDir)
+
+	// Map of file path -> template constant
+	files := map[string]string{
+		path.Join(moduleDir, "DashboardPage.tsx"): TmplAdminDashboard,
+		path.Join(moduleDir, "UsersPage.tsx"):     TmplAdminUsers,
+		path.Join(moduleDir, "SettingsPage.tsx"):  TmplAdminSettings,
+	}
+
+	for relPath, tmplName := range files {
+		// Admin templates don't strictly need data for now, but we pass config just in case
+		content, err := g.executeTemplate("admin_"+path.Base(relPath), tmplName, g.config)
+		if err != nil {
+			return fmt.Errorf("failed to generate %s: %w", relPath, err)
+		}
+
+		structure.Files = append(structure.Files, GeneratedFile{
+			Path:    relPath,
+			Content: content,
+		})
+	}
 
 	return nil
 }

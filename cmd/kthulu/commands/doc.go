@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"path/filepath"
 	"strings"
 
@@ -117,16 +120,41 @@ func generateMermaidDiagrams(root string) error {
 		if err != nil { return err }
 		if skipFileForDiagram(path) { return nil }
 
-		content, err := os.ReadFile(path)
-		if err != nil { return nil }
+		// Parse the file using go/parser
+		fset := token.NewFileSet()
+		node, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+		if err != nil { return nil } // Skip files that can't be parsed
+
+		pkg := node.Name.Name
 		
-		lines := strings.Split(string(content), "\n")
-		pkg := detectPackage(lines)
-		
-		s, i, r := parseGoFileForDiagrams(lines, pkg)
-		for k, v := range s { structs[k] = v }
-		interfaces = append(interfaces, i...)
-		relationships = append(relationships, r...)
+		ast.Inspect(node, func(n ast.Node) bool {
+			// Find type definitions
+			ts, ok := n.(*ast.TypeSpec)
+			if !ok { return true }
+
+			name := ts.Name.Name
+
+			// Handle Structs
+			if st, ok := ts.Type.(*ast.StructType); ok {
+				structs[name] = pkg
+				// Check fields for relationships
+				if st.Fields != nil {
+					for _, field := range st.Fields.List {
+						rel := extractRelationship(field.Type)
+						if rel != "" && isCustomType(rel) {
+							relationships = append(relationships, fmt.Sprintf("    %s --> %s", name, rel))
+						}
+					}
+				}
+			}
+
+			// Handle Interfaces
+			if _, ok := ts.Type.(*ast.InterfaceType); ok {
+				interfaces = append(interfaces, interfaceDef{Name: name, Package: pkg})
+			}
+
+			return true
+		})
 		
 		return nil
 	})
@@ -142,6 +170,29 @@ func generateMermaidDiagrams(root string) error {
 	return os.WriteFile(mermaidPath, []byte(sb.String()), 0644)
 }
 
+func extractRelationship(expr ast.Expr) string {
+	switch t := expr.(type) {
+	case *ast.Ident:
+		return t.Name
+	case *ast.StarExpr:
+		return extractRelationship(t.X)
+	case *ast.ArrayType:
+		return extractRelationship(t.Elt)
+	case *ast.SelectorExpr:
+		return t.Sel.Name // Handling package.Type
+	}
+	return ""
+}
+
+func isCustomType(name string) bool {
+	// Simple heuristic to ignore basic types
+	basic := map[string]bool{
+		"string": true, "int": true, "int64": true, "float64": true, 
+		"bool": true, "error": true, "time.Time": true,
+	}
+	return !basic[name] && len(name) > 0 && name[0] >= 'A' && name[0] <= 'Z'
+}
+
 type interfaceDef struct {
 	Name    string
 	Package string
@@ -149,57 +200,9 @@ type interfaceDef struct {
 
 func skipFileForDiagram(path string) bool {
 	return !strings.HasSuffix(path, ".go") || 
-		strings.Contains(path, "test") || 
+		strings.HasSuffix(path, "_test.go") || 
 		strings.Contains(path, "vendor") || 
 		strings.Contains(path, "mocks")
-}
-
-func detectPackage(lines []string) string {
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "package ") {
-			return strings.TrimPrefix(line, "package ")
-		}
-	}
-	return "unknown"
-}
-
-func parseGoFileForDiagrams(lines []string, pkg string) (map[string]string, []interfaceDef, []string) {
-	structs := make(map[string]string)
-	interfaces := []interfaceDef{}
-	relationships := []string{}
-
-	for i, line := range lines {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "type ") {
-			if strings.Contains(line, " struct {") {
-				name := strings.Fields(line)[1]
-				structs[name] = pkg
-				relationships = append(relationships, detectRelationships(lines, i, name)...)
-			} else if strings.Contains(line, " interface {") {
-				interfaces = append(interfaces, interfaceDef{Name: strings.Fields(line)[1], Package: pkg})
-			}
-		}
-	}
-	return structs, interfaces, relationships
-}
-
-func detectRelationships(lines []string, startLine int, structName string) []string {
-	rels := []string{}
-	for j := startLine + 1; j < len(lines); j++ {
-		line := strings.TrimSpace(lines[j])
-		if line == "}" { break }
-		if line == "" || strings.HasPrefix(line, "//") { continue }
-		
-		parts := strings.Fields(line)
-		if len(parts) >= 2 {
-			cleanType := strings.TrimLeft(parts[1], "*[]")
-			if cleanType != "" && cleanType[0] >= 'A' && cleanType[0] <= 'Z' {
-				rels = append(rels, fmt.Sprintf("    %s --> %s", structName, cleanType))
-			}
-		}
-	}
-	return rels
 }
 
 func writeMermaidHeader(sb *strings.Builder) {

@@ -15,6 +15,47 @@ import (
 	"github.com/pmaojo/kthulu-go/cmd/kthulu/templates"
 )
 
+const (
+	// Project Templates
+	TmplDockerCompose = "docker-compose.yml.tmpl"
+	TmplMakefile      = "Makefile.tmpl"
+	TmplAppConfig     = "app.yaml.tmpl"
+	TmplCIWorkflow    = "github/ci.yaml.tmpl"
+	TmplDockerfile    = "Dockerfile.tmpl"
+	TmplBuildScript   = "build.sh.tmpl"
+
+	// Go Source Templates
+	TmplMainTest      = "scaffold/backend/project/main_test.go.tmpl"
+	TmplMigrateMain   = "scaffold/backend/project/migrate_main.go.tmpl"
+	TmplCoreProviders = "scaffold/backend/core/providers.go.tmpl"
+	TmplConfigGo      = "scaffold/backend/config/config.go.tmpl"
+	TmplCoreTest      = "scaffold/backend/project/core_providers_test.go.tmpl"
+
+	// Module Templates
+	TmplModule       = "scaffold/backend/module.go.tmpl"
+	TmplLayerDomain  = "scaffold/backend/layers/domain.go.tmpl"
+	TmplLayerRepo    = "scaffold/backend/layers/repository.go.tmpl"
+	TmplLayerService = "scaffold/backend/layers/service.go.tmpl"
+	TmplLayerHandler = "scaffold/backend/layers/handler.go.tmpl"
+	TmplLayerCore    = "scaffold/backend/layers/core.go.tmpl"
+	TmplLayerStore   = "scaffold/backend/layers/store.go.tmpl"
+	TmplMigration    = "scaffold/backend/migration.sql.tmpl"
+
+	// Test Templates
+	TmplModuleTest  = "scaffold/backend/layers/module_providers_test.go.tmpl"
+	TmplRepoTest    = "scaffold/backend/layers/repository_test.go.tmpl"
+	TmplServiceTest = "scaffold/backend/layers/service_test.go.tmpl"
+	TmplHandlerTest = "scaffold/backend/layers/handler_test.go.tmpl"
+
+	// Frontend Templates
+	TmplAdminLayout    = "scaffold/frontend/react/AdminLayout.tsx.tmpl"
+	TmplAdminDashboard = "scaffold/frontend/react/modules/admin/DashboardPage.tsx.tmpl"
+	TmplAdminUsers     = "scaffold/frontend/react/modules/admin/UsersPage.tsx.tmpl"
+	TmplAdminSettings  = "scaffold/frontend/react/modules/admin/SettingsPage.tsx.tmpl"
+	TmplAdminCRUDPage  = "scaffold/frontend/react/AdminCRUDPage.tsx.tmpl"
+	TmplNavigation     = "scaffold/frontend/react/config/navigation.ts.tmpl"
+)
+
 // TemplateGenerator generates code templates based on dependency analysis
 type TemplateGenerator struct {
 	resolver  *resolver.DependencyResolver
@@ -442,53 +483,6 @@ func (g *TemplateGenerator) generateCoreProviders() string {
 		dbName = "app"
 	}
 
-	imports := []string{
-		"\"fmt\"",
-		"\"log\"",
-		"\"os\"",
-		"\"go.uber.org/fx\"",
-		"\"gorm.io/gorm\"",
-	}
-
-	var connectionBuilder strings.Builder
-	var driverImport string
-	switch dbDriver {
-	case "postgres":
-		imports = append(imports, "\"fmt\"")
-		driverImport = "\"gorm.io/driver/postgres\""
-		connectionBuilder.WriteString("\t\tdsn := fmt.Sprintf(\"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable\",\n")
-		connectionBuilder.WriteString("\t\t\tgetEnv(\"DB_HOST\", \"localhost\"),\n")
-		connectionBuilder.WriteString("\t\t\tgetEnv(\"DB_PORT\", \"5432\"),\n")
-		connectionBuilder.WriteString("\t\t\tgetEnv(\"DB_USER\", \"postgres\"),\n")
-		connectionBuilder.WriteString("\t\t\tgetEnv(\"DB_PASSWORD\", \"postgres\"),\n")
-		connectionBuilder.WriteString(fmt.Sprintf("\t\t\tgetEnv(\"DB_NAME\", \"%s\"),\n", dbName))
-		connectionBuilder.WriteString("\t\t)\n")
-		connectionBuilder.WriteString(fmt.Sprintf("\t\tlog.Printf(\"Connecting to PostgreSQL at %%s:%%s/%%s\", getEnv(\"DB_HOST\", \"localhost\"), getEnv(\"DB_PORT\", \"5432\"), getEnv(\"DB_NAME\", \"%s\"))\n", dbName))
-		connectionBuilder.WriteString("\t\treturn gorm.Open(postgres.Open(dsn), &gorm.Config{})\n")
-	case "mysql":
-		imports = append(imports, "\"fmt\"")
-		driverImport = "\"gorm.io/driver/mysql\""
-		connectionBuilder.WriteString("\t\tdsn := fmt.Sprintf(\"%s:%s@tcp(%s:%s)/%s?parseTime=true\",\n")
-		connectionBuilder.WriteString("\t\t\tgetEnv(\"DB_USER\", \"root\"),\n")
-		connectionBuilder.WriteString("\t\t\tgetEnv(\"DB_PASSWORD\", \"password\"),\n")
-		connectionBuilder.WriteString("\t\t\tgetEnv(\"DB_HOST\", \"localhost\"),\n")
-		connectionBuilder.WriteString("\t\t\tgetEnv(\"DB_PORT\", \"3306\"),\n")
-		connectionBuilder.WriteString(fmt.Sprintf("\t\t\tgetEnv(\"DB_NAME\", \"%s\"),\n", dbName))
-		connectionBuilder.WriteString("\t\t)\n")
-		connectionBuilder.WriteString(fmt.Sprintf("\t\tlog.Printf(\"Connecting to MySQL at %%s:%%s/%%s\", getEnv(\"DB_HOST\", \"localhost\"), getEnv(\"DB_PORT\", \"3306\"), getEnv(\"DB_NAME\", \"%s\"))\n", dbName))
-		connectionBuilder.WriteString("\t\treturn gorm.Open(mysql.Open(dsn), &gorm.Config{})\n")
-	default:
-		driverImport = "\"gorm.io/driver/sqlite\""
-		imports = append(imports, "\"path/filepath\"")
-		connectionBuilder.WriteString(fmt.Sprintf("\t\tdbPath := getEnv(\"SQLITE_PATH\", \"data/%s.db\")\n", dbName))
-		connectionBuilder.WriteString("\t\tif err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {\n")
-		connectionBuilder.WriteString("\t\t\treturn nil, err\n")
-		connectionBuilder.WriteString("\t\t}\n")
-		connectionBuilder.WriteString("\t\tlog.Printf(\"Using SQLite database at %s\", dbPath)\n")
-		connectionBuilder.WriteString("\t\treturn gorm.Open(sqlite.Open(dbPath), &gorm.Config{})\n")
-	}
-	imports = append(imports, driverImport)
-
 	// Generate domain imports for AutoMigrate
 	var domainImports []string
 	var autoMigrateModels []string
@@ -500,48 +494,34 @@ func (g *TemplateGenerator) generateCoreProviders() string {
 		autoMigrateModels = append(autoMigrateModels, fmt.Sprintf("&%sCore.%s{}", module, Capitalize(module)))
 	}
 
-	var importLines []string
-	for _, imp := range imports {
-		importLines = append(importLines, "\t"+imp)
-	}
-	importLines = append(importLines, domainImports...)
-
 	autoMigrateCall := ""
 	if len(autoMigrateModels) > 0 {
-		autoMigrateCall = fmt.Sprintf("\n\t// Auto-migrate all domain models\n\tif err := db.AutoMigrate(%s); err != nil {\n\t\treturn nil, fmt.Errorf(\"auto-migrate failed: %%w\", err)\n\t}\n\treturn db, nil", strings.Join(autoMigrateModels, ", "))
-	} else {
-		autoMigrateCall = "\n\treturn db, nil"
+		autoMigrateCall = fmt.Sprintf(`
+    // Auto-migrate all domain models
+    if err := db.AutoMigrate(%s); err != nil {
+        return nil, fmt.Errorf("auto-migrate failed: %%w", err)
+    }
+    return db, nil`, strings.Join(autoMigrateModels, ", "))
 	}
 
-	return fmt.Sprintf(`package core
+	data := struct {
+		Database        string
+		DBName          string
+		DomainImports   []string
+		AutoMigrateCall string
+	}{
+		Database:        dbDriver,
+		DBName:          dbName,
+		DomainImports:   domainImports,
+		AutoMigrateCall: autoMigrateCall,
+	}
 
-import (
-%s
-)
-
-func CoreRepositoryProviders() fx.Option {
-        return fx.Options(
-                fx.Provide(NewDatabase),
-        )
-}
-
-func NewDatabase() (*gorm.DB, error) {
-if os.Getenv("KTHULU_TEST_MODE") == "1" {
-log.Println("Using in-memory SQLite database for tests")
-db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
-if err != nil { return nil, err }
-%s
-}
-%s
-}
-
-func getEnv(key, fallback string) string {
-        if value := os.Getenv(key); value != "" {
-                return value
-        }
-        return fallback
-}
-`, strings.Join(importLines, "\n"), autoMigrateCall, strings.Replace(connectionBuilder.String(), "return gorm.Open(", "db, err := gorm.Open(", 1)+"\nif err != nil { return nil, err }"+autoMigrateCall)
+	content, err := g.executeTemplate("coreProviders", "scaffold/backend/core/providers.go.tmpl", data)
+	if err != nil {
+		fmt.Printf("⚠️ Failed to generate core providers: %v\n", err)
+		return ""
+	}
+	return content
 }
 
 // Helper methods for code generation
@@ -639,7 +619,7 @@ func (g *TemplateGenerator) GenerateModuleFile(name string, info *resolver.Modul
 		"ModuleRelPath": relPath,
 	}
 
-	content, err := g.executeTemplate("module", "scaffold/backend/module.go.tmpl", data)
+	content, err := g.executeTemplate("module", TmplModule, data)
 	if err != nil {
 		fmt.Printf("⚠️  Error generating module file: %v\n", err)
 		return ""
@@ -671,7 +651,7 @@ func (g *TemplateGenerator) GenerateRepositoryFile(name string) string {
 		"CoreImport":   g.moduleImportPath(relPath, name, "core"),
 	}
 
-	content, err := g.executeTemplate("repository", "scaffold/backend/layers/repository.go.tmpl", data)
+	content, err := g.executeTemplate("repository", TmplLayerRepo, data)
 	if err != nil {
 		fmt.Printf("⚠️  Error generating repository file: %v\n", err)
 		return ""
@@ -688,7 +668,7 @@ func (g *TemplateGenerator) GenerateServiceFile(name string) string {
 		"CoreImport":   g.moduleImportPath(relPath, name, "core"),
 	}
 
-	content, err := g.executeTemplate("service", "scaffold/backend/layers/service.go.tmpl", data)
+	content, err := g.executeTemplate("service", TmplLayerService, data)
 	if err != nil {
 		fmt.Printf("⚠️  Error generating service file: %v\n", err)
 		return ""
@@ -706,7 +686,7 @@ func (g *TemplateGenerator) GenerateHandlerFile(name string) string {
 		"DomainImport": g.moduleImportPath(relPath, name, "domain"),
 	}
 
-	content, err := g.executeTemplate("handler", "scaffold/backend/layers/handler.go.tmpl", data)
+	content, err := g.executeTemplate("handler", TmplLayerHandler, data)
 	if err != nil {
 		fmt.Printf("⚠️  Error generating handler file: %v\n", err)
 		return ""
@@ -755,10 +735,10 @@ func (g *TemplateGenerator) GenerateBackendModule(moduleName string, fields []st
 	// Core layers
 	layers := map[string]string{
 		"module.go":                             "scaffold/backend/module.go.tmpl",
-		"core/" + moduleName + ".go":            "scaffold/backend/layers/core.go.tmpl",
-		"store/" + moduleName + "_store.go":     "scaffold/backend/layers/store.go.tmpl",
-		"core/" + moduleName + "_service.go":    "scaffold/backend/layers/service.go.tmpl",
-		"api/" + moduleName + "_handler.go":     "scaffold/backend/layers/handler.go.tmpl",
+		"core/" + moduleName + ".go":            TmplLayerCore,
+		"store/" + moduleName + "_store.go":     TmplLayerStore,
+		"core/" + moduleName + "_service.go":    TmplLayerService,
+		"api/" + moduleName + "_handler.go":     TmplLayerHandler,
 	}
 
 	for relPath, tmplPath := range layers {
@@ -770,7 +750,7 @@ func (g *TemplateGenerator) GenerateBackendModule(moduleName string, fields []st
 	}
 
 	// Migration
-	migrationContent, err := g.executeTemplate("migration", "scaffold/backend/migration.sql.tmpl", data)
+	migrationContent, err := g.executeTemplate("migration", TmplMigration, data)
 	if err != nil {
 		fmt.Printf("⚠️  Warning: Failed to generate migration: %v\n", err)
 	}
@@ -847,6 +827,19 @@ func (g *TemplateGenerator) GenerateFrontendModule(moduleName string, fields []s
 		"presentation/components/" + data.Title + "Form.tsx": "scaffold/frontend/react/form.tsx.tmpl",
 		"presentation/" + data.Title + "Page.tsx":            "scaffold/frontend/react/page.tsx.tmpl",
 		"index.ts":                                           "scaffold/frontend/react/index.tsx.tmpl",
+		"../../../tests/e2e/" + data.Name + ".spec.ts":       "scaffold/frontend/react/e2e/module.spec.ts.tmpl",
+	}
+
+	// Conditionally add Admin CRUD page
+	if g.config.CustomValues["with_admin"] == "true" {
+		files["presentation/Admin"+data.Title+"Page.tsx"] = TmplAdminCRUDPage
+		
+		// Attempt to register in navigation
+		if err := g.ResultRegisterFrontendNavigation(data.Title, data.Name, structure.RootPath); err != nil {
+			fmt.Printf("   ⚠️  Warning: Failed to auto-register navigation: %v\n", err)
+		} else {
+			fmt.Printf("   🧭 Auto-registered navigation for %s\n", data.Name)
+		}
 	}
 
 	for relPath, tmplPath := range files {
@@ -868,7 +861,7 @@ func (g *TemplateGenerator) generateConfiguration(structure *ProjectStructure) e
 	// Generate docker-compose.yml
 	dockerComposeFile := GeneratedFile{
 		Path:     "docker-compose.yml",
-		Template: "docker-compose.yml.tmpl",
+		Template: TmplDockerCompose,
 		Content:  g.generateDockerCompose(),
 	}
 	structure.Files = append(structure.Files, dockerComposeFile)
@@ -876,7 +869,7 @@ func (g *TemplateGenerator) generateConfiguration(structure *ProjectStructure) e
 	// Generate Makefile
 	makefileFile := GeneratedFile{
 		Path:     "Makefile",
-		Template: "Makefile.tmpl",
+		Template: TmplMakefile,
 		Content:  g.generateMakefile(),
 	}
 	structure.Files = append(structure.Files, makefileFile)
@@ -884,10 +877,29 @@ func (g *TemplateGenerator) generateConfiguration(structure *ProjectStructure) e
 	// Generate app config
 	configFile := GeneratedFile{
 		Path:     "configs/app.yaml",
-		Template: "app.yaml.tmpl",
+		Template: TmplAppConfig,
 		Content:  g.generateAppConfig(),
 	}
 	structure.Files = append(structure.Files, configFile)
+
+	// Generate internal/config/config.go
+	configGoFile := GeneratedFile{
+		Path:     "internal/config/config.go",
+		Template: TmplConfigGo,
+		Content:  g.generateConfigGo(),
+	}
+	structure.Files = append(structure.Files, configGoFile)
+
+	// Generate GitHub CI Workflow
+	ciFile := GeneratedFile{
+		Path:     ".github/workflows/ci.yaml",
+		Template: TmplCIWorkflow,
+		Content:  "", // Loaded dynamically
+	}
+	if content, err := g.executeTemplate("ciWorkflow", TmplCIWorkflow, nil); err == nil {
+		ciFile.Content = content
+		structure.Files = append(structure.Files, ciFile)
+	}
 
 	return nil
 }
@@ -896,15 +908,15 @@ func (g *TemplateGenerator) generateBuildScripts(structure *ProjectStructure) er
 	// Generate Dockerfile
 	dockerFile := GeneratedFile{
 		Path:     "Dockerfile",
-		Template: "Dockerfile.tmpl",
+		Template: TmplDockerfile,
 		Content:  g.generateDockerfile(),
 	}
-	structure.Files = append(structure.Files, dockerFile)
+		structure.Files = append(structure.Files, dockerFile)
 
 	// Generate build script
 	buildScript := GeneratedFile{
 		Path:       "scripts/build.sh",
-		Template:   "build.sh.tmpl",
+		Template:   TmplBuildScript,
 		Content:    g.generateBuildScript(),
 		Executable: true,
 	}
@@ -914,7 +926,7 @@ func (g *TemplateGenerator) generateBuildScripts(structure *ProjectStructure) er
 }
 
 func (g *TemplateGenerator) generateMainTestFile() string {
-	content, err := g.executeTemplate("main_test", "scaffold/backend/project/main_test.go.tmpl", nil)
+	content, err := g.executeTemplate("main_test", TmplMainTest, nil)
 	if err != nil {
 		fmt.Printf("⚠️  Error generating main test: %v\n", err)
 		return ""
@@ -942,9 +954,10 @@ func (g *TemplateGenerator) generateMigrateMainFile() string {
 		"DriverImport": driverImport,
 		"OpenDriver":   openDriver,
 		"OpenDSN":      openDSN,
+		"ModulePath":   g.modulePath(),
 	}
 
-	content, err := g.executeTemplate("migrate_main", "scaffold/backend/project/migrate_main.go.tmpl", data)
+	content, err := g.executeTemplate("migrate_main", TmplMigrateMain, data)
 	if err != nil {
 		fmt.Printf("⚠️  Error generating migrate main: %v\n", err)
 		return ""
@@ -952,8 +965,21 @@ func (g *TemplateGenerator) generateMigrateMainFile() string {
 	return content
 }
 
+func (g *TemplateGenerator) generateConfigGo() string {
+	data := map[string]interface{}{
+		"Database":    g.config.Database,
+		"ProjectName": g.config.ProjectName,
+	}
+	content, err := g.executeTemplate("config_go", TmplConfigGo, data)
+	if err != nil {
+		fmt.Printf("⚠️  Error generating config.go: %v\n", err)
+		return ""
+	}
+	return content
+}
+
 func (g *TemplateGenerator) generateCoreProvidersTest() string {
-	content, err := g.executeTemplate("core_test", "scaffold/backend/project/core_providers_test.go.tmpl", nil)
+	content, err := g.executeTemplate("core_test", TmplCoreTest, nil)
 	if err != nil {
 		fmt.Printf("⚠️  Error generating core test: %v\n", err)
 		return ""
@@ -966,7 +992,7 @@ func (g *TemplateGenerator) generateModuleProvidersTestFile(name string) string 
 		"Name": name,
 	}
 
-	content, err := g.executeTemplate("module_test", "scaffold/backend/layers/module_providers_test.go.tmpl", data)
+	content, err := g.executeTemplate("module_test", TmplModuleTest, data)
 	if err != nil {
 		fmt.Printf("⚠️  Error generating module test: %v\n", err)
 		return ""
@@ -981,7 +1007,7 @@ func (g *TemplateGenerator) generateRepositoryTestFile(name string) string {
 		"DomainImport": g.moduleImportPath("internal/adapters/http/modules", name, "domain"),
 	}
 
-	content, err := g.executeTemplate("repository_test", "scaffold/backend/layers/repository_test.go.tmpl", data)
+	content, err := g.executeTemplate("repository_test", TmplRepoTest, data)
 	if err != nil {
 		fmt.Printf("⚠️  Error generating repository test: %v\n", err)
 		return ""
@@ -1065,4 +1091,44 @@ func (g *TemplateGenerator) WriteProject(structure *ProjectStructure) error {
 
 	fmt.Printf("🎉 Project generated successfully!\n")
 	return nil
+}
+
+// ResultRegisterFrontendNavigation registers a module in the frontend navigation config
+func (g *TemplateGenerator) ResultRegisterFrontendNavigation(title, name, rootPath string) error {
+	configPath := filepath.Join(rootPath, "frontend/src/config/navigation.ts")
+	
+	// Read existing file
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil // Config doesn't exist, skip
+		}
+		return err
+	}
+	
+	text := string(content)
+	
+	// Check if already registered
+	if strings.Contains(text, `path: '/`+name+`'`) {
+		return nil
+	}
+	
+	// Prepare new item
+	newItem := fmt.Sprintf(`  {
+    title: '%s',
+    path: '/%s',
+    icon: LayoutDashboard,
+    category: 'Modules'
+  },
+`, title, name)
+
+	// Insert before the end of the array
+	lastBracket := strings.LastIndex(text, "];")
+	if lastBracket == -1 {
+		return fmt.Errorf("could not find closing bracket in navigation.ts")
+	}
+	
+	newText := text[:lastBracket] + newItem + text[lastBracket:]
+	
+	return os.WriteFile(configPath, []byte(newText), 0644)
 }

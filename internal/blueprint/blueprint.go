@@ -19,6 +19,11 @@ type ModuleConfig struct {
 	Fields []string `yaml:"fields,omitempty"`
 }
 
+// ProjectStructure defines custom paths for the project
+type ProjectStructure struct {
+	ModulesPath string `yaml:"modules_path,omitempty"`
+}
+
 // ProjectBlueprint represents the desired state of a project
 type ProjectBlueprint struct {
 	Name         string                  `yaml:"name"`
@@ -29,6 +34,7 @@ type ProjectBlueprint struct {
 	Database     string                  `yaml:"database"`
 	Frontend     string                  `yaml:"frontend"`
 	Auth         string                  `yaml:"auth"`
+	Structure    ProjectStructure        `yaml:"structure,omitempty"`
 	Requirements []Requirement           `yaml:"requirements,omitempty"`
 }
 
