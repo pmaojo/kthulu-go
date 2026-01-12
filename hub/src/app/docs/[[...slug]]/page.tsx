@@ -16,10 +16,10 @@ export default async function DocPage({ params }: { params: { slug: string[] } }
     isMarketplace = true;
     // Strip 'marketplace' and use the rest of the slug
     const marketplaceSlug = slug.slice(1);
-    doc = getDocBySlug(marketplaceSlug, REGISTRY_DIR);
+    doc = await getDocBySlug(marketplaceSlug, REGISTRY_DIR);
   } else {
     // Normal docs
-    doc = getDocBySlug(slug);
+    doc = await getDocBySlug(slug);
   }
 
   if (!doc) {
@@ -27,7 +27,9 @@ export default async function DocPage({ params }: { params: { slug: string[] } }
   }
 
   // Helper to determine if content is sparse (placeholder)
-  const isSparse = doc.content.trim().split('\n').length < 10;
+  // Ensure content exists before checking length. If fetched without fields, it should be there.
+  const content = doc.content || '';
+  const isSparse = content.trim().split('\n').length < 10;
 
   const iconMap: Record<string, any> = {
     Zap: <Zap size={20} />,
@@ -118,7 +120,7 @@ export default async function DocPage({ params }: { params: { slug: string[] } }
 
           <div className="prose-custom">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {doc.content}
+              {content}
             </ReactMarkdown>
           </div>
         </article>

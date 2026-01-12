@@ -9,11 +9,11 @@ export interface DocContent {
   slug: string[];
   title: string;
   description?: string;
-  content: string;
+  content?: string;
   frontmatter: Record<string, any>;
 }
 
-export function getDocBySlug(slug: string[], baseDir: string = DOCS_DIR): DocContent | null {
+export async function getDocBySlug(slug: string[], baseDir: string = DOCS_DIR, fields: string[] = []): Promise<DocContent | null> {
   if (!Array.isArray(slug)) return null;
   
   const fullPath = path.join(baseDir, ...slug) + '.md';
@@ -25,38 +25,48 @@ export function getDocBySlug(slug: string[], baseDir: string = DOCS_DIR): DocCon
   
   if (!targetPath) return null;
 
-  const fileContents = fs.readFileSync(targetPath, 'utf8');
+  const fileContents = await fs.promises.readFile(targetPath, 'utf8');
   const { data, content } = matter(fileContents);
 
-  return {
+  const doc: DocContent = {
     slug,
     title: data.title || slug[slug.length - 1],
     description: data.description || '',
-    content,
     frontmatter: data,
   };
+
+  if (fields.length === 0 || fields.includes('content')) {
+    doc.content = content;
+  }
+
+  return doc;
 }
 
-export function getAllDocs(subDir: string = '', baseDir: string = DOCS_DIR): DocContent[] {
+export async function getAllDocs(subDir: string = '', baseDir: string = DOCS_DIR, fields: string[] = []): Promise<DocContent[]> {
   const fullDir = path.join(baseDir, subDir);
   if (!fs.existsSync(fullDir)) return [];
 
-  const files = fs.readdirSync(fullDir, { recursive: true }) as string[];
+  const files = await fs.promises.readdir(fullDir, { recursive: true }) as string[];
   
-  return files
+  const docs = await Promise.all(files
     .filter((file) => file.endsWith('.md'))
-    .map((file) => {
+    .map(async (file) => {
       const relativePath = path.join(subDir, file);
       const slug = relativePath.replace(/(\.md|index\.md)$/, '').split(path.sep).filter(Boolean);
-      return getDocBySlug(slug, baseDir);
-    })
-    .filter((doc): doc is DocContent => doc !== null);
+      return getDocBySlug(slug, baseDir, fields);
+    }));
+
+  return docs.filter((doc): doc is DocContent => doc !== null);
 }
 
-export function getMarketplaceItems() {
-  const starters = getAllDocs('starters', REGISTRY_DIR);
-  const modules = getAllDocs('modules', REGISTRY_DIR);
-  const plugins = getAllDocs('plugins', REGISTRY_DIR);
+export async function getMarketplaceItems() {
+  const fields = ['slug', 'title', 'description', 'frontmatter'];
+
+  const [starters, modules, plugins] = await Promise.all([
+    getAllDocs('starters', REGISTRY_DIR, fields),
+    getAllDocs('modules', REGISTRY_DIR, fields),
+    getAllDocs('plugins', REGISTRY_DIR, fields)
+  ]);
 
   return {
     starters,

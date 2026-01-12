@@ -2,8 +2,8 @@ import { getMarketplaceItems } from '@/lib/cms';
 import Link from 'next/link';
 import { Zap, Shield, Cloud, Star, ArrowRight } from 'lucide-react';
 
-export default function MarketplacePage() {
-  const { starters, modules, plugins } = getMarketplaceItems();
+export default async function MarketplacePage() {
+  const { starters, modules, plugins } = await getMarketplaceItems();
 
   return (
     <div className="kthulu-container py-12">
