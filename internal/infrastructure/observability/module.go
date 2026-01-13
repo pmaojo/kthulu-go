@@ -1,5 +1,7 @@
 package observability
 
+// @kthulu:module:observability
+
 import "go.uber.org/fx"
 
 // Module provides observability dependencies.

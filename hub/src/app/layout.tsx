@@ -14,7 +14,7 @@ const robotoMono = Roboto_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Kthulu Hub | Docs & Marketplace",
+  title: "Kthulu Go Hub | Docs & Marketplace",
   description: "The official marketplace and documentation for Kthulu CLI Framework",
 };
 

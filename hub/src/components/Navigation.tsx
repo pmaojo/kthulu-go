@@ -8,7 +8,7 @@ export function Header() {
       <div className="flex items-center gap-8">
         <Link href="/" className="flex items-center gap-2 font-bold text-xl tracking-tighter kthulu-glow">
           <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-primary-foreground">K</div>
-          KTHULU HUB
+          KTHULU GO HUB
         </Link>
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
           <Link href="/docs" className="hover:text-primary transition-colors flex items-center gap-2">

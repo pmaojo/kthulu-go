@@ -1,5 +1,7 @@
 package resolver
 
+// @kthulu:module:resolver
+
 import (
 	"fmt"
 	"sort"
