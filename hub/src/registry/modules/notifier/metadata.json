@@ -1,0 +1,9 @@
+{
+  "id": "notifier",
+  "name": "Notifier Module",
+  "type": "module",
+  "description": "Multi-channel notification system (Email, Slack, SMS).",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "Bell"
+}

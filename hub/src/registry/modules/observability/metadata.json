@@ -1,0 +1,9 @@
+{
+  "id": "observability",
+  "name": "Observability Module",
+  "type": "module",
+  "description": "Metrics, tracing, and logging infrastructure.",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "BarChart"
+}

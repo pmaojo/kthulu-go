@@ -1,0 +1,9 @@
+{
+  "id": "realtime",
+  "name": "Realtime Module",
+  "type": "module",
+  "description": "Live updates and WebSocket communication layer.",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "Activity"
+}

@@ -1,0 +1,9 @@
+{
+  "id": "auth",
+  "name": "Auth Module",
+  "type": "module",
+  "description": "Secure JWT authentication with role-based access control.",
+  "author": "Kthulu Core",
+  "stars": 100,
+  "icon": "Shield"
+}

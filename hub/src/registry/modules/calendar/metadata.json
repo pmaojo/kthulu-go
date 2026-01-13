@@ -1,0 +1,9 @@
+{
+  "id": "calendar",
+  "name": "Calendar Module",
+  "type": "module",
+  "description": "Event scheduling and calendar integration.",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "Calendar"
+}

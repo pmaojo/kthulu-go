@@ -1,0 +1,9 @@
+{
+  "id": "audit",
+  "name": "Audit Module",
+  "type": "module",
+  "description": "Audit logging and compliance tracking.",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "FileSearch"
+}

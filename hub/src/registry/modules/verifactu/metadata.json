@@ -1,0 +1,9 @@
+{
+  "id": "verifactu",
+  "name": "Verifactu Module",
+  "type": "module",
+  "description": "Spanish fiscal compliance (VeriFACTU) system.",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "CheckSquare"
+}

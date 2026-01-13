@@ -1,0 +1,9 @@
+{
+  "id": "health",
+  "name": "Health Module",
+  "type": "module",
+  "description": "System monitoring and health checks.",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "Heart"
+}

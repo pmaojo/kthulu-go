@@ -1,0 +1,9 @@
+{
+  "id": "contact",
+  "name": "Contact Module",
+  "type": "module",
+  "description": "Contact management and CRM integration.",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "Users"
+}

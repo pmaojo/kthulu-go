@@ -7,17 +7,7 @@ const MODULES_REGISTRY_DIR = path.join(REGISTRY_DIR, 'modules');
 const INTERNAL_DIR = path.join(ROOT, 'internal');
 const TEMPLATES_DIR = path.join(ROOT, 'cmd', 'kthulu', 'templates');
 
-interface RegistryItem {
-  id: string;
-  name: string;
-  type: 'module' | 'starter' | 'plugin';
-  description: string;
-  author: string;
-  stars: number;
-  icon: string;
-}
-
-const DESCRIPTIONS: Record<string, string> = {
+const DESCRIPTIONS = {
   auth: 'Secure JWT authentication with role-based access control.',
   ai: 'Agentic coding assistant and automated code generation.',
   user: 'Comprehensive user management and profile system.',
@@ -31,9 +21,16 @@ const DESCRIPTIONS: Record<string, string> = {
   realtime: 'Live updates and WebSocket communication layer.',
   health: 'System monitoring and health checks.',
   flags: 'Feature flag management and remote configuration.',
+  contact: 'Contact management and CRM integration.',
+  oauthsso: 'OAuth 2.0 and Single Sign-On integration.',
+  audit: 'Audit logging and compliance tracking.',
+  notification: 'User notification and alert system.',
+  observability: 'Metrics, tracing, and logging infrastructure.',
+  resolver: 'Intelligent module dependency resolution.',
+  generator: 'Code generation and scaffolding engine.',
 };
 
-const ICONS: Record<string, string> = {
+const ICONS = {
   auth: 'Shield',
   ai: 'Zap',
   user: 'User',
@@ -47,13 +44,20 @@ const ICONS: Record<string, string> = {
   realtime: 'Activity',
   health: 'Heart',
   flags: 'Flag',
+  contact: 'Users',
+  oauthsso: 'Key',
+  audit: 'FileSearch',
+  notification: 'MessageSquare',
+  observability: 'BarChart',
+  resolver: 'GitBranch',
+  generator: 'Cpu',
 };
 
-function getAllFiles(dirPath: string, arrayOfFiles: string[] = []) {
+function getAllFiles(dirPath, arrayOfFiles = []) {
   if (!fs.existsSync(dirPath)) return arrayOfFiles;
   const files = fs.readdirSync(dirPath);
 
-  files.forEach(function(file: string) {
+  files.forEach(function(file) {
     const fullPath = path.join(dirPath, file);
     if (fs.statSync(fullPath).isDirectory()) {
       if (file !== 'vendor' && file !== 'node_modules' && !file.startsWith('.')) {
@@ -73,20 +77,20 @@ function syncModules() {
   console.log('🔄 Syncing Modules via @kthulu tags...');
   
   const scanDirs = [INTERNAL_DIR, TEMPLATES_DIR];
-  const allFiles: string[] = [];
+  const allFiles = [];
   scanDirs.forEach(dir => {
     if (fs.existsSync(dir)) {
       getAllFiles(dir, allFiles);
     }
   });
 
-  const discoveredModules = new Set<string>();
+  const discoveredModules = new Set();
 
   allFiles.forEach(file => {
     const content = fs.readFileSync(file, 'utf8');
     const matches = content.match(/@kthulu:module:(\w+)/g);
     if (matches) {
-      matches.forEach((match: string) => {
+      matches.forEach(match => {
         const id = match.split(':').pop();
         if (id) discoveredModules.add(id);
       });
@@ -109,7 +113,7 @@ function syncModules() {
     const itemDir = path.join(MODULES_REGISTRY_DIR, id);
     if (!fs.existsSync(itemDir)) fs.mkdirSync(itemDir, { recursive: true });
 
-    const metadata: RegistryItem = {
+    const metadata = {
       id,
       name: id.charAt(0).toUpperCase() + id.slice(1) + ' Module',
       type: 'module',
@@ -138,8 +142,8 @@ function syncModules() {
   // Cleanup: Remove ghost modules
   if (fs.existsSync(MODULES_REGISTRY_DIR)) {
     const existingFolders = fs.readdirSync(MODULES_REGISTRY_DIR);
-    existingFolders.forEach((folder: string) => {
-      if (!discoveredModules.has(folder) && folder !== 'modules') { // avoid deleting the 'modules' dir itself if it exists as a folder inside registry/modules? No, it's the parent.
+    existingFolders.forEach(folder => {
+      if (!discoveredModules.has(folder)) {
         console.log(`🗑️ Removing ghost module: ${folder}`);
         fs.rmSync(path.join(MODULES_REGISTRY_DIR, folder), { recursive: true, force: true });
       }

@@ -1,0 +1,9 @@
+{
+  "id": "flags",
+  "name": "Flags Module",
+  "type": "module",
+  "description": "Feature flag management and remote configuration.",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "Flag"
+}

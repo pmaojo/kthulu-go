@@ -1,0 +1,9 @@
+{
+  "id": "ai",
+  "name": "Ai Module",
+  "type": "module",
+  "description": "Agentic coding assistant and automated code generation.",
+  "author": "Kthulu Core",
+  "stars": 100,
+  "icon": "Zap"
+}

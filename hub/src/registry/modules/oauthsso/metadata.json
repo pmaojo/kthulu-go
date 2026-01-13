@@ -1,0 +1,9 @@
+{
+  "id": "oauthsso",
+  "name": "Oauthsso Module",
+  "type": "module",
+  "description": "OAuth 2.0 and Single Sign-On integration.",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "Key"
+}

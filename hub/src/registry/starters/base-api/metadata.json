@@ -1,0 +1,9 @@
+{
+  "id": "base-api",
+  "name": "Base API Starter",
+  "type": "starter",
+  "description": "The standard Kthulu Go API project structure.",
+  "author": "Kthulu Team",
+  "stars": 120,
+  "icon": "Zap"
+}
