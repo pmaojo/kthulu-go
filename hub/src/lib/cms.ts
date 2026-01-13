@@ -13,15 +13,38 @@ export interface DocContent {
   frontmatter: Record<string, any>;
 }
 
-export async function getDocBySlug(slug: string[], baseDir: string = DOCS_DIR, fields: string[] = []): Promise<DocContent | null> {
+async function fileExists(path: string): Promise<boolean> {
+  try {
+    await fs.promises.access(path, fs.constants.F_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function getDocBySlug(
+  slug: string[],
+  baseDir: string = DOCS_DIR,
+  fields: string[] = [],
+  knownPath?: string
+): Promise<DocContent | null> {
   if (!Array.isArray(slug)) return null;
   
-  const fullPath = path.join(baseDir, ...slug) + '.md';
-  const indexPath = path.join(baseDir, ...slug, 'index.md');
+  let targetPath = knownPath;
   
-  let targetPath = '';
-  if (fs.existsSync(fullPath)) targetPath = fullPath;
-  else if (fs.existsSync(indexPath)) targetPath = indexPath;
+  if (!targetPath) {
+    const fullPath = path.join(baseDir, ...slug) + '.md';
+    const indexPath = path.join(baseDir, ...slug, 'index.md');
+
+    // Parallel check for file existence to avoid blocking event loop
+    const [fullPathExists, indexPathExists] = await Promise.all([
+      fileExists(fullPath),
+      fileExists(indexPath)
+    ]);
+
+    if (fullPathExists) targetPath = fullPath;
+    else if (indexPathExists) targetPath = indexPath;
+  }
   
   if (!targetPath) return null;
 
@@ -44,7 +67,7 @@ export async function getDocBySlug(slug: string[], baseDir: string = DOCS_DIR, f
 
 export async function getAllDocs(subDir: string = '', baseDir: string = DOCS_DIR, fields: string[] = []): Promise<DocContent[]> {
   const fullDir = path.join(baseDir, subDir);
-  if (!fs.existsSync(fullDir)) return [];
+  if (!(await fileExists(fullDir))) return [];
 
   const files = await fs.promises.readdir(fullDir, { recursive: true }) as string[];
   
@@ -53,7 +76,9 @@ export async function getAllDocs(subDir: string = '', baseDir: string = DOCS_DIR
     .map(async (file) => {
       const relativePath = path.join(subDir, file);
       const slug = relativePath.replace(/(\.md|index\.md)$/, '').split(path.sep).filter(Boolean);
-      return getDocBySlug(slug, baseDir, fields);
+      const fullPath = path.join(fullDir, file);
+      // Optimization: pass known path to avoid lookup
+      return getDocBySlug(slug, baseDir, fields, fullPath);
     }));
 
   return docs.filter((doc): doc is DocContent => doc !== null);
