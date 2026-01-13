@@ -1,143 +1,172 @@
 const fs = require('fs');
 const path = require('path');
 
-const ROOT = path.join(__dirname, '..', '..', '..');
+const ROOT = path.join(process.cwd(), '..');
 const REGISTRY_DIR = path.join(ROOT, 'registry');
-const BACKEND_MODULES_DIR = path.join(ROOT, 'backend', 'internal', 'adapters', 'http', 'modules');
-const CLI_TEMPLATES_DIR = path.join(ROOT, 'backend', 'cmd', 'kthulu-cli', 'templates');
+const MODULES_REGISTRY_DIR = path.join(REGISTRY_DIR, 'modules');
+const INTERNAL_DIR = path.join(ROOT, 'internal');
+const TEMPLATES_DIR = path.join(ROOT, 'cmd', 'kthulu', 'templates');
 
-function syncModules() {
-  console.log('🔄 Syncing Modules from Backend...');
-  if (!fs.existsSync(BACKEND_MODULES_DIR)) {
-      console.warn('⚠️ Backend modules dir not found at:', BACKEND_MODULES_DIR);
-      return;
-  }
+interface RegistryItem {
+  id: string;
+  name: string;
+  type: 'module' | 'starter' | 'plugin';
+  description: string;
+  author: string;
+  stars: number;
+  icon: string;
+}
 
-  const items = fs.readdirSync(BACKEND_MODULES_DIR);
-  items.forEach(file => {
-    if (file.endsWith('.go') && !file.endsWith('_test.go')) {
-      const id = file.replace('.go', '');
-      const reserved = ['module', 'routes', 'registry', 'static', 'builtin', 'module_set', 'shared_providers', 'access'];
-      if (reserved.includes(id)) return;
+const DESCRIPTIONS: Record<string, string> = {
+  auth: 'Secure JWT authentication with role-based access control.',
+  ai: 'Agentic coding assistant and automated code generation.',
+  user: 'Comprehensive user management and profile system.',
+  inventory: 'Real-time inventory tracking and warehouse management.',
+  organization: 'Multi-tenant organization and team management.',
+  invoice: 'Automated invoicing and billing system.',
+  product: 'Product catalog and SKU management.',
+  notifier: 'Multi-channel notification system (Email, Slack, SMS).',
+  calendar: 'Event scheduling and calendar integration.',
+  verifactu: 'Spanish fiscal compliance (VeriFACTU) system.',
+  realtime: 'Live updates and WebSocket communication layer.',
+  health: 'System monitoring and health checks.',
+  flags: 'Feature flag management and remote configuration.',
+};
 
-      const itemDir = path.join(REGISTRY_DIR, 'modules', id);
-      if (!fs.existsSync(itemDir)) fs.mkdirSync(itemDir, { recursive: true });
+const ICONS: Record<string, string> = {
+  auth: 'Shield',
+  ai: 'Zap',
+  user: 'User',
+  inventory: 'Package',
+  organization: 'Briefcase',
+  invoice: 'FileText',
+  product: 'Box',
+  notifier: 'Bell',
+  calendar: 'Calendar',
+  verifactu: 'CheckSquare',
+  realtime: 'Activity',
+  health: 'Heart',
+  flags: 'Flag',
+};
 
-      const metadata = {
-        id,
-        name: id.charAt(0).toUpperCase() + id.slice(1) + ' Module',
-        type: 'module',
-        description: `Automatically discovered Kthulu module: ${id}`,
-        author: 'Kthulu Core',
-        stars: (id === 'auth' || id === 'ai') ? 100 : 0,
-        icon: id === 'auth' ? 'Shield' : id === 'ai' ? 'Sparkles' : 'Box'
-      };
+function getAllFiles(dirPath: string, arrayOfFiles: string[] = []) {
+  if (!fs.existsSync(dirPath)) return arrayOfFiles;
+  const files = fs.readdirSync(dirPath);
 
-      fs.writeFileSync(path.join(itemDir, 'metadata.json'), JSON.stringify(metadata, null, 2));
-      
-      const indexPath = path.join(itemDir, 'index.md');
-      fs.writeFileSync(indexPath, `---
-title: "${metadata.name}"
-description: "${metadata.description}"
-type: "module"
-author: "${metadata.author}"
-stars: ${metadata.stars}
-icon: "${metadata.icon}"
----
-
-# ${metadata.name}
-`);
+  files.forEach(function(file: string) {
+    const fullPath = path.join(dirPath, file);
+    if (fs.statSync(fullPath).isDirectory()) {
+      if (file !== 'vendor' && file !== 'node_modules' && !file.startsWith('.')) {
+        arrayOfFiles = getAllFiles(fullPath, arrayOfFiles);
+      }
+    } else {
+      if (file.endsWith('.go') || file.endsWith('.tmpl') || file.endsWith('.md')) {
+        arrayOfFiles.push(fullPath);
+      }
     }
   });
+
+  return arrayOfFiles;
+}
+
+function syncModules() {
+  console.log('🔄 Syncing Modules via @kthulu tags...');
+  
+  const scanDirs = [INTERNAL_DIR, TEMPLATES_DIR];
+  const allFiles: string[] = [];
+  scanDirs.forEach(dir => {
+    if (fs.existsSync(dir)) {
+      getAllFiles(dir, allFiles);
+    }
+  });
+
+  const discoveredModules = new Set<string>();
+
+  allFiles.forEach(file => {
+    const content = fs.readFileSync(file, 'utf8');
+    const matches = content.match(/@kthulu:module:(\w+)/g);
+    if (matches) {
+      matches.forEach((match: string) => {
+        const id = match.split(':').pop();
+        if (id) discoveredModules.add(id);
+      });
+    }
+  });
+
+  // Adding manual core modules that are known to exist as templates but might not be tagged yet
+  const coreModules = [
+    'auth', 'user', 'ai', 'inventory', 'invoice', 'product', 
+    'organization', 'notifier', 'calendar', 'realtime', 
+    'contact', 'verifactu', 'oauthsso', 'audit', 'notification',
+    'health', 'flags', 'observability', 'resolver', 'generator'
+  ];
+  coreModules.forEach(id => discoveredModules.add(id));
+
+  console.log(`📦 Registered ${discoveredModules.size} modules: ${Array.from(discoveredModules).sort().join(', ')}`);
+
+  // Create/Update modules
+  discoveredModules.forEach(id => {
+    const itemDir = path.join(MODULES_REGISTRY_DIR, id);
+    if (!fs.existsSync(itemDir)) fs.mkdirSync(itemDir, { recursive: true });
+
+    const metadata: RegistryItem = {
+      id,
+      name: id.charAt(0).toUpperCase() + id.slice(1) + ' Module',
+      type: 'module',
+      description: DESCRIPTIONS[id] || `High-performance ${id} module for Kthulu Go ecosystems.`,
+      author: 'Kthulu Core',
+      stars: (id === 'auth' || id === 'ai') ? 100 : 0,
+      icon: ICONS[id] || 'Box'
+    };
+
+    fs.writeFileSync(path.join(itemDir, 'metadata.json'), JSON.stringify(metadata, null, 2));
+
+    const indexPath = path.join(itemDir, 'index.md');
+    const defaultContent = `# ${metadata.name}\n\nThis module was automatically discovered or registered and is ready for use in Kthulu Go.`;
+    
+    if (!fs.existsSync(indexPath)) {
+       fs.writeFileSync(indexPath, `---\ntitle: ${metadata.name}\ndescription: ${metadata.description}\n---\n\n${defaultContent}`);
+    } else {
+       const existing = fs.readFileSync(indexPath, 'utf8');
+       // If it's a minimal placeholder, update it with description
+       if (existing.length < 150 || existing.includes('Automatically discovered')) {
+          fs.writeFileSync(indexPath, `---\ntitle: ${metadata.name}\ndescription: ${metadata.description}\n---\n\n# ${metadata.name}\n\n${DESCRIPTIONS[id] || 'Detailed documentation coming soon.'}`);
+       }
+    }
+  });
+
+  // Cleanup: Remove ghost modules
+  if (fs.existsSync(MODULES_REGISTRY_DIR)) {
+    const existingFolders = fs.readdirSync(MODULES_REGISTRY_DIR);
+    existingFolders.forEach((folder: string) => {
+      if (!discoveredModules.has(folder) && folder !== 'modules') { // avoid deleting the 'modules' dir itself if it exists as a folder inside registry/modules? No, it's the parent.
+        console.log(`🗑️ Removing ghost module: ${folder}`);
+        fs.rmSync(path.join(MODULES_REGISTRY_DIR, folder), { recursive: true, force: true });
+      }
+    });
+  }
 }
 
 function syncStarters() {
-  console.log('🔄 Syncing Starters from CLI Templates...');
-  const starters = [
-      { id: 'base-api', name: 'Base API', desc: 'The standard Kthulu API structure.', icon: 'Zap' },
-      { id: 'saas-starter', name: 'SaaS Starter', desc: 'Full-stack SaaS with Auth and Billing.', icon: 'ShoppingBag' }
-  ];
-
-  starters.forEach(s => {
-      const itemDir = path.join(REGISTRY_DIR, 'starters', s.id);
-      if (!fs.existsSync(itemDir)) fs.mkdirSync(itemDir, { recursive: true });
-
-      const metadata = {
-        id: s.id,
-        name: s.name,
-        type: 'starter',
-        description: s.desc,
-        author: 'Kthulu Team',
-        stars: 42,
-        icon: s.icon
-      };
-
-      fs.writeFileSync(path.join(itemDir, 'metadata.json'), JSON.stringify(metadata, null, 2));
-      
-      // Starter Blueprint
-      fs.writeFileSync(path.join(itemDir, 'blueprint.yaml'), `name: "${s.name}"\ntemplate: "${s.id}"\nmodules: ["auth", "ai"]\n`);
-
-      const indexPath = path.join(itemDir, 'index.md');
-      fs.writeFileSync(indexPath, `---
-title: "${s.name}"
-description: "${s.desc}"
-type: "starter"
-author: "Kthulu Team"
-stars: 42
-icon: "${s.icon}"
----
-
-# ${s.name}
-`);
-  });
-}
-
-function syncPlugins() {
-    console.log('🔄 Syncing Plugins...');
-    const plugins = [
-        { id: 'aws-deploy', name: 'AWS Deploy', desc: 'One-click deployment to AWS.', icon: 'Cloud' }
-    ];
-
-    plugins.forEach(p => {
-        const itemDir = path.join(REGISTRY_DIR, 'plugins', p.id);
-        if (!fs.existsSync(itemDir)) fs.mkdirSync(itemDir, { recursive: true });
-
-        const metadata = {
-          id: p.id,
-          name: p.name,
-          type: 'plugin',
-          description: p.desc,
-          author: 'CloudOps',
-          stars: 88,
-          icon: p.icon
-        };
-
-        fs.writeFileSync(path.join(itemDir, 'metadata.json'), JSON.stringify(metadata, null, 2));
-        
-        // Plugin Binaries Directory
-        const binDir = path.join(itemDir, 'bin');
-        if (!fs.existsSync(binDir)) fs.mkdirSync(binDir);
-        fs.writeFileSync(path.join(binDir, '.keep'), '');
-
-        const indexPath = path.join(itemDir, 'index.md');
-        fs.writeFileSync(indexPath, `---
-title: "${p.name}"
-description: "${p.desc}"
-type: "plugin"
-author: "${metadata.author}"
-stars: ${metadata.stars}
-icon: "${metadata.icon}"
----
-
-# ${p.name}
-`);
-    });
+  console.log('🔄 Syncing Starters...');
+  const itemDir = path.join(REGISTRY_DIR, 'starters', 'base-api');
+  if (!fs.existsSync(itemDir)) fs.mkdirSync(itemDir, { recursive: true });
+  
+  const metadata = {
+     id: 'base-api',
+     name: 'Base API Starter',
+     type: 'starter',
+     description: 'The standard Kthulu Go API project structure.',
+     author: 'Kthulu Team',
+     stars: 120,
+     icon: 'Zap'
+  };
+  fs.writeFileSync(path.join(itemDir, 'metadata.json'), JSON.stringify(metadata, null, 2));
 }
 
 function main() {
   syncModules();
   syncStarters();
-  syncPlugins();
   console.log('✅ Registry Sync Complete!');
 }
 
