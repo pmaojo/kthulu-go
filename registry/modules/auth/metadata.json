@@ -2,8 +2,10 @@
   "id": "auth",
   "name": "Auth Module",
   "type": "module",
-  "description": "Automatically discovered Kthulu module: auth",
+  "description": "Production-ready authentication with JWT, OAuth2, and RBAC support.",
   "author": "Kthulu Core",
-  "stars": 100,
-  "icon": "Shield"
+  "stars": 124,
+  "icon": "Shield",
+  "tags": ["security", "jwt", "oauth2", "rbac"],
+  "version": "1.2.0"
 }

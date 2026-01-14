@@ -39,10 +39,10 @@ export function Sidebar() {
     <aside className="fixed left-0 top-16 w-64 h-[calc(100vh-64px)] overflow-y-auto border-r border-white/5 bg-background/50 backdrop-blur-sm hidden md:block p-6">
       <div className="space-y-8">
         <div>
-          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-4">Guides</h3>
+          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-4">Getting Started</h3>
           <ul className="space-y-2 text-sm">
             <li>
-              <Link href="/docs/guide/introduction" className="hover:text-primary text-primary transition-colors">
+              <Link href="/docs/guide/introduction" className="hover:text-primary transition-colors">
                 Introduction
               </Link>
             </li>
@@ -51,8 +51,46 @@ export function Sidebar() {
                 Installation
               </Link>
             </li>
+            <li>
+              <Link href="/docs/guide/quick-start" className="hover:text-primary transition-colors">
+                Quick Start Tour
+              </Link>
+            </li>
           </ul>
         </div>
+
+        <div>
+          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-4">Core Concepts</h3>
+          <ul className="space-y-2 text-sm">
+            <li>
+              <Link href="/docs/guide/project-structure" className="hover:text-primary transition-colors">
+                Project Structure
+              </Link>
+            </li>
+            <li>
+              <Link href="/docs/guide/modules" className="hover:text-primary transition-colors">
+                Modules & Registry
+              </Link>
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-4">Reference</h3>
+          <ul className="space-y-2 text-sm">
+            <li>
+              <Link href="/docs/guide/deployment" className="hover:text-primary transition-colors">
+                Deployment
+              </Link>
+            </li>
+            <li>
+              <Link href="/docs/guide/cli-reference" className="hover:text-primary transition-colors">
+                CLI Reference
+              </Link>
+            </li>
+          </ul>
+        </div>
+
         <div>
           <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-4">Marketplace</h3>
           <ul className="space-y-2 text-sm">
