@@ -1,7 +1,5 @@
 # Kthulu Go — AI-Powered Software Foundry
 
-<img width="1280" height="776" alt="Kthulu Forge" src="https://github.com/user-attachments/assets/231fe84d-9dab-4485-8733-4791168ad931" />
-
 **Kthulu Go** is an intelligent software foundry powered by **Go**, **MCP (Model Context Protocol)**, and **AI**. It is not just a framework, but a Generation Engine designed to autonomously plan, scaffold, and evolve modular software architectures.
 
 The platform prioritizes:
