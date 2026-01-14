@@ -1,47 +1,46 @@
 ---
-title: "Auth Module"
-description: "Production-ready authentication with JWT, OAuth2, and RBAC support."
+title: "Auth"
+description: "AuthModule provides authentication functionality. Repositories are injected via the ModuleSet provider map to avoid duplication."
 type: "module"
 author: "Kthulu Core"
 stars: 100
 icon: "Shield"
 ---
 
-# Auth Module
+# Auth
 
-The Auth module provides a complete authentication solution for your Kthulu application. It supports JWT-based stateless authentication, OAuth2 providers (Google, GitHub), and Role-Based Access Control (RBAC).
+AuthModule provides authentication functionality. Repositories are injected via the ModuleSet provider map to avoid duplication.
 
 ## Features
 
-- **JWT Authentication**: Secure, stateless authentication with access and refresh tokens.
-- **OAuth2 Support**: Built-in support for Google, GitHub, and custom providers.
-- **RBAC**: Define roles and permissions to granularly control access to resources.
-- **Middleware**: Ready-to-use HTTP middleware for protecting routes.
-- **Database Agnostic**: Works with PostgreSQL, MySQL, and SQLite.
+- HTTP API
+- Domain Logic
+
+
+
+## Configuration
+
+The module is configured via environment variables:
+
+| Variable | Description |
+|----------|-------------|
+| - | No environment variables detected |
+
 
 ## Installation
 
-Add the module to your project using the CLI:
+Add this module to your project:
 
 ```bash
 kthulu add module auth
 ```
 
-This will:
-1.  Scaffold the `internal/core/auth` domain logic.
-2.  Add `AuthHandler` to your HTTP adapter.
-3.  Inject the `AuthMiddleware` into your router.
+## Components
 
-## Configuration
+This module provides the following components to the application:
 
-The module is configured via environment variables.
+- **Backend**: Go module wired with Uber Fx.
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `JWT_SECRET` | Secret key for signing tokens | `changeme` |
-| `JWT_EXPIRY` | Token expiration time | `24h` |
-| `OAUTH_GOOGLE_ID` | Google Client ID | - |
-| `OAUTH_GOOGLE_SECRET` | Google Client Secret | - |
 
 ## Usage
 

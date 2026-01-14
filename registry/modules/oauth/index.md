@@ -1,23 +1,21 @@
 ---
-title: "Inventory"
-description: "InventoryModule provides inventory management functionality"
+title: "Oauth"
+description: "OAuthSSOModule exports OAuth SSO dependencies."
 type: "module"
 author: "Kthulu Core"
 stars: 0
 icon: "Box"
 ---
 
-# Inventory
+# Oauth
 
-InventoryModule provides inventory management functionality
+OAuthSSOModule exports OAuth SSO dependencies.
 
 ## Features
 
-- HTTP API
 - Domain Logic
+- Database Persistence
 
-
-- **Frontend included**: React components and Admin UI integration.
 
 
 ## Configuration
@@ -34,7 +32,7 @@ The module is configured via environment variables:
 Add this module to your project:
 
 ```bash
-kthulu add module inventory
+kthulu add module oauth
 ```
 
 ## Components
@@ -42,4 +40,3 @@ kthulu add module inventory
 This module provides the following components to the application:
 
 - **Backend**: Go module wired with Uber Fx.
-- **Frontend**: React components in `src/modules/inventory`.

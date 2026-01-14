@@ -1,15 +1,15 @@
 ---
-title: "Inventory"
-description: "InventoryModule provides inventory management functionality"
+title: "Contacts"
+description: "ContactModule provides contact functionality"
 type: "module"
 author: "Kthulu Core"
 stars: 0
 icon: "Box"
 ---
 
-# Inventory
+# Contacts
 
-InventoryModule provides inventory management functionality
+ContactModule provides contact functionality
 
 ## Features
 
@@ -34,7 +34,7 @@ The module is configured via environment variables:
 Add this module to your project:
 
 ```bash
-kthulu add module inventory
+kthulu add module contacts
 ```
 
 ## Components
@@ -42,4 +42,4 @@ kthulu add module inventory
 This module provides the following components to the application:
 
 - **Backend**: Go module wired with Uber Fx.
-- **Frontend**: React components in `src/modules/inventory`.
+- **Frontend**: React components in `src/modules/contacts`.

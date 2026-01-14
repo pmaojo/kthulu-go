@@ -1,0 +1,33 @@
+name: Hub Registry Generation
+
+on:
+  push:
+    paths:
+      - 'cmd/kthulu/templates/**'
+      - 'cmd/registry-gen/**'
+      - '.github/workflows/hub-registry.yml'
+  workflow_dispatch:
+
+jobs:
+  generate-registry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24.x'
+
+      - name: Run Registry Generator
+        run: go run ./cmd/registry-gen
+
+      - name: Check for changes
+        run: |
+          git diff --exit-code registry/ || echo "Registry updated"
+
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: update registry docs from templates [skip ci]"
+          file_pattern: registry/

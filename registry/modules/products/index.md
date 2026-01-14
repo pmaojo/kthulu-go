@@ -1,15 +1,15 @@
 ---
-title: "Inventory"
-description: "InventoryModule provides inventory management functionality"
+title: "Products"
+description: "ProductModule provides product functionality. Repositories are injected via the ModuleSet provider map to avoid duplication."
 type: "module"
 author: "Kthulu Core"
 stars: 0
 icon: "Box"
 ---
 
-# Inventory
+# Products
 
-InventoryModule provides inventory management functionality
+ProductModule provides product functionality. Repositories are injected via the ModuleSet provider map to avoid duplication.
 
 ## Features
 
@@ -34,7 +34,7 @@ The module is configured via environment variables:
 Add this module to your project:
 
 ```bash
-kthulu add module inventory
+kthulu add module products
 ```
 
 ## Components
@@ -42,4 +42,4 @@ kthulu add module inventory
 This module provides the following components to the application:
 
 - **Backend**: Go module wired with Uber Fx.
-- **Frontend**: React components in `src/modules/inventory`.
+- **Frontend**: React components in `src/modules/products`.
