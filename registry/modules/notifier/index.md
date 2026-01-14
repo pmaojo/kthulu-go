@@ -41,3 +41,4 @@ kthulu add module notifier
 This module provides the following components to the application:
 
 - **Backend**: Go module wired with Uber Fx.
+
