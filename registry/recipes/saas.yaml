@@ -1,0 +1,8 @@
+name: "SaaS Starter"
+id: "saas"
+description: "The complete B2B SaaS foundation: Auth, Organizations, and Payments."
+modules:
+  - name: "auth"
+  - name: "organization"
+  - name: "payment"
+    integrations: ["stripe"]
