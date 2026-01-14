@@ -99,7 +99,7 @@ Once connected, your AI assistant gains the ability to:
 - **Database Agnostic**: Built-in support for SQLite, PostgreSQL, and MySQL via GORM.
 
 ## CLI Command Reference
-
+```
 | Command | Description |
 |Utils|---|
 | `kthulu create <name>` | Scaffolds a new project with Modular Monolith structure. |
@@ -112,6 +112,7 @@ Once connected, your AI assistant gains the ability to:
 | `kthulu analyze` | Analyzes project structure and dependencies. |
 | `kthulu ai suggest` | Asks the AI for code improvements or refactoring. |
 
+```
 ## Contributing
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
