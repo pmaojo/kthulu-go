@@ -40,3 +40,4 @@ kthulu add module shared_providers
 This module provides the following components to the application:
 
 - **Backend**: Go module wired with Uber Fx.
+
