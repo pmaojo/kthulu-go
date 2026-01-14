@@ -1,23 +1,20 @@
 ---
-title: "Inventory"
-description: "InventoryModule provides inventory management functionality"
+title: "Static"
+description: "StaticModule provides static file serving functionality for the frontend. This module enables serving the built frontend application from the same binary."
 type: "module"
 author: "Kthulu Core"
 stars: 0
 icon: "Box"
 ---
 
-# Inventory
+# Static
 
-InventoryModule provides inventory management functionality
+StaticModule provides static file serving functionality for the frontend. This module enables serving the built frontend application from the same binary.
 
 ## Features
 
 - HTTP API
-- Domain Logic
 
-
-- **Frontend included**: React components and Admin UI integration.
 
 
 ## Configuration
@@ -34,7 +31,7 @@ The module is configured via environment variables:
 Add this module to your project:
 
 ```bash
-kthulu add module inventory
+kthulu add module static
 ```
 
 ## Components
@@ -42,4 +39,3 @@ kthulu add module inventory
 This module provides the following components to the application:
 
 - **Backend**: Go module wired with Uber Fx.
-- **Frontend**: React components in `src/modules/inventory`.

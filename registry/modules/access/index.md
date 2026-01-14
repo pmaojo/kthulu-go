@@ -1,20 +1,20 @@
 ---
-title: "Inventory"
-description: "InventoryModule provides inventory management functionality"
+title: "Access"
+description: "AccessModule provides access control functionality"
 type: "module"
 author: "Kthulu Core"
 stars: 0
 icon: "Box"
 ---
 
-# Inventory
+# Access
 
-InventoryModule provides inventory management functionality
+AccessModule provides access control functionality
 
 ## Features
 
-- HTTP API
 - Domain Logic
+- Database Persistence
 
 
 - **Frontend included**: React components and Admin UI integration.
@@ -34,7 +34,7 @@ The module is configured via environment variables:
 Add this module to your project:
 
 ```bash
-kthulu add module inventory
+kthulu add module access
 ```
 
 ## Components
@@ -42,4 +42,4 @@ kthulu add module inventory
 This module provides the following components to the application:
 
 - **Backend**: Go module wired with Uber Fx.
-- **Frontend**: React components in `src/modules/inventory`.
+- **Frontend**: React components in `src/modules/access`.

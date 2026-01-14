@@ -1,23 +1,22 @@
 ---
-title: "Inventory"
-description: "InventoryModule provides inventory management functionality"
+title: "Module_set_test"
+description: "No description available."
 type: "module"
 author: "Kthulu Core"
 stars: 0
 icon: "Box"
 ---
 
-# Inventory
+# Module_set_test
 
-InventoryModule provides inventory management functionality
+No description available.
 
 ## Features
 
-- HTTP API
-- Domain Logic
 
+- Auto-configured Fx Module
+- Clean Architecture structure
 
-- **Frontend included**: React components and Admin UI integration.
 
 
 ## Configuration
@@ -34,7 +33,7 @@ The module is configured via environment variables:
 Add this module to your project:
 
 ```bash
-kthulu add module inventory
+kthulu add module module_set_test
 ```
 
 ## Components
@@ -42,4 +41,3 @@ kthulu add module inventory
 This module provides the following components to the application:
 
 - **Backend**: Go module wired with Uber Fx.
-- **Frontend**: React components in `src/modules/inventory`.

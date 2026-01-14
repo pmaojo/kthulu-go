@@ -1,23 +1,21 @@
 ---
-title: "Inventory"
-description: "InventoryModule provides inventory management functionality"
+title: "Org"
+description: "OrganizationModule provides organization functionality. Repositories are injected via the ModuleSet provider map to avoid duplication."
 type: "module"
 author: "Kthulu Core"
 stars: 0
 icon: "Box"
 ---
 
-# Inventory
+# Org
 
-InventoryModule provides inventory management functionality
+OrganizationModule provides organization functionality. Repositories are injected via the ModuleSet provider map to avoid duplication.
 
 ## Features
 
 - HTTP API
 - Domain Logic
 
-
-- **Frontend included**: React components and Admin UI integration.
 
 
 ## Configuration
@@ -34,7 +32,7 @@ The module is configured via environment variables:
 Add this module to your project:
 
 ```bash
-kthulu add module inventory
+kthulu add module org
 ```
 
 ## Components
@@ -42,4 +40,3 @@ kthulu add module inventory
 This module provides the following components to the application:
 
 - **Backend**: Go module wired with Uber Fx.
-- **Frontend**: React components in `src/modules/inventory`.

@@ -1,23 +1,21 @@
 ---
-title: "Inventory"
-description: "InventoryModule provides inventory management functionality"
+title: "Shared_providers"
+description: "No description available."
 type: "module"
 author: "Kthulu Core"
 stars: 0
 icon: "Box"
 ---
 
-# Inventory
+# Shared_providers
 
-InventoryModule provides inventory management functionality
+No description available.
 
 ## Features
 
-- HTTP API
 - Domain Logic
+- Database Persistence
 
-
-- **Frontend included**: React components and Admin UI integration.
 
 
 ## Configuration
@@ -34,7 +32,7 @@ The module is configured via environment variables:
 Add this module to your project:
 
 ```bash
-kthulu add module inventory
+kthulu add module shared_providers
 ```
 
 ## Components
@@ -42,4 +40,3 @@ kthulu add module inventory
 This module provides the following components to the application:
 
 - **Backend**: Go module wired with Uber Fx.
-- **Frontend**: React components in `src/modules/inventory`.
