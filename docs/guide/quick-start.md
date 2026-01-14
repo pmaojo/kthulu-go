@@ -80,12 +80,26 @@ kthulu dev
 
 Visit `http://localhost:3000` to see your app and `http://localhost:3000/admin` for the admin panel.
 
-## 7. Deployment
+## 7. CLI & MCP Projects
 
-Deploy your application to the cloud or Wasmer Edge.
+You can also create other types of projects:
+
+**CLI Tool:**
+```bash
+kthulu new my-cli --template=cli
+```
+
+**MCP Server:**
+```bash
+kthulu new my-mcp-agent --template=mcp
+```
+
+## 8. Deployment
+
+Deploy your application to the cloud.
 
 ```bash
-kthulu deploy --target=wasmer
+kthulu deploy
 ```
 
 ## Conclusion

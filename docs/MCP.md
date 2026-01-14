@@ -74,3 +74,20 @@ If you wish to publish this server to the [community list](https://github.com/mo
 3. Submit a Pull Request to the registry repository adding your server details.
 
 Since Kthulu is a CLI tool rather than a hosted API, it is primarily distributed via binary/source and run locally by the user ("stdio" transport).
+
+## Scaffolding New MCP Servers
+
+Kthulu can now scaffold new, standalone MCP servers to help you build your own tools for AI agents.
+
+To create a new MCP server project:
+
+```bash
+kthulu new my-mcp-server --template=mcp
+```
+
+This will generate a project with:
+- `cmd/my-mcp-server/main.go`: The server entrypoint using `mcp-golang`.
+- `internal/tools/`: A sample tool implementation.
+- `go.mod`: Pre-configured dependencies.
+
+You can then extend this project by adding more tools in the `internal/tools` directory and registering them in `main.go`.

@@ -1,0 +1,18 @@
+package tools
+
+import (
+	"context"
+	"fmt"
+	"github.com/metoro-io/mcp-golang"
+)
+
+// HelloArguments defines the schema for the hello tool
+type HelloArguments struct {
+	Name string `json:"name" jsonschema:"description=The name to greet"`
+}
+
+// HelloHandler implements the hello tool logic
+func HelloHandler(ctx context.Context, args HelloArguments) (*mcp_golang.ToolResponse, error) {
+	message := fmt.Sprintf("Hello, %s!", args.Name)
+	return mcp_golang.NewToolResponse(mcp_golang.NewTextContent(message)), nil
+}
