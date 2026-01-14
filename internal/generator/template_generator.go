@@ -69,6 +69,7 @@ type GeneratorConfig struct {
 	OutputPath    string            `json:"output_path"`
 	Frontend      string            `json:"frontend"`      // react, templ, fyne, none
 	ProjectModule string            `json:"project_module"`
+	TemplateType  string            `json:"template_type"` // server, cli, mcp
 	Database      string            `json:"database"`      // sqlite, postgres, mysql
 	Auth          string            `json:"auth"`          // jwt, oauth, both
 	Features      []string          `json:"features"`      // modules to include
@@ -209,15 +210,28 @@ func (g *TemplateGenerator) GenerateProject(config *GeneratorConfig) (*ProjectSt
 		Configuration: make(map[string]interface{}),
 	}
 
-	// Step 3: Generate base structure
-	if err := g.generateBaseStructure(structure); err != nil {
-		return nil, fmt.Errorf("failed to generate base structure: %w", err)
+	// Step 3: Generate structure based on template type
+	var errGen error
+	switch config.TemplateType {
+	case "cli":
+		errGen = g.generateCLIStructure(structure)
+	case "mcp":
+		errGen = g.generateMCPStructure(structure)
+	default:
+		// Default to server structure
+		errGen = g.generateBaseStructure(structure)
 	}
 
-	// Step 4: Generate module files
-	for _, module := range plan.InstallOrder {
-		if err := g.generateModuleFiles(module, structure); err != nil {
-			return nil, fmt.Errorf("failed to generate module '%s': %w", module, err)
+	if errGen != nil {
+		return nil, fmt.Errorf("failed to generate structure: %w", errGen)
+	}
+
+	// Step 4: Generate module files (only for server templates)
+	if config.TemplateType == "server" || config.TemplateType == "" {
+		for _, module := range plan.InstallOrder {
+			if err := g.generateModuleFiles(module, structure); err != nil {
+				return nil, fmt.Errorf("failed to generate module '%s': %w", module, err)
+			}
 		}
 	}
 
@@ -1144,4 +1158,147 @@ func (g *TemplateGenerator) ResultRegisterFrontendNavigation(title, name, rootPa
 	newText := text[:lastBracket] + newItem + text[lastBracket:]
 	
 	return os.WriteFile(configPath, []byte(newText), 0644)
+}
+
+func (g *TemplateGenerator) generateCLIStructure(structure *ProjectStructure) error {
+	structure.Directories = append(structure.Directories, "cmd/"+g.config.ProjectName, "internal/cli")
+
+	// main.go
+	structure.Files = append(structure.Files, GeneratedFile{
+		Path:     "cmd/" + g.config.ProjectName + "/main.go",
+		Template: "cli_main",
+		Content:  g.generateCLIMain(),
+	})
+
+	// root.go
+	structure.Files = append(structure.Files, GeneratedFile{
+		Path:     "internal/cli/root.go",
+		Template: "cli_root",
+		Content:  g.generateCLIRoot(),
+	})
+
+	// go.mod
+	structure.Files = append(structure.Files, GeneratedFile{
+		Path:     "go.mod",
+		Template: "cli_gomod",
+		Content:  g.generateCLIGoMod(),
+	})
+
+	// README.md
+	structure.Files = append(structure.Files, GeneratedFile{
+		Path:     "README.md",
+		Template: "readme",
+		Content:  g.generateReadme(),
+	})
+
+	return nil
+}
+
+func (g *TemplateGenerator) generateMCPStructure(structure *ProjectStructure) error {
+	structure.Directories = append(structure.Directories, "cmd/"+g.config.ProjectName, "internal/tools")
+
+	// main.go
+	structure.Files = append(structure.Files, GeneratedFile{
+		Path:     "cmd/" + g.config.ProjectName + "/main.go",
+		Template: "mcp_main",
+		Content:  g.generateMCPMain(),
+	})
+
+	// tools.go
+	structure.Files = append(structure.Files, GeneratedFile{
+		Path:     "internal/tools/tools.go",
+		Template: "mcp_tools",
+		Content:  g.generateMCPTools(),
+	})
+
+	// go.mod
+	structure.Files = append(structure.Files, GeneratedFile{
+		Path:     "go.mod",
+		Template: "mcp_gomod",
+		Content:  g.generateMCPGoMod(),
+	})
+
+	// README.md
+	structure.Files = append(structure.Files, GeneratedFile{
+		Path:     "README.md",
+		Template: "readme",
+		Content:  g.generateReadme(),
+	})
+
+	return nil
+}
+
+func (g *TemplateGenerator) generateCLIMain() string {
+	data := map[string]interface{}{
+		"ModulePath": g.modulePath(),
+	}
+	content, err := g.executeTemplate("cli_main", "scaffold/cli/main.go.tmpl", data)
+	if err != nil {
+		fmt.Printf("⚠️  Error generating CLI main.go: %v\n", err)
+		return ""
+	}
+	return content
+}
+
+func (g *TemplateGenerator) generateCLIRoot() string {
+	data := map[string]interface{}{
+		"ProjectName": g.config.ProjectName,
+	}
+	content, err := g.executeTemplate("cli_root", "scaffold/cli/root.go.tmpl", data)
+	if err != nil {
+		fmt.Printf("⚠️  Error generating CLI root.go: %v\n", err)
+		return ""
+	}
+	return content
+}
+
+func (g *TemplateGenerator) generateCLIGoMod() string {
+	data := map[string]interface{}{
+		"ModulePath": g.modulePath(),
+		"GoVersion":  "1.24",
+	}
+	content, err := g.executeTemplate("cli_gomod", "scaffold/cli/go.mod.tmpl", data)
+	if err != nil {
+		fmt.Printf("⚠️  Error generating CLI go.mod: %v\n", err)
+		return ""
+	}
+	return content
+}
+
+func (g *TemplateGenerator) generateMCPMain() string {
+	data := map[string]interface{}{
+		"ProjectName": g.config.ProjectName,
+		"ModulePath":  g.modulePath(),
+	}
+	content, err := g.executeTemplate("mcp_main", "scaffold/mcp/main.go.tmpl", data)
+	if err != nil {
+		fmt.Printf("⚠️  Error generating MCP main.go: %v\n", err)
+		return ""
+	}
+	return content
+}
+
+func (g *TemplateGenerator) generateMCPTools() string {
+	data := map[string]interface{}{
+		"ProjectName": g.config.ProjectName,
+	}
+	content, err := g.executeTemplate("mcp_tools", "scaffold/mcp/tools.go.tmpl", data)
+	if err != nil {
+		fmt.Printf("⚠️  Error generating MCP tools.go: %v\n", err)
+		return ""
+	}
+	return content
+}
+
+func (g *TemplateGenerator) generateMCPGoMod() string {
+	data := map[string]interface{}{
+		"ModulePath": g.modulePath(),
+		"GoVersion":  "1.24",
+	}
+	content, err := g.executeTemplate("mcp_gomod", "scaffold/mcp/go.mod.tmpl", data)
+	if err != nil {
+		fmt.Printf("⚠️  Error generating MCP go.mod: %v\n", err)
+		return ""
+	}
+	return content
 }

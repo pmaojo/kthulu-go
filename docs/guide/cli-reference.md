@@ -14,10 +14,14 @@ Initializes the global Kthulu configuration in `~/.kthulu`.
 ### `kthulu plan`
 Starts an interactive session to design your application architecture. Generates a `kthulu-plan.yaml` file.
 
-### `kthulu create`
+### `kthulu create` (or `kthulu new`)
 Scaffolds a new project.
 - `--from-plan`: Uses the `kthulu-plan.yaml` in the current directory.
-- `--template <name>`: Uses a starter template from the marketplace.
+- `--template <name>`: Uses a starter template.
+  - `microservice`: Default backend service.
+  - `monolith`: Full-featured backend.
+  - `cli`: Standalone CLI application using Cobra.
+  - `mcp`: Model Context Protocol server.
 
 ### `kthulu dev`
 Starts the development server with hot-reloading and self-healing capabilities.
@@ -31,4 +35,3 @@ Generates a React Admin UI for the specified module entity.
 
 ### `kthulu deploy`
 Deploys the application.
-- `--target <provider>`: `wasmer`, `fly`, or `docker`.

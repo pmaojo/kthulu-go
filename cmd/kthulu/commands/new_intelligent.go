@@ -84,6 +84,24 @@ var projectTemplates = map[string]ProjectTemplate{
 		Auth:        "both",
 		Enterprise:  true,
 	},
+	"cli": {
+		Name:        "CLI Tool",
+		Description: "Command Line Interface application using Cobra",
+		Features:    []string{},
+		Database:    "none",
+		Frontend:    "none",
+		Auth:        "none",
+		Enterprise:  false,
+	},
+	"mcp": {
+		Name:        "MCP Server",
+		Description: "Model Context Protocol server for AI agents",
+		Features:    []string{},
+		Database:    "none",
+		Frontend:    "none",
+		Auth:        "none",
+		Enterprise:  false,
+	},
 }
 
 var newCmd = &cobra.Command{
@@ -386,6 +404,12 @@ func buildProjectConfig(projectName string) (*generator.GeneratorConfig, error) 
 		ModuleFields:    newModuleFields,
 		FrontendModules: newFrontendModules, // Convention: 'modules:' = fullstack
 		CustomValues:    make(map[string]string),
+	}
+
+	if newTemplate == "cli" || newTemplate == "mcp" {
+		config.TemplateType = newTemplate
+	} else {
+		config.TemplateType = "server"
 	}
 
 	if newModulePath != "" {
