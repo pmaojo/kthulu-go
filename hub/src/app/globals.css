@@ -203,6 +203,8 @@ h1, h2, h3 {
 .prose-custom {
   line-height: 1.75;
   color: hsl(var(--foreground) / 0.9);
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .prose-custom h1, .prose-custom h2, .prose-custom h3 {

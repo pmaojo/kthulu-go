@@ -76,7 +76,7 @@ export default async function DocPage({ params }: { params: { slug: string[] } }
             </div>
 
             <div className="flex items-start justify-between gap-4 mb-6">
-              <h1 className="text-5xl font-bold tracking-tighter kthulu-glow leading-tight">
+              <h1 className="text-3xl md:text-5xl font-bold tracking-tighter kthulu-glow leading-tight break-words">
                 {doc.title}
               </h1>
               {Icon && (
