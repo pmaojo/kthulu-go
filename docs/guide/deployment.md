@@ -1,53 +1,78 @@
 ---
 title: Deployment
-description: Deploying Kthulu applications to Cloud and Edge.
+description: Deploying Kthulu applications to Cloud and Docker.
 ---
 
 
-Kthulu applications are compiled into a single binary ("One-Bin" philosophy), which makes deployment incredibly simple. The frontend assets are embedded into the Go binary.
+Kthulu applications are designed with the "One-Bin" philosophy, simplifying deployment by compiling everything into a single binary. The frontend assets are embedded directly into the Go binary.
 
 ## Building for Production
 
-To build your application:
+To build your application as a standalone binary:
 
 ```bash
 go build -tags prod -o app cmd/server/main.go
 ```
 
-This binary contains your API server and your static frontend files.
+This binary contains your API server and your static frontend files (served from the binary itself).
 
-## Cloud Deployment (Docker)
+## Docker Deployment
 
-Kthulu generates a `Dockerfile` optimized for production.
+Kthulu provides robust Docker support out of the box.
+
+### Single Container (Recommended)
+
+The project includes a multi-stage `Dockerfile.fullstack` that builds the frontend (using Bun) and the backend (using Go), producing a minimal scratch-based image.
+
+To build and run:
 
 ```bash
-docker build -t my-app .
+# Build the image
+docker build -f Dockerfile.fullstack -t my-app .
+
+# Run the container
 docker run -p 8080:8080 -e DOMAIN=example.com my-app
 ```
 
-The application automatically handles AutoTLS (Let's Encrypt) when the `DOMAIN` environment variable is set.
+This image is highly optimized (typically < 20MB compressed) and includes:
+- AutoTLS (Let's Encrypt) when `DOMAIN` is set.
+- Embedded frontend assets.
+- Timezone data and CA certificates.
 
-## Wasmer Edge
+### Docker Compose
 
-Kthulu has first-class support for WebAssembly (WASI).
+For development or deployments requiring a separate database, use the provided `docker-compose.yml`:
 
-1.  **Compile to WASM**:
-    ```bash
-    GOOS=wasip1 GOARCH=wasm go build -o app.wasm cmd/server/main.go
-    ```
+```bash
+docker-compose up -d
+```
 
-2.  **Deploy**:
-    ```bash
-    wasmer deploy
-    ```
+This spins up:
+- `api`: The Go backend.
+- `web`: The Vite dev server (for hot-reloading).
+- `db`: A PostgreSQL instance.
 
-The `kthulu deploy` command automates this process, generating the necessary `wasmer.toml` configuration.
+## Cloud Deployment (CLI)
+
+The `kthulu deploy` command automates the generation of Kubernetes manifests and Docker builds.
+
+```bash
+kthulu deploy --cloud=kubernetes --namespace=production
+```
+
+This command will:
+1.  Analyze your project structure.
+2.  Generate a `Dockerfile` if one is missing.
+3.  Build the Docker image.
+4.  Generate Kubernetes manifests (`deployment.yaml`, `service.yaml`, `hpa.yaml`) in `deployments/kubernetes/`.
+5.  Apply them to your cluster using `kubectl`.
 
 ## Environment Variables
 
 Common configuration variables:
 
-- `PORT`: HTTP port (default: 8080)
-- `DOMAIN`: Domain name for AutoTLS
-- `DATABASE_URL`: Connection string for the database
-- `ENVIRONMENT`: `production` or `development`
+- `PORT`: HTTP port (default: 8080).
+- `DOMAIN`: Domain name for AutoTLS (e.g., `myapp.com`).
+- `DATABASE_URL`: Connection string for the database (PostgreSQL/SQLite).
+- `ENVIRONMENT`: `production` or `development`.
+- `JWT_SECRET`: Secret for signing auth tokens.
