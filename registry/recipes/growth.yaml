@@ -1,0 +1,10 @@
+name: "Growth Stack"
+id: "growth"
+description: "Essential tools for scaling: Analytics, Audit Logs, and Notifications."
+modules:
+  - name: "analytics"
+    fields: ["event:string", "payload:json", "user_id:string"]
+  - name: "audit"
+    fields: ["action:string", "resource:string", "actor_id:string", "metadata:json"]
+  - name: "notifier"
+    fields: ["channel:string", "recipient:string", "content:text"]

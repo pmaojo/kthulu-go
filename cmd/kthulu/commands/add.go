@@ -3,6 +3,8 @@ package commands
 import (
 	"bufio"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -113,6 +115,87 @@ func init() {
 	addCmd.AddCommand(addModuleCmd)
 	addCmd.AddCommand(addComponentCmd)
 	addCmd.AddCommand(addAdminCmd)
+	addCmd.AddCommand(addRecipeCmd)
+}
+
+var addRecipeCmd = &cobra.Command{
+	Use:   "recipe [name]",
+	Short: "Add a complete recipe (stack of modules)",
+	Long: `Add a pre-configured stack of modules (recipe) to your project.
+Recipes are defined in the registry and can include multiple modules, integrations, and configurations.
+
+Examples:
+  kthulu add recipe growth
+  kthulu add recipe saas`,
+	Args: cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return runAddRecipe(args[0])
+	},
+}
+
+type Recipe struct {
+	Name        string         `yaml:"name"`
+	ID          string         `yaml:"id"`
+	Description string         `yaml:"description"`
+	Modules     []RecipeModule `yaml:"modules"`
+}
+
+type RecipeModule struct {
+	Name         string   `yaml:"name"`
+	Fields       []string `yaml:"fields"`
+	Integrations []string `yaml:"integrations"`
+}
+
+func runAddRecipe(name string) error {
+	fmt.Printf("🍳 Cooking up recipe: %s\n", name)
+
+	var data []byte
+
+	// 1. Try local registry (Development Mode)
+	recipePath := filepath.Join("registry", "recipes", name+".yaml")
+	if _, err := os.Stat(recipePath); err == nil {
+		data, _ = os.ReadFile(recipePath)
+	} else {
+		// 2. Try git root (Development Mode)
+		if gitRoot, err := exec.Command("git", "rev-parse", "--show-toplevel").Output(); err == nil {
+			recipePath = filepath.Join(strings.TrimSpace(string(gitRoot)), "registry", "recipes", name+".yaml")
+			data, _ = os.ReadFile(recipePath)
+		}
+	}
+
+	// 3. Try Remote Registry (Production Mode)
+	if len(data) == 0 {
+		fmt.Println("🌐 Fetching recipe from remote registry...")
+		url := fmt.Sprintf("https://raw.githubusercontent.com/pmaojo/kthulu-go/main/registry/recipes/%s.yaml", name)
+		resp, err := http.Get(url)
+		if err == nil && resp.StatusCode == 200 {
+			defer resp.Body.Close()
+			data, err = io.ReadAll(resp.Body)
+		}
+	}
+
+	if len(data) == 0 {
+		return fmt.Errorf("recipe '%s' not found locally or remotely", name)
+	}
+
+	var recipe Recipe
+	if err := yaml.Unmarshal(data, &recipe); err != nil {
+		return fmt.Errorf("failed to parse recipe: %w", err)
+	}
+
+	fmt.Printf("📜 %s: %s\n", recipe.Name, recipe.Description)
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+	for _, module := range recipe.Modules {
+		fmt.Printf("\n🔹 Adding module from recipe: %s\n", module.Name)
+		// We use force=true and yes=true to batch install without prompts
+		if err := runAddModule(module.Name, module.Fields, module.Integrations, "", true, true, "", false, false); err != nil {
+			return fmt.Errorf("failed to add module %s: %w", module.Name, err)
+		}
+	}
+
+	fmt.Printf("\n✨ Recipe '%s' completed successfully!\n", name)
+	return nil
 }
 
 var addAdminCmd = &cobra.Command{

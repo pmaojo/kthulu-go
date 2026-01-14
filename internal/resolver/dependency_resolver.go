@@ -76,6 +76,7 @@ func (r *DependencyResolver) initializeRules() {
 	r.rules["realtime"] = []string{"user", "auth"}
 	r.rules["audit"] = []string{"user"}
 	r.rules["notification"] = []string{"user"}
+	r.rules["analytics"] = []string{"user"}
 }
 
 // ResolveDependencies resolves dependencies for the given modules
@@ -312,6 +313,29 @@ func (r *DependencyResolver) generateRecommendations(requestedModules []string, 
 			}
 			plan.Recommendations = append(plan.Recommendations, rec)
 		}
+	}
+
+	// Smart Wiring: Analytics & Audit
+	if contains(plan.RequiredModules, "analytics") && contains(plan.RequiredModules, "audit") {
+		rec := Recommendation{
+			Type:      "wire",
+			Module:    "growth-engine",
+			Reason:    "Connect Analytics and Audit logs to a centralized dashboard",
+			Impact:    "high",
+			AutoApply: true,
+		}
+		plan.Recommendations = append(plan.Recommendations, rec)
+	}
+
+	if contains(plan.RequiredModules, "audit") {
+		rec := Recommendation{
+			Type:      "wire",
+			Module:    "middleware",
+			Reason:    "Inject audit middleware into HTTP router",
+			Impact:    "medium",
+			AutoApply: true,
+		}
+		plan.Recommendations = append(plan.Recommendations, rec)
 	}
 }
 
