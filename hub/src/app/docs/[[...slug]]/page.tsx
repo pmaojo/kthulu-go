@@ -3,10 +3,36 @@ import { notFound } from 'next/navigation';
 import { Sidebar } from '@/components/Navigation';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Book, Clock, User, Terminal, Star, Zap, Shield, Cloud } from 'lucide-react';
+import { Book, Clock, User, Terminal, Star, Zap, Shield, Cloud, ArrowLeft, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
+
+const TOUR_ORDER = [
+  '/docs/guide/introduction',
+  '/docs/guide/installation',
+  '/docs/guide/quick-start',
+  '/docs/guide/project-structure',
+  '/docs/guide/modules',
+  '/docs/guide/deployment',
+  '/docs/guide/cli-reference',
+];
+
+const TOUR_TITLES: Record<string, string> = {
+  '/docs/guide/introduction': 'Introduction',
+  '/docs/guide/installation': 'Installation',
+  '/docs/guide/quick-start': 'Quick Start Tour',
+  '/docs/guide/project-structure': 'Project Structure',
+  '/docs/guide/modules': 'Modules',
+  '/docs/guide/deployment': 'Deployment',
+  '/docs/guide/cli-reference': 'CLI Reference',
+};
 
 export default async function DocPage({ params }: { params: { slug: string[] } }) {
   const { slug } = await params;
+
+  const currentPath = `/docs/${slug.join('/')}`;
+  const currentIndex = TOUR_ORDER.indexOf(currentPath);
+  const prevPage = currentIndex > 0 ? TOUR_ORDER[currentIndex - 1] : null;
+  const nextPage = currentIndex >= 0 && currentIndex < TOUR_ORDER.length - 1 ? TOUR_ORDER[currentIndex + 1] : null;
 
   let doc;
   let isMarketplace = false;
@@ -122,6 +148,26 @@ export default async function DocPage({ params }: { params: { slug: string[] } }
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {content}
             </ReactMarkdown>
+          </div>
+
+          <div className="mt-12 pt-12 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-6">
+             {prevPage ? (
+               <Link href={prevPage} className="flex flex-col gap-2 p-6 rounded-xl border border-white/10 hover:border-primary/50 hover:bg-white/5 transition-all w-full md:w-1/2 text-left group">
+                 <span className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                   <ArrowLeft size={12} className="group-hover:-translate-x-1 transition-transform" /> Previous
+                 </span>
+                 <span className="font-bold text-lg text-foreground">{TOUR_TITLES[prevPage]}</span>
+               </Link>
+             ) : <div className="hidden md:block w-1/2" />}
+
+             {nextPage && (
+               <Link href={nextPage} className="flex flex-col gap-2 p-6 rounded-xl border border-white/10 hover:border-primary/50 hover:bg-white/5 transition-all w-full md:w-1/2 text-right group items-end">
+                 <span className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                   Next <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
+                 </span>
+                 <span className="font-bold text-lg text-foreground">{TOUR_TITLES[nextPage]}</span>
+               </Link>
+             )}
           </div>
         </article>
       </div>
