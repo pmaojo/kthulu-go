@@ -19,13 +19,24 @@ export async function getDocBySlug(slug: string[], baseDir: string = DOCS_DIR, f
   const fullPath = path.join(baseDir, ...slug) + '.md';
   const indexPath = path.join(baseDir, ...slug, 'index.md');
   
-  let targetPath = '';
-  if (fs.existsSync(fullPath)) targetPath = fullPath;
-  else if (fs.existsSync(indexPath)) targetPath = indexPath;
-  
-  if (!targetPath) return null;
+  let fileContents = '';
 
-  const fileContents = await fs.promises.readFile(targetPath, 'utf8');
+  // Try reading fullPath first
+  try {
+    fileContents = await fs.promises.readFile(fullPath, 'utf8');
+  } catch (err: unknown) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((err as any).code !== 'ENOENT') throw err;
+    // If fullPath doesn't exist, try indexPath
+    try {
+      fileContents = await fs.promises.readFile(indexPath, 'utf8');
+    } catch (err2: unknown) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if ((err2 as any).code !== 'ENOENT') throw err2;
+      return null;
+    }
+  }
+
   const { data, content } = matter(fileContents);
 
   const doc: DocContent = {
@@ -44,9 +55,16 @@ export async function getDocBySlug(slug: string[], baseDir: string = DOCS_DIR, f
 
 export async function getAllDocs(subDir: string = '', baseDir: string = DOCS_DIR, fields: string[] = []): Promise<DocContent[]> {
   const fullDir = path.join(baseDir, subDir);
-  if (!fs.existsSync(fullDir)) return [];
 
-  const files = await fs.promises.readdir(fullDir, { recursive: true }) as string[];
+  let files: string[] = [];
+  try {
+    files = await fs.promises.readdir(fullDir, { recursive: true }) as string[];
+  } catch (err: unknown) {
+    // If directory doesn't exist, return empty array
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((err as any).code === 'ENOENT') return [];
+    throw err;
+  }
   
   const docs = await Promise.all(files
     .filter((file) => file.endsWith('.md'))
