@@ -51,6 +51,7 @@ func NewRegistry() *Registry {
 	r.Register(GrepTool)
 	r.Register(ThinkTool)
 	r.Register(KthuluTool)
+	r.Register(AnalysisTool)
 
 	return r
 }
