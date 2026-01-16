@@ -20,20 +20,23 @@ type Theme struct {
 	BorderFocus lipgloss.Color
 }
 
-// DefaultTheme is the "Cyberpunk Neon" theme
-var DefaultTheme = Theme{
-	Primary:     lipgloss.Color("#00F0FF"), // Cyan Neon
-	Secondary:   lipgloss.Color("#B026FF"), // Neon Purple
-	Accent:      lipgloss.Color("#FFFF00"), // Electric Yellow
-	Background:  lipgloss.Color("#050505"), // Void Black
-	Foreground:  lipgloss.Color("#E0E0E0"), // Ashes
-	Muted:       lipgloss.Color("#505050"), // Dark Charcoal
-	Success:     lipgloss.Color("#00FF99"), // Neon Green
-	Warning:     lipgloss.Color("#FF8C00"), // Dark Orange
-	Error:       lipgloss.Color("#FF0033"), // Neon Red
-	Border:      lipgloss.Color("#303030"), // Obsidian
-	BorderFocus: lipgloss.Color("#00F0FF"), // Cyan focus
+// InfernoTheme is the new default "Inferno" theme (Red/Orange/Gold)
+var InfernoTheme = Theme{
+	Primary:     lipgloss.Color("#FF4500"), // OrangeRed
+	Secondary:   lipgloss.Color("#FFD700"), // Gold
+	Accent:      lipgloss.Color("#DC143C"), // Crimson
+	Background:  lipgloss.Color("#100505"), // Very dark red/black
+	Foreground:  lipgloss.Color("#FFDAB9"), // PeachPuff
+	Muted:       lipgloss.Color("#602020"), // Dark red/brown
+	Success:     lipgloss.Color("#32CD32"), // LimeGreen
+	Warning:     lipgloss.Color("#FFA500"), // Orange
+	Error:       lipgloss.Color("#FF0000"), // Red
+	Border:      lipgloss.Color("#502020"), // Dark red/brown border
+	BorderFocus: lipgloss.Color("#FF4500"), // OrangeRed focus
 }
+
+// DefaultTheme aliases InfernoTheme for backward compatibility
+var DefaultTheme = InfernoTheme
 
 // Styles contains all lipgloss styles for the TUI
 type Styles struct {
@@ -103,7 +106,7 @@ func NewStyles(theme Theme) Styles {
 			Padding(0, 1),
 
 		StatusBar: lipgloss.NewStyle().
-			Background(lipgloss.Color("#111111")).
+			Background(lipgloss.Color("#200505")). // Darker red background for status
 			Foreground(theme.Muted).
 			Border(lipgloss.NormalBorder(), false, false, true, false).
 			BorderForeground(theme.Border).
@@ -191,7 +194,7 @@ func NewStyles(theme Theme) Styles {
 	}
 }
 
-// DefaultStyles returns styles with the default theme
+// DefaultStyles returns styles with the default theme (now Inferno)
 func DefaultStyles() Styles {
-	return NewStyles(DefaultTheme)
+	return NewStyles(InfernoTheme)
 }

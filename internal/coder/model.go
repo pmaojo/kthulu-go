@@ -299,6 +299,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.quitting = true
 			return m, tea.Quit
 
+		case msg.String() == "ctrl+k":
+			// Open CLI Wizard
+			// For now, we'll just populate the input with a "/" to hint at commands
+			// But ideally this opens a modal or a specific command palette
+			if m.focusedPane != PaneInput {
+				m.focusedPane = PaneInput
+				m.inputArea.Focus()
+			}
+			m.inputArea.SetValue("/")
+			return m, nil
+
 		case msg.String() == "ctrl+o":
 			// Open file picker
 			m.filePicker.SetSize(m.width, m.height)

@@ -174,9 +174,6 @@ func (c *AIClient) StreamChat(ctx context.Context, messages []ChatMessage, tools
 			return
 		}
 
-		// DEBUG: Log API request
-		fmt.Fprintf(os.Stderr, "[DEBUG] API Request to: %s\n", c.config.APIBase+"/chat/completions")
-		fmt.Fprintf(os.Stderr, "[DEBUG] Model: %s, Messages: %d, Tools: %d\n", c.config.Model, len(messages), len(tools))
 
 		// Create HTTP request
 		req, err := http.NewRequestWithContext(ctx, "POST",
@@ -208,12 +205,10 @@ func (c *AIClient) StreamChat(ctx context.Context, messages []ChatMessage, tools
 
 		if resp.StatusCode != http.StatusOK {
 			body, _ := io.ReadAll(resp.Body)
-			fmt.Fprintf(os.Stderr, "[DEBUG] API Error %d: %s\n", resp.StatusCode, string(body))
 			eventChan <- ChatEvent{Type: "error", Error: fmt.Errorf("API error %d: %s", resp.StatusCode, string(body))}
 			return
 		}
 
-		fmt.Fprintf(os.Stderr, "[DEBUG] Got HTTP 200, parsing SSE stream...\n")
 
 		// Parse SSE stream
 		scanner := bufio.NewScanner(resp.Body)
@@ -222,10 +217,6 @@ func (c *AIClient) StreamChat(ctx context.Context, messages []ChatMessage, tools
 			line := scanner.Text()
 			lineCount++
 
-			// Debug first few lines
-			if lineCount <= 5 {
-				fmt.Fprintf(os.Stderr, "[DEBUG] SSE line %d: %s\n", lineCount, line)
-			}
 
 			// Skip empty lines and comments
 			if line == "" || strings.HasPrefix(line, ":") {
@@ -238,14 +229,12 @@ func (c *AIClient) StreamChat(ctx context.Context, messages []ChatMessage, tools
 
 				// Check for stream end
 				if data == "[DONE]" {
-					fmt.Fprintf(os.Stderr, "[DEBUG] Stream complete\n")
 					return
 				}
 
 				// Parse JSON chunk
 				var chunk StreamResponse
 				if err := json.Unmarshal([]byte(data), &chunk); err != nil {
-					fmt.Fprintf(os.Stderr, "[DEBUG] JSON parse error: %v\n", err)
 					continue // Skip malformed chunks
 				}
 
@@ -253,7 +242,6 @@ func (c *AIClient) StreamChat(ctx context.Context, messages []ChatMessage, tools
 				for _, choice := range chunk.Choices {
 					// Handle text content
 					if choice.Delta.Content != "" {
-						fmt.Fprintf(os.Stderr, "[DEBUG] Content chunk: %q\n", choice.Delta.Content[:min(50, len(choice.Delta.Content))])
 						select {
 						case eventChan <- ChatEvent{Type: "content", Content: choice.Delta.Content}:
 						case <-ctx.Done():
