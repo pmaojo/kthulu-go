@@ -865,20 +865,10 @@ func (m Model) renderLayout() string {
 }
 
 func (m Model) renderHeader() string {
-	logo := `  _  _________ _    _ _    _ _      _    _ 
- | |/ /__   __| |  | | |  | | |    | |  | |
- | ' /   | |  | |__| | |  | | |    | |  | |
- |  <    | |  |  __  | |  | | |    | |  | |
- | . \   | |  | |  | | |__| | |____| |__| |
- |_|\_\  |_|  |_|  |_|\____/|______\____/ `
-
 	return m.styles.Title.
-		Foreground(lipgloss.Color("205")).
-		Bold(true).
 		Width(m.width).
 		Align(lipgloss.Center).
-		PaddingTop(1).
-		Render(logo)
+		Render(Banner(m.width))
 }
 
 
