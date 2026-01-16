@@ -268,7 +268,7 @@ func (m *Model) handleSlashCommand(input string) tea.Cmd {
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
-	// Handle modals first (they capture input)
+	// Handle modals first
 	if m.confirmModal.IsVisible() {
 		approved, handled, cmd := m.confirmModal.Update(msg)
 		if handled {
@@ -294,101 +294,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch {
-		case msg.String() == "ctrl+c":
-			m.quitting = true
-			return m, tea.Quit
-
-		case msg.String() == "ctrl+k":
-			// Open CLI Wizard
-			// For now, we'll just populate the input with a "/" to hint at commands
-			// But ideally this opens a modal or a specific command palette
-			if m.focusedPane != PaneInput {
-				m.focusedPane = PaneInput
-				m.inputArea.Focus()
-			}
-			m.inputArea.SetValue("/")
-			return m, nil
-
-		case msg.String() == "ctrl+o":
-			// Open file picker
-			m.filePicker.SetSize(m.width, m.height)
-			return m, m.filePicker.Show()
-
-		case msg.String() == "tab":
-			m.cycleFocus()
-			return m, nil
-
-		case msg.String() == "?":
-			if m.focusedPane != PaneInput {
-				m.showHelp = !m.showHelp
-			}
-
-		case msg.String() == "ctrl+e":
-			// Open external editor
-			return m, openEditor(m.inputArea.Value())
-
-		case msg.String() == "ctrl+l":
-			m.messages = []Message{}
-			m.chatViewport.SetContent(Banner(m.chatViewport.Width))
-			return m, nil
-
-		case msg.String() == "enter":
-			if m.focusedPane == PaneInput && strings.TrimSpace(m.inputArea.Value()) != "" && !m.isLoading {
-				content := m.inputArea.Value()
-				m.inputArea.Reset()
-
-				// Check for slash command
-				if strings.HasPrefix(strings.TrimSpace(content), "/") {
-					return m, m.handleSlashCommand(strings.TrimSpace(content))
-				}
-
-				m.messages = append(m.messages, Message{Role: "user", Content: content})
-				m.updateChatContent()
-				m.isLoading = true
-				m.streamingContent = ""
-				m.statusMessage = "Thinking..."
-				
-				// Start streaming from LiteLLM
-				return m, m.sendToLLM()
-			}
-
-		case msg.String() == "esc":
-			if m.showHelp {
-				m.showHelp = false
-				return m, nil
-			}
-		}
+		return m.handleKeyMsg(msg)
 
 	case tea.MouseMsg:
-		if msg.Action != tea.MouseActionPress || msg.Button != tea.MouseButtonLeft {
-			return m, nil
-		}
-		
-		// Simple click detection based on layout
-		// Context pane: left 30%
-		// Input pane: bottom 3 lines + border
-		inputY := m.height - 3
-		contextWidth := m.width * 30 / 100
-
-		if msg.Y >= inputY {
-			if m.focusedPane != PaneInput {
-				m.focusedPane = PaneInput
-				m.inputArea.Focus()
-			}
-		} else if msg.X < contextWidth {
-			if m.focusedPane != PaneContext {
-				m.focusedPane = PaneContext
-				m.inputArea.Blur()
-			}
-		} else {
-			if m.focusedPane != PaneChat {
-				m.focusedPane = PaneChat
-				m.inputArea.Blur()
-			}
-		}
-		return m, nil
-
+		return m.handleMouseMsg(msg)
 
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -402,7 +311,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.log(string(msg))
 		return m, nil
 
-
 	case spinner.TickMsg:
 		if m.isLoading {
 			var cmd tea.Cmd
@@ -410,114 +318,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, cmd)
 		}
 
-	case StreamStartedMsg:
-		m.statusMessage = "Thinking..."
-		// Capture the event channel from the message
-		m.eventChan = msg.EventChan
-		// Append empty assistant message for streaming
-		m.messages = append(m.messages, Message{
-			Role: "assistant",
-		})
-		m.toolBuffer = make(map[int]*ToolCall)
-		return m, m.waitForStream()
+	case StreamStartedMsg, StreamChunkMsg, StreamErrorMsg, StreamToolCallMsg, StreamFinishMsg, StreamDoneMsg:
+		return m.handleStreamMsg(msg)
 
-	case StreamChunkMsg:
-		if len(m.messages) > 0 {
-			m.messages[len(m.messages)-1].Content += msg.Content
-			m.updateChatContentStreaming()
-		}
-		return m, m.waitForStream()
-
-	case StreamErrorMsg:
-		m.isLoading = false
-		m.statusMessage = "Error"
-		// Add error message to chat
-		m.messages = append(m.messages, Message{
-			Role:    "assistant",
-			Content: fmt.Sprintf("❌ Error: %v", msg.Error),
-		})
-		m.updateChatContent()
-		return m, nil
-
-	case StreamToolCallMsg:
-		m.statusMessage = "Receiving tool calls..."
-		if m.toolBuffer == nil {
-			m.toolBuffer = make(map[int]*ToolCall)
-		}
-		
-		for _, tc := range msg.ToolCalls {
-			if tc.Index == nil {
-				continue
-			}
-			idx := *tc.Index
-			if existing, ok := m.toolBuffer[idx]; ok {
-				// Append arguments
-				existing.Function.Arguments += tc.Function.Arguments
-			} else {
-				// New tool call
-				newTc := tc
-				m.toolBuffer[idx] = &newTc
-			}
-		}
-		return m, m.waitForStream()
-
-	case StreamFinishMsg:
-		if len(m.toolBuffer) > 0 {
-			m.statusMessage = "Executing tools..."
-			
-			// Convert buffer to slice
-			var calls []ToolCall
-			for i := 0; i < len(m.toolBuffer); i++ {
-				if tc, ok := m.toolBuffer[i]; ok {
-					calls = append(calls, *tc)
-				}
-			}
-			
-			// Update the assistant message with the tool calls
-			if len(m.messages) > 0 {
-				// We need to convert ai_client.ToolCall to model.ToolCall if they differ. 
-				// But we are using the same struct/package now implicitly via dot import or similar?
-				// internal/coder/model.go has `Tool` struct? No, it uses `Tools` from `tools` package?
-				// Actually `model.go` has `Tool` and `ToolCall` defined? 
-				// No, `model.go` relies on shared definitions or `ai_client.go` definitions if they are in same package `coder`.
-				// Yes, same package `coder`. So `ToolCall` is the one from `ai_client.go`.
-				
-				m.messages[len(m.messages)-1].ToolCalls = calls
-			}
-			
-			return m, m.executeToolsCmd(calls)
-		}
-		return m, m.waitForStream() // Continue if strictly finish reason was "stop" but we want to ensure everything is drained
-
-	case StreamDoneMsg:
-		m.statusMessage = "Ready"
-		return m, nil
-
+	case ToolExecutionResultMsg, ToolStartedMsg, ToolFinishedMsg, toolsRegisteredMsg:
+		return m.handleToolMsg(msg)
+	
 	case mcpServersStartedMsg:
 		if len(msg.connected) > 0 {
 			m.statusMessage = fmt.Sprintf("MCP: %d connected", len(msg.connected))
 		}
-		// Register tools from connected MCP servers
-		// logic to register tools... involves async calls so maybe another msg?
-		// For now simple synchronous registration since we are in a Cmd
-		// For now simple synchronous registration since we are in a Cmd
-		// Actually RegisterMCPTools needs wrappers. 
-		// m.mcpManager has tools?
-		// This line seems problematic as RegisterMCPTools signature changed.
-		// We should probably just trigger a tool refresh or similar.
-		// Or implement the correct logic:
-		// tools := m.mcpManager.GetTools()
-		// m.toolRegistry.RegisterMCPTools(tools)
-		return m, func() tea.Msg {
-			// Do it inside a Cmd to be safe?
-			// Actually mcpManager logic is outside model scope usually.
-			return toolsRegisteredMsg{count: 0} 
-		}
+		return m, func() tea.Msg { return toolsRegisteredMsg{count: 0} }
 
 	case skillsLoadedMsg:
 		if msg.count > 0 {
-			// Update status message but preserve MCP status if possible, or trigger a toast?
-			// For now just update status
 			m.statusMessage = fmt.Sprintf("Skills: %d loaded", msg.count)
 		}
 		return m, nil
@@ -538,9 +352,196 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		os.Remove(msg.path)
 		return m, nil
+	}
 
+	// Update focused component
+	var cmd tea.Cmd
+	switch m.focusedPane {
+	case PaneChat:
+		m.chatViewport, cmd = m.chatViewport.Update(msg)
+		cmds = append(cmds, cmd)
+	case PaneContext:
+		m.contextViewport, cmd = m.contextViewport.Update(msg)
+		cmds = append(cmds, cmd)
+	case PaneInput:
+		m.inputArea, cmd = m.inputArea.Update(msg)
+		cmds = append(cmds, cmd)
+	}
 
-		
+	return m, tea.Batch(cmds...)
+}
+
+func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch {
+	case msg.String() == "ctrl+c":
+		m.quitting = true
+		return m, tea.Quit
+
+	case msg.String() == "ctrl+k":
+		if m.focusedPane != PaneInput {
+			m.focusedPane = PaneInput
+			m.inputArea.Focus()
+		}
+		m.inputArea.SetValue("/")
+		return m, nil
+
+	case msg.String() == "ctrl+o":
+		m.filePicker.SetSize(m.width, m.height)
+		return m, m.filePicker.Show()
+
+	case msg.String() == "tab":
+		m.cycleFocus()
+		return m, nil
+
+	case msg.String() == "?":
+		if m.focusedPane != PaneInput {
+			m.showHelp = !m.showHelp
+		}
+		return m, nil
+
+	case msg.String() == "ctrl+e":
+		return m, openEditor(m.inputArea.Value())
+
+	case msg.String() == "ctrl+l":
+		m.messages = []Message{}
+		m.chatViewport.SetContent(Banner(m.chatViewport.Width))
+		return m, nil
+
+	case msg.String() == "enter":
+		if m.focusedPane == PaneInput && strings.TrimSpace(m.inputArea.Value()) != "" && !m.isLoading {
+			content := m.inputArea.Value()
+			m.inputArea.Reset()
+
+			if strings.HasPrefix(strings.TrimSpace(content), "/") {
+				return m, m.handleSlashCommand(strings.TrimSpace(content))
+			}
+
+			m.messages = append(m.messages, Message{Role: "user", Content: content})
+			m.updateChatContent()
+			m.isLoading = true
+			m.streamingContent = ""
+			m.statusMessage = "Thinking..."
+			return m, m.sendToLLM()
+		}
+
+	case msg.String() == "esc":
+		if m.showHelp {
+			m.showHelp = false
+			return m, nil
+		}
+	}
+	// Propagate key msg to components if not handled
+	return m.updateComponents(msg)
+}
+
+func (m Model) handleMouseMsg(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	if msg.Action != tea.MouseActionPress || msg.Button != tea.MouseButtonLeft {
+		return m, nil
+	}
+	
+	inputY := m.height - 3
+	contextWidth := m.width * 30 / 100
+
+	if msg.Y >= inputY {
+		if m.focusedPane != PaneInput {
+			m.focusedPane = PaneInput
+			m.inputArea.Focus()
+		}
+	} else if msg.X < contextWidth {
+		if m.focusedPane != PaneContext {
+			m.focusedPane = PaneContext
+			m.inputArea.Blur()
+		}
+	} else {
+		if m.focusedPane != PaneChat {
+			m.focusedPane = PaneChat
+			m.inputArea.Blur()
+		}
+	}
+	return m, nil
+}
+
+func (m Model) handleStreamMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case StreamStartedMsg:
+		m.statusMessage = "Thinking..."
+		m.eventChan = msg.EventChan
+		m.messages = append(m.messages, Message{
+			Role: "assistant",
+		})
+		m.toolBuffer = make(map[int]*ToolCall)
+		return m, m.waitForStream()
+
+	case StreamChunkMsg:
+		if len(m.messages) > 0 {
+			m.messages[len(m.messages)-1].Content += msg.Content
+			m.updateChatContentStreaming()
+		}
+		return m, m.waitForStream()
+
+	case StreamErrorMsg:
+		m.isLoading = false
+		m.statusMessage = "Error"
+		m.messages = append(m.messages, Message{
+			Role:    "assistant",
+			Content: fmt.Sprintf("❌ Error: %v", msg.Error),
+		})
+		m.updateChatContent()
+		return m, nil
+
+	case StreamToolCallMsg:
+		return m.handleStreamToolCall(msg)
+
+	case StreamFinishMsg:
+		return m.handleStreamFinish(msg)
+
+	case StreamDoneMsg:
+		m.statusMessage = "Ready"
+		return m, nil
+	}
+	return m, nil
+}
+
+func (m Model) handleStreamToolCall(msg StreamToolCallMsg) (tea.Model, tea.Cmd) {
+	m.statusMessage = "Receiving tool calls..."
+	if m.toolBuffer == nil {
+		m.toolBuffer = make(map[int]*ToolCall)
+	}
+
+	for _, tc := range msg.ToolCalls {
+		if tc.Index == nil {
+			continue
+		}
+		idx := *tc.Index
+		if existing, ok := m.toolBuffer[idx]; ok {
+			existing.Function.Arguments += tc.Function.Arguments
+		} else {
+			newTc := tc
+			m.toolBuffer[idx] = &newTc
+		}
+	}
+	return m, m.waitForStream()
+}
+
+func (m Model) handleStreamFinish(msg StreamFinishMsg) (tea.Model, tea.Cmd) {
+	if len(m.toolBuffer) > 0 {
+		m.statusMessage = "Executing tools..."
+		var calls []ToolCall
+		for i := 0; i < len(m.toolBuffer); i++ {
+			if tc, ok := m.toolBuffer[i]; ok {
+				calls = append(calls, *tc)
+			}
+		}
+		if len(m.messages) > 0 {
+			m.messages[len(m.messages)-1].ToolCalls = calls
+		}
+		return m, m.executeToolsCmd(calls)
+	}
+	return m, m.waitForStream()
+}
+
+func (m Model) handleToolMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
 	case ToolExecutionResultMsg:
 		m.isLoading = false
 		m.statusMessage = "Ready"
@@ -579,10 +580,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.updateToolsPane()
 		return m, nil
 	}
+	return m, nil
+}
 
-
-	// Update focused component
+func (m Model) updateComponents(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmds []tea.Cmd
 	var cmd tea.Cmd
+	
 	switch m.focusedPane {
 	case PaneChat:
 		m.chatViewport, cmd = m.chatViewport.Update(msg)
@@ -594,7 +598,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.inputArea, cmd = m.inputArea.Update(msg)
 		cmds = append(cmds, cmd)
 	}
-
 	return m, tea.Batch(cmds...)
 }
 
