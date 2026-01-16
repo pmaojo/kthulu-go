@@ -155,47 +155,12 @@ func (c *AIClient) StreamChat(ctx context.Context, messages []ChatMessage, tools
 	go func() {
 		defer close(eventChan)
 
-		// Build request
-		reqBody := ChatRequest{
-			Model:     c.config.Model,
-			Messages:  messages,
-			Stream:    true,
-			MaxTokens: 1024,
-		}
-
-		if len(tools) > 0 {
-			reqBody.Tools = tools
-			reqBody.ToolChoice = "auto"
-		}
-
-		jsonBody, err := json.Marshal(reqBody)
+		req, err := c.buildChatRequest(ctx, messages, tools)
 		if err != nil {
-			eventChan <- ChatEvent{Type: "error", Error: fmt.Errorf("failed to marshal request: %w", err)}
+			eventChan <- ChatEvent{Type: "error", Error: err}
 			return
 		}
 
-
-		// Create HTTP request
-		req, err := http.NewRequestWithContext(ctx, "POST",
-			c.config.APIBase+"/chat/completions",
-			strings.NewReader(string(jsonBody)))
-		if err != nil {
-			eventChan <- ChatEvent{Type: "error", Error: fmt.Errorf("failed to create request: %w", err)}
-			return
-		}
-
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Accept", "text/event-stream")
-		
-		// Required for OpenRouter to identify the app
-		req.Header.Set("HTTP-Referer", "https://github.com/pmaojo/kthulu-go")
-		req.Header.Set("X-Title", "Kthulu Coder")
-
-		if c.config.APIKey != "" {
-			req.Header.Set("Authorization", "Bearer "+c.config.APIKey)
-		}
-
-		// Send request
 		resp, err := c.httpClient.Do(req)
 		if err != nil {
 			eventChan <- ChatEvent{Type: "error", Error: fmt.Errorf("request failed: %w", err)}
@@ -209,71 +174,101 @@ func (c *AIClient) StreamChat(ctx context.Context, messages []ChatMessage, tools
 			return
 		}
 
-
-		// Parse SSE stream
-		scanner := bufio.NewScanner(resp.Body)
-		lineCount := 0
-		for scanner.Scan() {
-			line := scanner.Text()
-			lineCount++
-
-
-			// Skip empty lines and comments
-			if line == "" || strings.HasPrefix(line, ":") {
-				continue
-			}
-
-			// Parse SSE data
-			if strings.HasPrefix(line, "data: ") {
-				data := strings.TrimPrefix(line, "data: ")
-
-				// Check for stream end
-				if data == "[DONE]" {
-					return
-				}
-
-				// Parse JSON chunk
-				var chunk StreamResponse
-				if err := json.Unmarshal([]byte(data), &chunk); err != nil {
-					continue // Skip malformed chunks
-				}
-
-				// Extract content from choices
-				for _, choice := range chunk.Choices {
-					// Handle text content
-					if choice.Delta.Content != "" {
-						select {
-						case eventChan <- ChatEvent{Type: "content", Content: choice.Delta.Content}:
-						case <-ctx.Done():
-							return
-						}
-					}
-
-					// Handle tool calls
-					if len(choice.Delta.ToolCalls) > 0 {
-						select {
-						case eventChan <- ChatEvent{Type: "tool_calls", ToolCalls: choice.Delta.ToolCalls}:
-						case <-ctx.Done():
-							return
-						}
-					}
-
-					// Handle finish reason
-					if choice.FinishReason != nil {
-						select {
-						case eventChan <- ChatEvent{Type: "finish", FinishReason: *choice.FinishReason}:
-						case <-ctx.Done():
-							return
-						}
-					}
-				}
-			}
-		}
-
-		if err := scanner.Err(); err != nil {
-			eventChan <- ChatEvent{Type: "error", Error: fmt.Errorf("stream read error: %w", err)}
-		}
+		c.streamResponse(ctx, resp.Body, eventChan)
 	}()
 
 	return eventChan
+}
+
+func (c *AIClient) buildChatRequest(ctx context.Context, messages []ChatMessage, tools []Tool) (*http.Request, error) {
+	reqBody := ChatRequest{
+		Model:     c.config.Model,
+		Messages:  messages,
+		Stream:    true,
+		MaxTokens: 1024,
+	}
+
+	if len(tools) > 0 {
+		reqBody.Tools = tools
+		reqBody.ToolChoice = "auto"
+	}
+
+	jsonBody, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST",
+		c.config.APIBase+"/chat/completions",
+		strings.NewReader(string(jsonBody)))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "text/event-stream")
+	req.Header.Set("HTTP-Referer", "https://github.com/pmaojo/kthulu-go")
+	req.Header.Set("X-Title", "Kthulu Coder")
+
+	if c.config.APIKey != "" {
+		req.Header.Set("Authorization", "Bearer "+c.config.APIKey)
+	}
+
+	return req, nil
+}
+
+func (c *AIClient) streamResponse(ctx context.Context, body io.Reader, eventChan chan<- ChatEvent) {
+	scanner := bufio.NewScanner(body)
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		if line == "" || strings.HasPrefix(line, ":") {
+			continue
+		}
+
+		if strings.HasPrefix(line, "data: ") {
+			data := strings.TrimPrefix(line, "data: ")
+			if data == "[DONE]" {
+				return
+			}
+			c.processStreamChunk(ctx, data, eventChan)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		eventChan <- ChatEvent{Type: "error", Error: fmt.Errorf("stream read error: %w", err)}
+	}
+}
+
+func (c *AIClient) processStreamChunk(ctx context.Context, data string, eventChan chan<- ChatEvent) {
+	var chunk StreamResponse
+	if err := json.Unmarshal([]byte(data), &chunk); err != nil {
+		return
+	}
+
+	for _, choice := range chunk.Choices {
+		if choice.Delta.Content != "" {
+			select {
+			case eventChan <- ChatEvent{Type: "content", Content: choice.Delta.Content}:
+			case <-ctx.Done():
+				return
+			}
+		}
+
+		if len(choice.Delta.ToolCalls) > 0 {
+			select {
+			case eventChan <- ChatEvent{Type: "tool_calls", ToolCalls: choice.Delta.ToolCalls}:
+			case <-ctx.Done():
+				return
+			}
+		}
+
+		if choice.FinishReason != nil {
+			select {
+			case eventChan <- ChatEvent{Type: "finish", FinishReason: *choice.FinishReason}:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}
 }
