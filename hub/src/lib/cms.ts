@@ -13,31 +13,64 @@ export interface DocContent {
   frontmatter: Record<string, any>;
 }
 
+async function readFrontMatter(filePath: string): Promise<Record<string, any>> {
+  const fd = await fs.promises.open(filePath, 'r');
+  try {
+    const buffer = Buffer.alloc(4096);
+    const { bytesRead } = await fd.read(buffer, 0, 4096, 0);
+    const content = buffer.toString('utf8', 0, bytesRead);
+
+    if (content.startsWith('---')) {
+      const end = content.indexOf('\n---', 3);
+      if (end !== -1) {
+        return matter(content).data;
+      }
+    }
+    // Fallback: read full file if frontmatter is huge or not found in first 4KB
+    const fullContent = await fs.promises.readFile(filePath, 'utf8');
+    return matter(fullContent).data;
+  } finally {
+    await fd.close();
+  }
+}
+
 export async function getDocBySlug(slug: string[], baseDir: string = DOCS_DIR, fields: string[] = []): Promise<DocContent | null> {
   if (!Array.isArray(slug)) return null;
   
   const fullPath = path.join(baseDir, ...slug) + '.md';
   const indexPath = path.join(baseDir, ...slug, 'index.md');
   
-  let fileContents = '';
+  let data: Record<string, any> = {};
+  let content = '';
+  const needContent = fields.length === 0 || fields.includes('content');
 
-  // Try reading fullPath first
+  const tryRead = async (p: string) => {
+    if (!needContent) {
+      return { data: await readFrontMatter(p), content: '' };
+    } else {
+      const fileContents = await fs.promises.readFile(p, 'utf8');
+      return matter(fileContents);
+    }
+  };
+
   try {
-    fileContents = await fs.promises.readFile(fullPath, 'utf8');
+    const result = await tryRead(fullPath);
+    data = result.data;
+    content = result.content;
   } catch (err: unknown) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if ((err as any).code !== 'ENOENT') throw err;
     // If fullPath doesn't exist, try indexPath
     try {
-      fileContents = await fs.promises.readFile(indexPath, 'utf8');
+      const result = await tryRead(indexPath);
+      data = result.data;
+      content = result.content;
     } catch (err2: unknown) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if ((err2 as any).code !== 'ENOENT') throw err2;
       return null;
     }
   }
-
-  const { data, content } = matter(fileContents);
 
   const doc: DocContent = {
     slug,
@@ -46,7 +79,7 @@ export async function getDocBySlug(slug: string[], baseDir: string = DOCS_DIR, f
     frontmatter: data,
   };
 
-  if (fields.length === 0 || fields.includes('content')) {
+  if (needContent) {
     doc.content = content;
   }
 
