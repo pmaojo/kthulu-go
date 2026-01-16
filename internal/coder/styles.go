@@ -122,6 +122,11 @@ func NewStyles(theme Theme) Styles {
 			Padding(0, 1).
 			Bold(true),
 
+		Pane: lipgloss.NewStyle().
+			Border(border).
+			BorderForeground(theme.Border).
+			Padding(0, 1),
+
 		// Text styles
 		Title: lipgloss.NewStyle().
 			Foreground(theme.Primary).
