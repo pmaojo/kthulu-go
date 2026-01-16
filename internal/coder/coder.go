@@ -18,7 +18,7 @@ func Run(workingDir string, modelName string) ([]Message, error) {
 	}
 
 	if modelName == "" {
-		modelName = "gemini-2.5-flash"
+		modelName = "google/gemini-2.0-flash-exp:free"
 	}
 
 	m := New(workingDir, modelName)

@@ -163,9 +163,23 @@ func createAIClient(provider, model string) (*ai.MultiProviderClient, error) {
 		multi.RegisterProvider("gemini", geminiClient)
 	}
 
-	// Register OpenAI
-	if apiKey := strings.TrimSpace(os.Getenv("OPENAI_API_KEY")); apiKey != "" {
-		multi.RegisterProvider("openai", ai.NewOpenAIProvider(apiKey, model, 256, 5*time.Minute))
+	// Register OpenAI or OpenRouter
+	openRouterKey := strings.TrimSpace(os.Getenv("OPENROUTER_API_KEY"))
+	openAIKey := strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
+
+	if openRouterKey != "" {
+		// Use OpenRouter
+		provider := ai.NewOpenAIProvider(openRouterKey, model, 256, 5*time.Minute)
+		provider.SetBaseURL("https://openrouter.ai/api/v1")
+		provider.SetHeaders(map[string]string{
+			"HTTP-Referer": "https://github.com/pmaojo/kthulu-go",
+			"X-Title":      "Kthulu CLI",
+		})
+		multi.RegisterProvider("openai", provider) // Register as "openai" to be default if requested? Or "openrouter"?
+		// Register as both if provider is "openrouter" or just override openai logic?
+		// For now we treat it as "openai" provider implementation but with OpenRouter settings.
+	} else if openAIKey != "" {
+		multi.RegisterProvider("openai", ai.NewOpenAIProvider(openAIKey, model, 256, 5*time.Minute))
 	}
 
 	// Register LiteLLM

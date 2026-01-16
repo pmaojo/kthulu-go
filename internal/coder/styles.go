@@ -1,49 +1,51 @@
 package coder
 
 import (
+	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 )
 
 // Theme defines the color scheme for the TUI
 type Theme struct {
-	Primary    lipgloss.Color
-	Secondary  lipgloss.Color
-	Accent     lipgloss.Color
-	Background lipgloss.Color
-	Foreground lipgloss.Color
-	Muted      lipgloss.Color
-	Success    lipgloss.Color
-	Warning    lipgloss.Color
-	Error      lipgloss.Color
-	Border     lipgloss.Color
+	Primary     lipgloss.Color
+	Secondary   lipgloss.Color
+	Accent      lipgloss.Color
+	Background  lipgloss.Color
+	Foreground  lipgloss.Color
+	Muted       lipgloss.Color
+	Success     lipgloss.Color
+	Warning     lipgloss.Color
+	Error       lipgloss.Color
+	Border      lipgloss.Color
 	BorderFocus lipgloss.Color
 }
 
-// DefaultTheme is the "Inferno Black Magick" theme
+// DefaultTheme is the "Cyberpunk Neon" theme
 var DefaultTheme = Theme{
-	Primary:     lipgloss.Color("#FF4500"), // OrangeRed - Magickal Fire
-	Secondary:   lipgloss.Color("#9D00FF"), // Electric Violet - Arcane Energy
-	Accent:      lipgloss.Color("#FFD700"), // Gold - Ancient Runes
+	Primary:     lipgloss.Color("#00F0FF"), // Cyan Neon
+	Secondary:   lipgloss.Color("#B026FF"), // Neon Purple
+	Accent:      lipgloss.Color("#FFFF00"), // Electric Yellow
 	Background:  lipgloss.Color("#050505"), // Void Black
 	Foreground:  lipgloss.Color("#E0E0E0"), // Ashes
 	Muted:       lipgloss.Color("#505050"), // Dark Charcoal
-	Success:     lipgloss.Color("#00FF00"), // Lime - Vitality
-	Warning:     lipgloss.Color("#FF8C00"), // Dark Orange - Ember
-	Error:       lipgloss.Color("#FF0000"), // Pure Red - Blood
+	Success:     lipgloss.Color("#00FF99"), // Neon Green
+	Warning:     lipgloss.Color("#FF8C00"), // Dark Orange
+	Error:       lipgloss.Color("#FF0033"), // Neon Red
 	Border:      lipgloss.Color("#303030"), // Obsidian
-	BorderFocus: lipgloss.Color("#FF4500"), // Burning focus
+	BorderFocus: lipgloss.Color("#00F0FF"), // Cyan focus
 }
 
 // Styles contains all lipgloss styles for the TUI
 type Styles struct {
 	// Layout
-	App         lipgloss.Style
-	ChatPane    lipgloss.Style
-	ContextPane lipgloss.Style
-	InputPane   lipgloss.Style
-	StatusBar   lipgloss.Style
-	PaneTitle   lipgloss.Style
+	App             lipgloss.Style
+	ChatPane        lipgloss.Style
+	ContextPane     lipgloss.Style
+	InputPane       lipgloss.Style
+	StatusBar       lipgloss.Style
+	PaneTitle       lipgloss.Style
 	PaneTitleActive lipgloss.Style
+	Pane            lipgloss.Style
 
 	// Text
 	Title       lipgloss.Style
@@ -63,12 +65,22 @@ type Styles struct {
 	Focused  lipgloss.Style
 	Selected lipgloss.Style
 	Help     lipgloss.Style
+
+	// Renderer
+	Markdown *glamour.TermRenderer
 }
 
 // NewStyles creates styles from a theme
 func NewStyles(theme Theme) Styles {
 	border := lipgloss.RoundedBorder()
 	thickBorder := lipgloss.ThickBorder()
+
+	// Initialize Glamour renderer
+	// We use "dark" style as base which is standard
+	renderer, _ := glamour.NewTermRenderer(
+		glamour.WithStandardStyle("dark"),
+		glamour.WithWordWrap(80), // Dynamic breadth usually better, but default is safe
+	)
 
 	return Styles{
 		// Layout styles
@@ -78,7 +90,7 @@ func NewStyles(theme Theme) Styles {
 		ChatPane: lipgloss.NewStyle().
 			Border(border).
 			BorderForeground(theme.Border).
-			Padding(0, 1), // Reduced padding for cleaner look
+			Padding(0, 1),
 
 		ContextPane: lipgloss.NewStyle().
 			Border(border).
@@ -86,14 +98,14 @@ func NewStyles(theme Theme) Styles {
 			Padding(0, 1),
 
 		InputPane: lipgloss.NewStyle().
-			Border(thickBorder). // Thick border for input
+			Border(thickBorder).
 			BorderForeground(theme.Muted).
 			Padding(0, 1),
 
 		StatusBar: lipgloss.NewStyle().
-			Background(theme.Background).
+			Background(lipgloss.Color("#111111")).
 			Foreground(theme.Muted).
-			Border(lipgloss.NormalBorder(), false, false, true, false). // Bottom border only
+			Border(lipgloss.NormalBorder(), false, false, true, false).
 			BorderForeground(theme.Border).
 			Padding(0, 1).
 			Bold(true),
@@ -105,11 +117,10 @@ func NewStyles(theme Theme) Styles {
 			Bold(true),
 
 		PaneTitleActive: lipgloss.NewStyle().
-			Foreground(theme.Primary).
-			Background(theme.Background).
+			Foreground(theme.Background).
+			Background(theme.Primary). // Inverted for active "Powerline" feel
 			Padding(0, 1).
-			Bold(true).
-			Underline(true),
+			Bold(true),
 
 		// Text styles
 		Title: lipgloss.NewStyle().
@@ -128,18 +139,21 @@ func NewStyles(theme Theme) Styles {
 
 		UserMessage: lipgloss.NewStyle().
 			Foreground(theme.Accent).
-			PaddingLeft(2).
+			PaddingLeft(1).
+			PaddingRight(1).
 			BorderStyle(lipgloss.NormalBorder()).
 			BorderLeft(true).
 			BorderForeground(theme.Accent),
 
 		AIMessage: lipgloss.NewStyle().
 			Foreground(theme.Foreground).
-			PaddingLeft(2).
+			PaddingLeft(1).
+			// No border for AI, rely on Markdown
+			// But maybe a subtle left line?
 			BorderStyle(lipgloss.NormalBorder()).
 			BorderLeft(true).
 			BorderForeground(theme.Secondary),
-		
+
 		CodeBlock: lipgloss.NewStyle().
 			Background(lipgloss.Color("#111111")).
 			Foreground(lipgloss.Color("#A9A9A9")).
@@ -160,13 +174,15 @@ func NewStyles(theme Theme) Styles {
 			BorderForeground(theme.BorderFocus),
 
 		Selected: lipgloss.NewStyle().
-			Background(theme.Secondary). // Purple selection
+			Background(theme.Secondary).
 			Foreground(theme.Foreground).
 			Bold(true),
 
 		Help: lipgloss.NewStyle().
 			Foreground(theme.Muted).
 			Italic(true),
+
+		Markdown: renderer,
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/joho/godotenv"
 	"github.com/pmaojo/kthulu-go/internal/coder"
 	"github.com/spf13/cobra"
 )
@@ -27,6 +28,9 @@ Controls:
   ?         - Show help
   Ctrl+C    - Quit`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Auto-load .env file if present (silently ignore if missing)
+		_ = godotenv.Load()
+		
 		model, _ := cmd.Flags().GetString("model")
 		workingDir, _ := os.Getwd()
 

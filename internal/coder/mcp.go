@@ -66,6 +66,63 @@ type MCPContent struct {
 	Text string `json:"text,omitempty"`
 }
 
+// MCPResource represents a resource exposed by an MCP server
+type MCPResource struct {
+	URI         string `json:"uri"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	MIMEType    string `json:"mimeType,omitempty"`
+}
+
+// MCPResourcesResult is the response from resources/list
+type MCPResourcesResult struct {
+	Resources []MCPResource `json:"resources"`
+}
+
+// MCPReadResourceResult is the response from resources/read
+type MCPReadResourceResult struct {
+	Contents []MCPResourceContent `json:"contents"`
+}
+
+// MCPResourceContent represents the content of a resource
+type MCPResourceContent struct {
+	URI      string `json:"uri"`
+	MIMEType string `json:"mimeType,omitempty"`
+	Text     string `json:"text,omitempty"`
+	Blob     string `json:"blob,omitempty"` // Base64 encoded
+}
+
+// MCPPrompt represents a prompt exposed by an MCP server
+type MCPPrompt struct {
+	Name        string              `json:"name"`
+	Description string              `json:"description,omitempty"`
+	Arguments   []MCPPromptArgument `json:"arguments,omitempty"`
+}
+
+// MCPPromptArgument represents an argument for a prompt
+type MCPPromptArgument struct {
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Required    bool   `json:"required,omitempty"`
+}
+
+// MCPPromptsResult is the response from prompts/list
+type MCPPromptsResult struct {
+	Prompts []MCPPrompt `json:"prompts"`
+}
+
+// MCPGetPromptResult is the response from prompts/get
+type MCPGetPromptResult struct {
+	Description string       `json:"description,omitempty"`
+	Messages    []MCPMessage `json:"messages"`
+}
+
+// MCPMessage represents a message in a prompt
+type MCPMessage struct {
+	Role    string     `json:"role"`
+	Content MCPContent `json:"content"`
+}
+
 // NewMCPClient creates a new MCP client connected to a server
 func NewMCPClient(ctx context.Context, command string, args ...string) (*MCPClient, error) {
 	cmd := exec.CommandContext(ctx, command, args...)
@@ -132,6 +189,71 @@ func (c *MCPClient) ListTools() ([]MCPTool, error) {
 	}
 
 	return toolsResult.Tools, nil
+}
+
+// ListResources returns all resources available from the MCP server
+func (c *MCPClient) ListResources() ([]MCPResource, error) {
+	result, err := c.call("resources/list", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var resourcesResult MCPResourcesResult
+	if err := json.Unmarshal(result, &resourcesResult); err != nil {
+		return nil, fmt.Errorf("failed to parse resources: %w", err)
+	}
+
+	return resourcesResult.Resources, nil
+}
+
+// ReadResource reads a resource from the MCP server
+func (c *MCPClient) ReadResource(uri string) ([]MCPResourceContent, error) {
+	result, err := c.call("resources/read", map[string]interface{}{
+		"uri": uri,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var readResult MCPReadResourceResult
+	if err := json.Unmarshal(result, &readResult); err != nil {
+		return nil, fmt.Errorf("failed to parse read result: %w", err)
+	}
+
+	return readResult.Contents, nil
+}
+
+// ListPrompts returns all prompts available from the MCP server
+func (c *MCPClient) ListPrompts() ([]MCPPrompt, error) {
+	result, err := c.call("prompts/list", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var promptsResult MCPPromptsResult
+	if err := json.Unmarshal(result, &promptsResult); err != nil {
+		return nil, fmt.Errorf("failed to parse prompts: %w", err)
+	}
+
+	return promptsResult.Prompts, nil
+}
+
+// GetPrompt gets a prompt from the MCP server
+func (c *MCPClient) GetPrompt(name string, arguments map[string]string) (*MCPGetPromptResult, error) {
+	result, err := c.call("prompts/get", map[string]interface{}{
+		"name":      name,
+		"arguments": arguments,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var promptResult MCPGetPromptResult
+	if err := json.Unmarshal(result, &promptResult); err != nil {
+		return nil, fmt.Errorf("failed to parse prompt result: %w", err)
+	}
+
+	return &promptResult, nil
 }
 
 // CallTool invokes a tool on the MCP server

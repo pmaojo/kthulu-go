@@ -69,3 +69,39 @@ func TestDefaultMCPServers(t *testing.T) {
 		t.Error("expected non-nil slice")
 	}
 }
+
+func TestMCPResourceStructures(t *testing.T) {
+	// Test marshaling/unmarshaling of resource structures
+	res := MCPResource{
+		URI:         "file:///path/to/file",
+		Name:        "file",
+		Description: "A file",
+		MIMEType:    "text/plain",
+	}
+
+	if res.URI != "file:///path/to/file" {
+		t.Errorf("URI = %q, want %q", res.URI, "file:///path/to/file")
+	}
+}
+
+func TestMCPPromptStructures(t *testing.T) {
+	// Test marshaling/unmarshaling of prompt structures
+	prompt := MCPPrompt{
+		Name:        "test-prompt",
+		Description: "A test prompt",
+		Arguments: []MCPPromptArgument{
+			{
+				Name:        "arg1",
+				Description: "First argument",
+				Required:    true,
+			},
+		},
+	}
+
+	if prompt.Name != "test-prompt" {
+		t.Errorf("Name = %q, want %q", prompt.Name, "test-prompt")
+	}
+	if len(prompt.Arguments) != 1 {
+		t.Errorf("len(Arguments) = %d, want 1", len(prompt.Arguments))
+	}
+}

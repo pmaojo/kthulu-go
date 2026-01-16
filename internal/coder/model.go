@@ -2,17 +2,22 @@ package coder
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/pmaojo/kthulu-go/internal/coder/tools"
+	"github.com/pmaojo/kthulu-go/internal/coder/skills"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/glamour"
 )
 
 // Pane represents which pane is currently focused
@@ -24,107 +29,117 @@ const (
 	PaneInput
 )
 
-// Message represents a chat message
-type Message struct {
-	Role    string // "user" or "assistant"
-	Content string
-}
-
-// Model is the main Bubble Tea model for the coder TUI
 type Model struct {
-	// Window dimensions
-	width  int
-	height int
-
-	// Panes
-	chatViewport    viewport.Model
-	contextViewport viewport.Model
-	inputArea       textarea.Model
-	help            help.Model
-	spinner         spinner.Model
-
-	// Modals
-	confirmModal *ConfirmationModal
-	filePicker   *FilePicker
-
 	// State
+	ctx              context.Context
+	cancel           context.CancelFunc
+	workingDir       string
+	modelName        string
+	
+	// UI State
+	width            int
+	height           int
 	focusedPane      Pane
+	inputArea        textarea.Model
+	chatViewport     viewport.Model
+	contextViewport  viewport.Model
+	logViewport      viewport.Model
+	toolsViewport    viewport.Model
+	spinner          spinner.Model
+	help             help.Model
+	keys             KeyMap
+	confirmModal     ConfirmationModal
+	filePicker       FilePicker
+	showHelp         bool
+	quitting         bool
+	
+	// Chat State
 	messages         []Message
 	isLoading        bool
-	modelName        string
-	workingDir       string
-	streamingContent string // Current streaming response
+	streamingContent string
 	statusMessage    string
-	contextFiles     []string // Files added to context
+	contextFiles     []string
+	rulesContent     string
+	logs             []string
+	activeTools      []string
+	pulseInfo        string
 
-	// LiteLLM
-	llmClient   *LiteLLMClient
-	ctx         context.Context
-	cancelFunc  context.CancelFunc
-	textChan    <-chan string
-	errChan     <-chan error
-
+	// LLM
+	llmClient        *AIClient
+	eventChan        <-chan ChatEvent
+	toolBuffer       map[int]*ToolCall
+	
+	// Tools & MCP
+	toolRegistry     *tools.Registry
+	mcpManager       *MCPManager
+	skillManager     *skills.Manager
+	
 	// Styling
-	styles Styles
-	keys   KeyMap
-
-	// Flags
-	showHelp bool
-	quitting bool
+	styles           Styles
 }
 
-
-// New creates a new Model with default settings
-func New(workingDir string, modelName string) Model {
-	// Create textarea for input
-	ta := textarea.New()
-	ta.Placeholder = "Ask general questions..."
-	ta.Focus()
-	ta.Prompt = "│ "
-	ta.CharLimit = 4000
-	ta.SetWidth(60)
-	ta.SetHeight(1)
-	ta.ShowLineNumbers = false
-	ta.KeyMap.InsertNewline.SetEnabled(false) // Enter sends, Shift+Enter for newline
-
-	// Create viewports (will be resized on WindowSizeMsg)
-	chatVp := viewport.New(80, 20)
-	chatVp.SetContent(Banner(80) + "\nType a message to get started.")
-
-	contextVp := viewport.New(40, 20)
-	contextVp.SetContent("Your Grimoire is empty.\n\nPress Ctrl+O to add scrolls (files)\nfor the Spirit to read.")
-
-	// Create spinner for loading state
-	s := spinner.New()
-	s.Spinner = spinner.Dot
-	s.Style = lipgloss.NewStyle().Foreground(DefaultTheme.Primary)
-
-	// Create LiteLLM client
-	llmConfig := DefaultLiteLLMConfig(modelName)
-	llmClient := NewLiteLLMClient(llmConfig)
-
+// New creates a new model
+func New(workingDir, modelName string) Model {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	return Model{
-		chatViewport:    chatVp,
-		contextViewport: contextVp,
-		inputArea:       ta,
-		help:            help.New(),
-		spinner:         s,
-		confirmModal:    NewConfirmationModal(),
-		filePicker:      NewFilePicker(workingDir),
-		focusedPane:     PaneInput,
-		messages:        []Message{},
-		modelName:       modelName,
-		workingDir:      workingDir,
-		styles:          DefaultStyles(),
-		keys:            DefaultKeyMap(),
-		llmClient:       llmClient,
-		ctx:             ctx,
-		cancelFunc:      cancel,
-		statusMessage:   "Ready",
-		contextFiles:    []string{},
+	s := DefaultStyles()
+
+	ta := textarea.New()
+	ta.Placeholder = "Ask Kthulu..."
+	ta.Focus()
+	ta.Prompt = "┃ "
+	ta.CharLimit = 0
+	ta.SetHeight(1)
+	ta.ShowLineNumbers = false
+	ta.KeyMap.InsertNewline.SetEnabled(false)
+
+	chatVp := viewport.New(0, 0)
+	contextVp := viewport.New(0, 0)
+	logVp := viewport.New(0, 0)
+	logVp.Style = s.Muted
+	toolsVp := viewport.New(0, 0)
+	toolsVp.Style = s.Muted
+
+	sp := spinner.New()
+	sp.Spinner = spinner.Dot
+	sp.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+
+	// Create tool registry, MCP manager and skills manager
+	registry := tools.NewRegistry()
+	mcpManager := NewMCPManager()
+	skillManager := skills.NewManager()
+
+	// Initialize LLM Client
+	client := NewAIClient(DefaultAIConfig(modelName))
+
+	m := Model{
+		ctx:              ctx,
+		cancel:           cancel,
+		workingDir:       workingDir,
+		modelName:        modelName,
+		styles:           s,
+		keys:             DefaultKeyMap(),
+		help:             help.New(),
+		
+		chatViewport:     chatVp,
+		contextViewport:  contextVp,
+		logViewport:      logVp,
+		toolsViewport:    toolsVp,
+		inputArea:        ta,
+		spinner:          sp,
+		
+		messages:         []Message{},
+		focusedPane:      PaneInput,
+		toolBuffer:       make(map[int]*ToolCall),
+
+		toolRegistry:     registry,
+		mcpManager:       mcpManager,
+		skillManager:     skillManager,
+		llmClient:        client,
 	}
+	m.updatePulseInfo()
+	m.updateToolsPane()
+	return m
 }
 
 
@@ -134,26 +149,119 @@ func (m Model) Init() tea.Cmd {
 		textarea.Blink,
 		m.spinner.Tick,
 		tea.EnableMouseCellMotion,
-		m.startLiteLLMCmd(),
+		m.initMCPServersCmd(),
+		m.loadSkillsCmd(),
+		m.loadRulesCmd(),
 	)
 }
 
-type sidecarStartedMsg struct{}
 
-func (m Model) startLiteLLMCmd() tea.Cmd {
+
+type mcpServersStartedMsg struct {
+	connected []string
+}
+
+func (m Model) initMCPServersCmd() tea.Cmd {
 	return func() tea.Msg {
-		// Attempt to start sidecar
-		// We use a separate context for startup to avoid race with model context
-		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-		defer cancel()
-		
-		if err := m.llmClient.StartSidecar(ctx); err != nil {
-			// If sidecar fails, we might just be in a mode where we expect it running?
-			// Or we return error.
-			return StreamErrorMsg{Error: fmt.Errorf("AI Engine failed to start: %v", err)}
-		}
-		return sidecarStartedMsg{}
+		connected := InitializeMCPServers(context.Background(), m.mcpManager)
+		return mcpServersStartedMsg{connected: connected}
 	}
+}
+
+type skillsLoadedMsg struct {
+	count int
+}
+
+func (m Model) loadSkillsCmd() tea.Cmd {
+	return func() tea.Msg {
+		// Look in typical locations
+		// 1. .kthulu/skills relative to working dir
+		// 2. ~/.kthulu/skills (global) - Optional, maybe later
+		skillPath := filepath.Join(m.workingDir, ".kthulu", "skills")
+		err := m.skillManager.LoadSkills(skillPath)
+		if err != nil {
+			// Just return 0 count, ignore error for UI noise? or log it?
+			return skillsLoadedMsg{count: 0}
+		}
+		return skillsLoadedMsg{count: len(m.skillManager.All())}
+	}
+}
+
+type rulesLoadedMsg struct {
+	content string
+}
+
+func (m Model) loadRulesCmd() tea.Cmd {
+	return func() tea.Msg {
+		// Priority 1: KTHULU.md in root
+		path := filepath.Join(m.workingDir, "KTHULU.md")
+		if _, err := os.Stat(path); err != nil {
+			// Priority 2: .kthulu/rules.md
+			path = filepath.Join(m.workingDir, ".kthulu", "rules.md")
+			if _, err := os.Stat(path); err != nil {
+				return rulesLoadedMsg{content: ""}
+			}
+		}
+
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return rulesLoadedMsg{content: ""}
+		}
+		return rulesLoadedMsg{content: string(content)}
+	}
+}
+
+func (m *Model) handleSlashCommand(input string) tea.Cmd {
+	parts := strings.Fields(input)
+	if len(parts) == 0 {
+		return nil
+	}
+	cmd := parts[0]
+	args := parts[1:]
+
+	switch cmd {
+	case "/help":
+		m.messages = append(m.messages, Message{
+			Role: "system",
+			Content: "Available commands:\n" +
+				"• /help - Show this help\n" +
+				"• /clear - Clear chat history\n" +
+				"• /add <file> - Add file to context\n" +
+				"• /mode <name> - Switch persona (expert, learner, etc.)",
+		})
+		m.updateChatContent()
+		
+	case "/clear":
+		m.messages = []Message{}
+		m.chatViewport.SetContent(Banner(m.chatViewport.Width))
+		m.statusMessage = "Cleared history"
+
+	case "/add":
+		if len(args) == 0 {
+			m.statusMessage = "Usage: /add <file>"
+		} else {
+			f := args[0]
+			// Handle absolute or relative paths
+			path := f
+			if !filepath.IsAbs(f) {
+				path = filepath.Join(m.workingDir, f)
+			}
+			m.addFileToContext(path)
+		}
+
+	case "/mode":
+		if len(args) == 0 {
+			m.statusMessage = "Mode: Default"
+			// Todo show current mode
+		} else {
+			m.statusMessage = "Mode switched to " + args[0]
+			// Logic to switch mode...
+		}
+
+	default:
+		m.statusMessage = "Unknown command: " + cmd
+	}
+	return nil
 }
 
 // Update implements tea.Model
@@ -189,9 +297,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch {
 		case msg.String() == "ctrl+c":
 			m.quitting = true
-			if m.llmClient != nil {
-				m.llmClient.StopSidecar()
-			}
 			return m, tea.Quit
 
 		case msg.String() == "ctrl+o":
@@ -220,9 +325,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case msg.String() == "enter":
 			if m.focusedPane == PaneInput && strings.TrimSpace(m.inputArea.Value()) != "" && !m.isLoading {
 				content := m.inputArea.Value()
+				m.inputArea.Reset()
+
+				// Check for slash command
+				if strings.HasPrefix(strings.TrimSpace(content), "/") {
+					return m, m.handleSlashCommand(strings.TrimSpace(content))
+				}
+
 				m.messages = append(m.messages, Message{Role: "user", Content: content})
 				m.updateChatContent()
-				m.inputArea.Reset()
 				m.isLoading = true
 				m.streamingContent = ""
 				m.statusMessage = "Thinking..."
@@ -276,6 +387,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.filePicker.SetSize(m.width, m.height)
 		return m, nil
 
+	case logMsg:
+		m.log(string(msg))
+		return m, nil
+
 
 	case spinner.TickMsg:
 		if m.isLoading {
@@ -284,41 +399,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, cmd)
 		}
 
+	case StreamStartedMsg:
+		m.statusMessage = "Thinking..."
+		// Capture the event channel from the message
+		m.eventChan = msg.EventChan
+		// Append empty assistant message for streaming
+		m.messages = append(m.messages, Message{
+			Role: "assistant",
+		})
+		m.toolBuffer = make(map[int]*ToolCall)
+		return m, m.waitForStream()
+
 	case StreamChunkMsg:
-		m.streamingContent += msg.Content
-		m.updateChatContentStreaming()
-		m.chatViewport.GotoBottom()
-		// Continue receiving chunks
-		return m, m.receiveStreamChunk()
-
-	case StreamDoneMsg:
-		m.isLoading = false
-		m.statusMessage = "Ready"
-		// Finalize the assistant message
-		if m.streamingContent != "" {
-			m.messages = append(m.messages, Message{
-				Role:    "assistant",
-				Content: m.streamingContent,
-			})
-			m.streamingContent = ""
+		if len(m.messages) > 0 {
+			m.messages[len(m.messages)-1].Content += msg.Content
+			m.updateChatContentStreaming()
 		}
-		m.updateChatContent()
-		m.chatViewport.GotoBottom()
-		return m, nil
-
-	case sidecarStartedMsg:
-		m.statusMessage = "AI Online"
-		return m, nil
-
-	case editorFinishedMsg:
-		if msg.err == nil {
-			content, err := os.ReadFile(msg.path)
-			if err == nil {
-				m.inputArea.SetValue(string(content))
-			}
-		}
-		os.Remove(msg.path)
-		return m, nil
+		return m, m.waitForStream()
 
 	case StreamErrorMsg:
 		m.isLoading = false
@@ -331,11 +428,171 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.updateChatContent()
 		return m, nil
 
-	case streamStartedMsg:
-		m.textChan = msg.textChan
-		m.errChan = msg.errChan
-		m.statusMessage = "Streaming..."
-		return m, m.receiveStreamChunk()
+	case StreamToolCallMsg:
+		m.statusMessage = "Receiving tool calls..."
+		if m.toolBuffer == nil {
+			m.toolBuffer = make(map[int]*ToolCall)
+		}
+		
+		for _, tc := range msg.ToolCalls {
+			if tc.Index == nil {
+				continue
+			}
+			idx := *tc.Index
+			if existing, ok := m.toolBuffer[idx]; ok {
+				// Append arguments
+				existing.Function.Arguments += tc.Function.Arguments
+			} else {
+				// New tool call
+				newTc := tc
+				m.toolBuffer[idx] = &newTc
+			}
+		}
+		return m, m.waitForStream()
+
+	case StreamFinishMsg:
+		if len(m.toolBuffer) > 0 {
+			m.statusMessage = "Executing tools..."
+			
+			// Convert buffer to slice
+			var calls []ToolCall
+			for i := 0; i < len(m.toolBuffer); i++ {
+				if tc, ok := m.toolBuffer[i]; ok {
+					calls = append(calls, *tc)
+				}
+			}
+			
+			// Update the assistant message with the tool calls
+			if len(m.messages) > 0 {
+				// We need to convert ai_client.ToolCall to model.ToolCall if they differ. 
+				// But we are using the same struct/package now implicitly via dot import or similar?
+				// internal/coder/model.go has `Tool` struct? No, it uses `Tools` from `tools` package?
+				// Actually `model.go` has `Tool` and `ToolCall` defined? 
+				// No, `model.go` relies on shared definitions or `ai_client.go` definitions if they are in same package `coder`.
+				// Yes, same package `coder`. So `ToolCall` is the one from `ai_client.go`.
+				
+				m.messages[len(m.messages)-1].ToolCalls = calls
+			}
+			
+			return m, m.executeToolsCmd(calls)
+		}
+		return m, m.waitForStream() // Continue if strictly finish reason was "stop" but we want to ensure everything is drained
+
+	case StreamDoneMsg:
+		m.statusMessage = "Ready"
+		return m, nil
+
+	case ToolExecutionResultMsg:
+		m.statusMessage = "Tools executed"
+		
+		// Append tool outputs to messages
+		for _, res := range msg.Results {
+			content := res.Output
+			if res.Error != nil {
+				content = fmt.Sprintf("Error: %v", res.Error)
+			}
+			
+			m.messages = append(m.messages, Message{
+				Role:       "tool",
+				Content:    content,
+				ToolCallID: res.ToolCallID,
+			})
+		}
+		
+
+		
+		m.updateChatContent()
+		
+		// Continue conversation with tool outputs
+		return m, m.sendToLLM()
+
+
+
+	case mcpServersStartedMsg:
+		if len(msg.connected) > 0 {
+			m.statusMessage = fmt.Sprintf("MCP: %d connected", len(msg.connected))
+		}
+		// Register tools from connected MCP servers
+		// logic to register tools... involves async calls so maybe another msg?
+		// For now simple synchronous registration since we are in a Cmd
+		// For now simple synchronous registration since we are in a Cmd
+		// Actually RegisterMCPTools needs wrappers. 
+		// m.mcpManager has tools?
+		// This line seems problematic as RegisterMCPTools signature changed.
+		// We should probably just trigger a tool refresh or similar.
+		// Or implement the correct logic:
+		// tools := m.mcpManager.GetTools()
+		// m.toolRegistry.RegisterMCPTools(tools)
+		return m, func() tea.Msg {
+			// Do it inside a Cmd to be safe?
+			// Actually mcpManager logic is outside model scope usually.
+			return toolsRegisteredMsg{count: 0} 
+		}
+
+	case skillsLoadedMsg:
+		if msg.count > 0 {
+			// Update status message but preserve MCP status if possible, or trigger a toast?
+			// For now just update status
+			m.statusMessage = fmt.Sprintf("Skills: %d loaded", msg.count)
+		}
+		return m, nil
+
+	case rulesLoadedMsg:
+		if msg.content != "" {
+			m.rulesContent = msg.content
+			m.statusMessage = "Project Rules Loaded"
+		}
+		return m, nil
+
+	case editorFinishedMsg:
+		if msg.err == nil {
+			content, err := os.ReadFile(msg.path)
+			if err == nil {
+				m.inputArea.SetValue(string(content))
+			}
+		}
+		os.Remove(msg.path)
+		return m, nil
+
+
+		
+	case ToolExecutionResultMsg:
+		m.isLoading = false
+		m.statusMessage = "Ready"
+
+		for _, res := range msg.Results {
+			m.messages = append(m.messages, Message{
+				Role:       "tool",
+				Content:    res.Output,
+				ToolCallID: res.ToolCallID,
+			})
+			if res.Error != nil {
+				m.log(fmt.Sprintf("❌ Tool %s error: %v", res.Name, res.Error))
+			} else {
+				m.log(fmt.Sprintf("✅ Tool %s finished.", res.Name))
+			}
+		}
+		m.updateChatContent()
+		return m, m.sendToLLM()
+
+	case toolsRegisteredMsg:
+		m.statusMessage = fmt.Sprintf("Tools: %d ready", msg.count)
+		return m, nil
+
+	case ToolStartedMsg:
+		m.activeTools = append(m.activeTools, string(msg))
+		m.updateToolsPane()
+		return m, nil
+
+	case ToolFinishedMsg:
+		for i, t := range m.activeTools {
+			if t == string(msg) {
+				m.activeTools = append(m.activeTools[:i], m.activeTools[i+1:]...)
+				break
+			}
+		}
+		m.updateToolsPane()
+		return m, nil
 	}
 
 
@@ -355,6 +612,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	return m, tea.Batch(cmds...)
 }
+
+type toolsRegisteredMsg struct {
+	count int
+}
+
+
 
 // View implements tea.Model
 func (m Model) View() string {
@@ -399,8 +662,14 @@ func (m *Model) cycleFocus() {
 
 // updateLayout recalculates pane dimensions based on window size
 func (m *Model) updateLayout() {
-	// Reserve space for: status bar (1) + pane titles (1) + input area (3) + help bar (1) + borders (2)
-	contentHeight := m.height - 8
+	headerHeight := 7
+	logHeight := 5
+	inputAreaHeight := 4 // border + 1 line
+	
+	// Reserve space for: header (7) + status bar (1) + pane titles (1) + log title (1) + log viewport (5) + input area (4) + help bar (1)
+	reservedHeight := headerHeight + 1 + 1 + 1 + logHeight + inputAreaHeight + 1
+	
+	contentHeight := m.height - reservedHeight
 	if contentHeight < 5 {
 		contentHeight = 5
 	}
@@ -415,6 +684,16 @@ func (m *Model) updateLayout() {
 
 	m.chatViewport.Width = chatWidth - 4
 	m.chatViewport.Height = contentHeight
+
+	// Split bottom row: Logs (60%) and Tools (40%)
+	logWidth := (m.width * 60 / 100) - 2
+	toolsWidth := m.width - logWidth - 2
+
+	m.logViewport.Width = logWidth - 2
+	m.logViewport.Height = logHeight
+
+	m.toolsViewport.Width = toolsWidth - 2
+	m.toolsViewport.Height = logHeight
 
 	m.inputArea.SetWidth(m.width - 4)
 	m.inputArea.SetHeight(inputHeight)
@@ -473,14 +752,37 @@ func (m *Model) updateContextPane() {
 // updateChatContent refreshes the chat viewport with all messages
 func (m *Model) updateChatContent() {
 	var sb strings.Builder
+	
+	// Calculate available width for messages (viewport width minus padding/borders)
+	maxWidth := m.chatViewport.Width - 6 // Extra padding for borders
+	if maxWidth < 20 {
+		maxWidth = 20
+	}
+
+	// Re-initialize glamour with correct width
+	// We ignore error for simplicity in TUI
+	m.styles.Markdown, _ = glamour.NewTermRenderer(
+		glamour.WithStandardStyle("dark"),
+		glamour.WithWordWrap(maxWidth),
+	)
 
 	for _, msg := range m.messages {
 		if msg.Role == "user" {
 			sb.WriteString(m.styles.Title.Render("You") + "\n")
-			sb.WriteString(m.styles.UserMessage.Render(msg.Content) + "\n\n")
+			// User messages are usually short, so keep simple rendering or use glamour too?
+			// Let's use glamour for consistency if user pastes code
+			rendered, err := m.styles.Markdown.Render(msg.Content)
+			if err != nil {
+				rendered = msg.Content
+			}
+			sb.WriteString(m.styles.UserMessage.Render(rendered) + "\n\n")
 		} else {
 			sb.WriteString(m.styles.Subtitle.Render("🐙 Kthulu") + "\n")
-			sb.WriteString(m.styles.AIMessage.Render(msg.Content) + "\n\n")
+			rendered, err := m.styles.Markdown.Render(msg.Content)
+			if err != nil {
+				rendered = msg.Content
+			}
+			sb.WriteString(m.styles.AIMessage.Render(rendered) + "\n\n")
 		}
 	}
 
@@ -535,6 +837,18 @@ func (m Model) renderLayout() string {
 	// Main content (horizontal split)
 	mainContent := lipgloss.JoinHorizontal(lipgloss.Top, contextPane, chatPane)
 
+	// Bottom panes (Logs and Tools)
+	logTitle := m.styles.PaneTitle.Render("📜 Activity Logs")
+	toolsTitle := m.styles.PaneTitle.Render("🛠️ Active Tools")
+
+	logPane := m.styles.Pane.Width(m.logViewport.Width + 2).Render(m.logViewport.View())
+	toolsPane := m.styles.Pane.Width(m.toolsViewport.Width + 2).Render(m.toolsViewport.View())
+	
+	bottomPanes := lipgloss.JoinHorizontal(lipgloss.Top, 
+		lipgloss.JoinVertical(lipgloss.Left, logTitle, logPane),
+		lipgloss.JoinVertical(lipgloss.Left, toolsTitle, toolsPane),
+	)
+
 	// Input area
 	inputStyle := m.styles.InputPane
 	if m.focusedPane == PaneInput {
@@ -553,11 +867,30 @@ func (m Model) renderLayout() string {
 	// Combine all
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
+		m.renderHeader(),
 		statusBar,
 		mainContent,
+		bottomPanes,
 		inputPane,
 		helpBar,
 	)
+}
+
+func (m Model) renderHeader() string {
+	logo := `  _  _________ _    _ _    _ _      _    _ 
+ | |/ /__   __| |  | | |  | | |    | |  | |
+ | ' /   | |  | |__| | |  | | |    | |  | |
+ |  <    | |  |  __  | |  | | |    | |  | |
+ | . \   | |  | |  | | |__| | |____| |__| |
+ |_|\_\  |_|  |_|  |_|\____/|______\____/ `
+
+	return m.styles.Title.
+		Foreground(lipgloss.Color("205")).
+		Bold(true).
+		Width(m.width).
+		Align(lipgloss.Center).
+		PaddingTop(1).
+		Render(logo)
 }
 
 
@@ -600,21 +933,47 @@ func (m Model) renderHelp() string {
 // updateChatContentStreaming updates chat with current streaming content
 func (m *Model) updateChatContentStreaming() {
 	var sb strings.Builder
+	
+	// Calculate available width for messages
+	maxWidth := m.chatViewport.Width - 6
+	if maxWidth < 20 {
+		maxWidth = 20
+	}
+
+	// Refresh renderer for width
+	m.styles.Markdown, _ = glamour.NewTermRenderer(
+		glamour.WithStandardStyle("dark"),
+		glamour.WithWordWrap(maxWidth),
+	)
 
 	for _, msg := range m.messages {
 		if msg.Role == "user" {
 			sb.WriteString(m.styles.Title.Render("You") + "\n")
-			sb.WriteString(m.styles.UserMessage.Render(msg.Content) + "\n\n")
+			rendered, err := m.styles.Markdown.Render(msg.Content)
+			if err != nil {
+				rendered = msg.Content
+			}
+			sb.WriteString(m.styles.UserMessage.Render(rendered) + "\n\n")
 		} else {
 			sb.WriteString(m.styles.Subtitle.Render("🐙 Kthulu") + "\n")
-			sb.WriteString(m.styles.AIMessage.Render(msg.Content) + "\n\n")
+			rendered, err := m.styles.Markdown.Render(msg.Content)
+			if err != nil {
+				rendered = msg.Content
+			}
+			sb.WriteString(m.styles.AIMessage.Render(rendered) + "\n\n")
 		}
 	}
 
 	// Add streaming content if present
 	if m.streamingContent != "" {
 		sb.WriteString(m.styles.Subtitle.Render("🐙 Kthulu") + "\n")
-		sb.WriteString(m.styles.AIMessage.Render(m.streamingContent))
+		// For streaming, we might be rendering incomplete markdown (e.g. half a code block).
+		// Glamour handles this surprisingly well usually, but might flash.
+		rendered, err := m.styles.Markdown.Render(m.streamingContent)
+		if err != nil {
+			rendered = m.streamingContent
+		}
+		sb.WriteString(m.styles.AIMessage.Render(rendered))
 		if m.isLoading {
 			sb.WriteString(m.spinner.View())
 		}
@@ -630,59 +989,143 @@ func (m *Model) sendToLLM() tea.Cmd {
 		// Convert messages to ChatMessage format
 		chatMessages := make([]ChatMessage, len(m.messages))
 		for i, msg := range m.messages {
-			chatMessages[i] = ChatMessage{
-				Role:    msg.Role,
-				Content: msg.Content,
+			// Strip Index from ToolCalls for history compatibility (Fix 422)
+			var historyToolCalls []ToolCall
+			if len(msg.ToolCalls) > 0 {
+				historyToolCalls = make([]ToolCall, len(msg.ToolCalls))
+				for j, tc := range msg.ToolCalls {
+					historyToolCalls[j] = tc
+					historyToolCalls[j].Index = nil // Omit from JSON
+				}
 			}
+
+			chatMessages[i] = ChatMessage{
+				Role:       msg.Role,
+				Content:    msg.Content,
+				ToolCalls:  historyToolCalls,
+				ToolCallID: msg.ToolCallID,
+			}
+		}
+
+		// Add skills info
+		skillsInfo := ""
+		if m.skillManager != nil {
+			loadedSkills := m.skillManager.All()
+			if len(loadedSkills) > 0 {
+				skillsInfo = "\n\n## Available Skills\n"
+				for _, s := range loadedSkills {
+					skillsInfo += fmt.Sprintf("- %s: %s (Path: %s)\n", s.Name, s.Description, s.Path)
+				}
+				skillsInfo += "\nTo use a skill, read its definition file using view_file or read_file to understand its capabilities and instructions."
+			}
+		}
+
+		// Add rules info
+		rulesInfo := ""
+		if m.rulesContent != "" {
+			rulesInfo = "\n\n## Project Rules & Guidelines\n" + m.rulesContent
 		}
 
 		// Add system prompt
 		systemPrompt := ChatMessage{
 			Role: "system",
-			Content: `You are Kthulu Coder, an AI coding assistant specialized in the Kthulu framework.
+			Content: `You are Kthulu Coder, an AI coding assistant with access to powerful tools.
 
-Kthulu uses:
+## CRITICAL: You MUST use tools to accomplish tasks. Do NOT just explain or provide tutorials.
+
+## Available Tools
+You have the following tools available. USE THEM to help the user:
+- **bash**: Execute shell commands (go build, npm run, git, ls, cat, etc.)
+- **read_file**: Read file contents from the filesystem
+- **write_file**: Write or create files on the filesystem
+- **grep**: Search for patterns in files
+- **think**: Reason through complex problems step-by-step
+- **kthulu**: Run kthulu CLI commands
+
+## When to Use Tools
+- User asks to "build" something → Use tools to create files, run builds
+- User asks about files → Use read_file to examine them
+- User asks to run commands → Use bash
+- User asks to modify code → Use write_file
+- User asks about project structure → Use kthulu status or kthulu analyze
+- User asks to add a module/component → Use kthulu add module/component
+- User asks for code review/optimization → Use kthulu ai review/optimize
+
+## Kthulu Framework Context
+The Kthulu framework uses:
 - Hexagonal Architecture (Ports & Adapters)
 - Modular Monolith with Vertical Slices
 - Uber fx for dependency injection
 - CLI-first approach
 
-Be concise, helpful, and follow best practices for Go development.`,
+Be action-oriented. When asked to do something, DO IT using your tools.` + rulesInfo + skillsInfo,
 		}
 		allMessages := append([]ChatMessage{systemPrompt}, chatMessages...)
 
+		// Prepare tools
+		var toolDefs []Tool
+		if m.toolRegistry != nil {
+			for _, t := range m.toolRegistry.ToOpenAIFormat() {
+				// Manual conversion from map to Tool struct
+				if fn, ok := t["function"].(map[string]interface{}); ok {
+					toolDefs = append(toolDefs, Tool{
+						Type: "function",
+						Function: FunctionDef{
+							Name:        fn["name"].(string),
+							Description: fn["description"].(string),
+							Parameters:  fn["parameters"],
+						},
+					})
+				}
+			}
+		}
+
 		// Start streaming
-		textChan, errChan := m.llmClient.StreamChat(m.ctx, allMessages)
-		
-		// Store channels for receiving
-		return streamStartedMsg{textChan: textChan, errChan: errChan}
+		eventChan := m.llmClient.StreamChat(m.ctx, allMessages, toolDefs)
+
+		return StreamStartedMsg{EventChan: eventChan}
 	}
 }
 
-// streamStartedMsg is sent when streaming begins
-type streamStartedMsg struct {
-	textChan <-chan string
-	errChan  <-chan error
+// StreamFinishMsg is sent when the stream finishes with a reason
+type StreamFinishMsg struct {
+	Reason string
 }
 
-// receiveStreamChunk receives the next chunk from the stream
-func (m *Model) receiveStreamChunk() tea.Cmd {
+// StreamToolCallMsg is sent when tool calls are received
+type StreamToolCallMsg struct {
+	ToolCalls []ToolCall
+}
+
+// waitForStream receives the next event from the stream
+func (m *Model) waitForStream() tea.Cmd {
 	return func() tea.Msg {
-		if m.textChan == nil {
+		if m.eventChan == nil {
 			return StreamDoneMsg{}
 		}
 
 		select {
-		case text, ok := <-m.textChan:
+		case event, ok := <-m.eventChan:
 			if !ok {
 				return StreamDoneMsg{}
 			}
-			return StreamChunkMsg{Content: text}
-		case err := <-m.errChan:
-			if err != nil {
-				return StreamErrorMsg{Error: err}
+
+			switch event.Type {
+			case "content":
+				return StreamChunkMsg{Content: event.Content}
+			case "tool_calls":
+				return StreamToolCallMsg{ToolCalls: event.ToolCalls}
+			case "finish":
+				return StreamFinishMsg{Reason: event.FinishReason}
+			case "error":
+				return StreamErrorMsg{Error: event.Error}
+			case "done":
+				return StreamDoneMsg{}
+			default:
+				// Ignore unknown types
+				return m.waitForStream()()
 			}
-			return StreamDoneMsg{}
+
 		case <-m.ctx.Done():
 			return StreamDoneMsg{}
 		}
@@ -693,3 +1136,122 @@ func (m *Model) receiveStreamChunk() tea.Cmd {
 func (m Model) GetMessages() []Message {
 	return m.messages
 }
+
+// ToolExecutionResultMsg contains the results of tool executions
+type ToolExecutionResultMsg struct {
+	Results []ToolResult
+}
+
+type ToolResult struct {
+	ToolCallID string
+	Name       string
+	Output     string
+	Error      error
+}
+
+// toolStartedMsg and toolFinishedMsg track active tool execution
+type toolStartedMsg string
+type toolFinishedMsg string
+
+func (m *Model) executeToolsCmd(calls []ToolCall) tea.Cmd {
+	var cmds []tea.Cmd
+	for _, call := range calls {
+		cmds = append(cmds, m.executeTool(call))
+	}
+	return tea.Batch(cmds...)
+}
+
+func (m *Model) executeTool(call ToolCall) tea.Cmd {
+	return func() tea.Msg {
+		// Emit start
+		// Tracking start/end from within a Cmd is hard without a channel.
+		// For now we'll just return a result that includes the name.
+		
+		tool, found := m.toolRegistry.Get(call.Function.Name)
+		if !found {
+			return ToolResult{
+				ToolCallID: call.ID,
+				Name:       call.Function.Name,
+				Error:      fmt.Errorf("tool not found: %s", call.Function.Name),
+			}
+		}
+
+		// Parse arguments
+		var args map[string]interface{}
+		if err := json.Unmarshal([]byte(call.Function.Arguments), &args); err != nil {
+			return ToolResult{
+				ToolCallID: call.ID,
+				Name:       call.Function.Name,
+				Error:      fmt.Errorf("invalid arguments: %v", err),
+			}
+		}
+
+		// Execute tool
+		res, err := tool.Execute(context.Background(), args)
+		
+		if err != nil {
+			return ToolResult{
+				ToolCallID: call.ID,
+				Name:       call.Function.Name,
+				Error:      err,
+			}
+		}
+
+		return ToolResult{
+			ToolCallID: call.ID,
+			Name:       call.Function.Name,
+			Output:     res.Output,
+		}
+	}
+}
+
+// logMsg is a message to append to the activity log
+type logMsg string
+
+func (m *Model) log(msg string) {
+	m.logs = append(m.logs, msg)
+	if len(m.logs) > 100 {
+		m.logs = m.logs[len(m.logs)-100:]
+	}
+	m.logViewport.SetContent(strings.Join(m.logs, "\n"))
+	m.logViewport.GotoBottom()
+}
+
+// updateToolsPane refreshes the active tools viewport
+func (m *Model) updateToolsPane() {
+	if len(m.activeTools) == 0 {
+		m.toolsViewport.SetContent(m.styles.Muted.Render("No active tools."))
+		return
+	}
+	
+	var sb strings.Builder
+	for _, t := range m.activeTools {
+		sb.WriteString(fmt.Sprintf("⚡ %s\n", t))
+	}
+	m.toolsViewport.SetContent(sb.String())
+}
+
+// updatePulseInfo gathers project stats for the header/status segment
+func (m *Model) updatePulseInfo() {
+	// Simple pulse: Current branch + file count
+	branch := "main"
+	out, err := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output()
+	if err == nil {
+		branch = strings.TrimSpace(string(out))
+	}
+	
+	// Count files (approximate)
+	files := 0
+	_ = filepath.Walk(m.workingDir, func(path string, info os.FileInfo, err error) error {
+		if err == nil && !info.IsDir() && !strings.Contains(path, "/.git/") && !strings.Contains(path, "/node_modules/") {
+			files++
+		}
+		return nil
+	})
+	
+	m.pulseInfo = fmt.Sprintf("🌳 %s  │  📂 %d files", branch, files)
+}
+
+// ToolStartedMsg and ToolFinishedMsg are for TUI status updates
+type ToolStartedMsg string
+type ToolFinishedMsg string

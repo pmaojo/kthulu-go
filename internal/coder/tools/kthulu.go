@@ -11,21 +11,51 @@ import (
 // KthuluTool executes kthulu CLI commands
 var KthuluTool = &Tool{
 	Name: "kthulu",
-	Description: `Execute Kthulu CLI commands for project scaffolding and analysis.
+	Description: `Execute Kthulu CLI commands for project scaffolding, AI assistance, and development.
 
-Available commands:
-- kthulu add module <name> [fields...] - Create a new module
-- kthulu add component <type> <name> - Add a component (handler, service, repository)
+## Scaffolding & Code Generation
+- kthulu create <name> - Create a new Kthulu project
+- kthulu add module <name> [fields...] - Create a new module with optional fields
+- kthulu add component <type> <name> - Add component (handler, service, repository)
+- kthulu add auth - Add JWT authentication module
+- kthulu generate <type> <name> - Generate code artifacts
+
+## AI Commands
+- kthulu ai <prompt> - AI-powered code assistance
+- kthulu ai review - AI code review and fixes
+- kthulu ai optimize - AI performance optimization
+- kthulu ai scaffold <desc> - AI project scaffolding
+- kthulu ai gen-feature <desc> - Generate BDD feature file
+- kthulu ai gen-steps <file> - Generate step definitions
+
+## BDD Testing
+- kthulu bdd features - List all feature files
+- kthulu bdd run - Run BDD scenarios
+
+## Database
+- kthulu migrate up - Apply migrations
+- kthulu migrate down - Revert migration
+- kthulu migrate create <name> - Create migration
+- kthulu migrate status - Show DB version
+
+## Project Analysis
 - kthulu analyze - Analyze project structure
 - kthulu status - Show project health
+- kthulu doctor - Diagnose environment
+- kthulu audit - Security/compliance audit
 
-Use this tool to leverage Kthulu's scaffolding and code generation capabilities.`,
+## Development
+- kthulu dev - Start dev server with self-healing
+- kthulu deploy - Zero-config deployment
+- kthulu doc - Generate API documentation
+
+Use this tool to leverage Kthulu's full capabilities.`,
 	Parameters: map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
 			"command": map[string]interface{}{
 				"type":        "string",
-				"description": "The kthulu subcommand to execute (e.g., 'add module user name:string')",
+				"description": "The kthulu subcommand to execute (e.g., 'add module user name:string', 'ai review', 'status')",
 			},
 		},
 		"required": []string{"command"},

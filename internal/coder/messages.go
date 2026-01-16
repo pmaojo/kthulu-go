@@ -2,6 +2,14 @@ package coder
 
 import tea "github.com/charmbracelet/bubbletea"
 
+// Message represents a chat message
+type Message struct {
+	Role       string
+	Content    string
+	ToolCalls  []ToolCall
+	ToolCallID string
+}
+
 // StreamStartMsg indicates streaming has begun
 type StreamStartMsg struct{}
 
@@ -18,6 +26,11 @@ type StreamDoneMsg struct {
 // StreamErrorMsg indicates an error during streaming
 type StreamErrorMsg struct {
 	Error error
+}
+
+// StreamStartedMsg is sent when the stream actually starts (from LLM)
+type StreamStartedMsg struct {
+	EventChan <-chan ChatEvent
 }
 
 // ToolUseMsg indicates the AI wants to use a tool
@@ -57,7 +70,7 @@ type SidecarErrorMsg struct {
 // startStreaming initiates a chat completion stream
 func (m *Model) startStreaming() tea.Cmd {
 	return func() tea.Msg {
-		return StreamStartMsg{}
+		return StreamStartedMsg{}
 	}
 }
 
