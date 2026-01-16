@@ -482,32 +482,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.statusMessage = "Ready"
 		return m, nil
 
-	case ToolExecutionResultMsg:
-		m.statusMessage = "Tools executed"
-		
-		// Append tool outputs to messages
-		for _, res := range msg.Results {
-			content := res.Output
-			if res.Error != nil {
-				content = fmt.Sprintf("Error: %v", res.Error)
-			}
-			
-			m.messages = append(m.messages, Message{
-				Role:       "tool",
-				Content:    content,
-				ToolCallID: res.ToolCallID,
-			})
-		}
-		
-
-		
-		m.updateChatContent()
-		
-		// Continue conversation with tool outputs
-		return m, m.sendToLLM()
-
-
-
 	case mcpServersStartedMsg:
 		if len(msg.connected) > 0 {
 			m.statusMessage = fmt.Sprintf("MCP: %d connected", len(msg.connected))
