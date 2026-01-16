@@ -11,7 +11,7 @@ import (
 // KthuluTool executes kthulu CLI commands
 var KthuluTool = &Tool{
 	Name: "kthulu",
-	Description: `Execute Kthulu CLI commands for project scaffolding, AI assistance, and development.
+	Description: `Execute Kthulu CLI commands for project scaffolding and development.
 
 ## Scaffolding & Code Generation
 - kthulu create <name> - Create a new Kthulu project
@@ -19,14 +19,6 @@ var KthuluTool = &Tool{
 - kthulu add component <type> <name> - Add component (handler, service, repository)
 - kthulu add auth - Add JWT authentication module
 - kthulu generate <type> <name> - Generate code artifacts
-
-## AI Commands
-- kthulu ai <prompt> - AI-powered code assistance
-- kthulu ai review - AI code review and fixes
-- kthulu ai optimize - AI performance optimization
-- kthulu ai scaffold <desc> - AI project scaffolding
-- kthulu ai gen-feature <desc> - Generate BDD feature file
-- kthulu ai gen-steps <file> - Generate step definitions
 
 ## BDD Testing
 - kthulu bdd features - List all feature files

@@ -1018,6 +1018,7 @@ You have the following tools available. USE THEM to help the user:
 - **write_file**: Write or create files on the filesystem
 - **grep**: Search for patterns in files
 - **think**: Reason through complex problems step-by-step
+- **analysis**: Analyze project structure, patterns, and quality
 - **kthulu**: Run kthulu CLI commands
 
 ## When to Use Tools
@@ -1025,9 +1026,9 @@ You have the following tools available. USE THEM to help the user:
 - User asks about files → Use read_file to examine them
 - User asks to run commands → Use bash
 - User asks to modify code → Use write_file
-- User asks about project structure → Use kthulu status or kthulu analyze
+- User asks about project structure → Use analysis (preferred) or kthulu status
 - User asks to add a module/component → Use kthulu add module/component
-- User asks for code review/optimization → Use kthulu ai review/optimize
+- User asks for code review/optimization → Use analysis to get project insights, then read_file to examine specific code
 
 ## Kthulu Framework Context
 The Kthulu framework uses:
