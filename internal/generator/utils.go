@@ -24,6 +24,13 @@ func Pluralize(s string) string {
 	return inflection.Plural(s)
 }
 
+func Singularize(s string) string {
+	if s == "" {
+		return ""
+	}
+	return inflection.Singular(s)
+}
+
 func ToSnakeCase(s string) string {
 	var result []rune
 	for i, r := range s {

@@ -106,11 +106,115 @@ func InjectModuleRegistration(projectRoot, moduleName, projectModule, moduleRelP
 	return os.WriteFile(mainPath, formatted, 0644)
 }
 
+
+// InjectRouteRegistration injects the route registration logic into main.go
+func InjectRouteRegistration(projectRoot, moduleName, projectModule, moduleRelPath, entityName string) error {
+	mainPath := filepath.Join(projectRoot, "cmd", "server", "main.go")
+	if _, err := os.Stat(mainPath); os.IsNotExist(err) {
+		return fmt.Errorf("main.go not found")
+	}
+
+	content, err := os.ReadFile(mainPath)
+	if err != nil {
+		return fmt.Errorf("failed to read main.go: %w", err)
+	}
+
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "main.go", content, parser.ParseComments)
+	if err != nil {
+		return fmt.Errorf("failed to parse main.go: %w", err)
+	}
+
+	// 1. Add API Import
+	// e.g. tournamentsAPI "my-project/internal/modules/tournaments/api"
+	safeModuleName := strings.ToLower(strings.ReplaceAll(moduleName, "-", ""))
+	apiPkgName := safeModuleName + "API" // e.g. tournamentsAPI
+	apiImportPath := fmt.Sprintf("%s/%s/%s/api", projectModule, moduleRelPath, moduleName)
+
+	astutil.AddNamedImport(fset, file, apiPkgName, apiImportPath)
+
+	// 2. Locate fx.Invoke and Inject Handler
+	foundInvoke := false
+	ast.Inspect(file, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+
+		if isFxInvoke(call) {
+			foundInvoke = true
+			if len(call.Args) > 0 {
+				if funcLit, ok := call.Args[0].(*ast.FuncLit); ok {
+					// 2a. Add Parameter to Callback: handler *tournamentsAPI.TournamentHandler
+					// We need the Struct Name for the handler. Usually "<Entity>Handler".
+
+					// Create the field for params
+					newParam := &ast.Field{
+						Names: []*ast.Ident{{Name: safeModuleName + "Handler"}},
+						Type: &ast.StarExpr{
+							X: &ast.SelectorExpr{
+								X:   &ast.Ident{Name: apiPkgName},
+								Sel: &ast.Ident{Name: entityName + "Handler"},
+							},
+						},
+					}
+					
+					// Append to params
+					funcLit.Type.Params.List = append(funcLit.Type.Params.List, newParam)
+
+					// 2b. Add Statement to Body: handler.RegisterRoutes(apiRouter)
+					// We assume 'apiRouter' is available in the callback args (it is in our template)
+					stmt := &ast.ExprStmt{
+						X: &ast.CallExpr{
+							Fun: &ast.SelectorExpr{
+								X:   &ast.Ident{Name: safeModuleName + "Handler"},
+								Sel: &ast.Ident{Name: "RegisterRoutes"},
+							},
+							Args: []ast.Expr{
+								&ast.Ident{Name: "apiRouter"},
+							},
+						},
+					}
+					
+					// Insert at end of body (or before logging/server start if we were smarter, but end is usually fine/safe)
+					// Actually, checking main.go.tmpl, we want it before server start.
+					// But for simplicity, appending usually works if the server start is async or handled via Create.
+					// In our template, `server := builder(router)` happens locally. 
+					// Let's prepend it to be safe (after apiRouter definition)?
+					// Finding specific insertion point is hard. Appending to the list of statements is safest for now.
+					// If the logic is sequential (define subrouter -> install routes), appending is correct 
+					// IF the subrouter definition is at the top.
+					funcLit.Body.List = append(funcLit.Body.List, stmt)
+				}
+			}
+			return false
+		}
+		return true
+	})
+
+	if !foundInvoke {
+		return fmt.Errorf("could not find fx.Invoke in main.go")
+	}
+
+	// Write back
+	var buf bytes.Buffer
+	if err := format.Node(&buf, fset, file); err != nil {
+		return fmt.Errorf("failed to format modified main.go: %w", err)
+	}
+	
+	formatted, err := format.Source(buf.Bytes())
+	if err != nil {
+		return fmt.Errorf("failed to run gofmt: %w", err)
+	}
+
+	return os.WriteFile(mainPath, formatted, 0644)
+}
+
 func insertArgBeforeInvoke(args []ast.Expr, newArg ast.Expr) []ast.Expr {
 	// Try to find the first fx.Invoke to insert before it
 	insertIdx := -1
 	for i, arg := range args {
-		if isFxInvoke(arg) {
+		if isFxInvokeExpr(arg) {
 			insertIdx = i
 			break
 		}
@@ -129,11 +233,15 @@ func insertArgBeforeInvoke(args []ast.Expr, newArg ast.Expr) []ast.Expr {
 	return newArgs
 }
 
-func isFxInvoke(arg ast.Expr) bool {
+func isFxInvokeExpr(arg ast.Expr) bool {
 	call, ok := arg.(*ast.CallExpr)
 	if !ok {
 		return false
 	}
+	return isFxInvoke(call)
+}
+
+func isFxInvoke(call *ast.CallExpr) bool {
 	sel, ok := call.Fun.(*ast.SelectorExpr)
 	if !ok {
 		return false

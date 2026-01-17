@@ -1,0 +1,15 @@
+{
+  "$schema": "https://charm.land/crush.json",
+  "mcp": {
+    "kthulu": {
+      "args": [
+        "mcp"
+      ],
+      "command": "kthulu",
+      "type": "stdio"
+    }
+  },
+  "options": {
+    "instructions": "You are the Kthulu Coder agent. You have access to powerful tools like 'kthulu_add_module' and 'kthulu_create_project'. ALWAYS use these tools to scaffold or modify the project structure. DO NOT manually create files or directories for modules/components unless explicitly asked or if the tools fail. Kthulu tools handle dependency injection, routing, and boilerplate automatically."
+  }
+}

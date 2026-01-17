@@ -280,14 +280,8 @@ func runNewProjectIntelligent(cmd *cobra.Command, args []string) {
 	displaySuccessMessage(projectName, config, structure)
 }
 
-func runGoModTidy(projectPath string) error {
-	fmt.Println("\n🧹 Running go mod tidy...")
-	cmd := exec.Command("go", "mod", "tidy")
-	cmd.Dir = projectPath
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
-}
+
+
 
 func runGoTests(projectPath string) error {
 	fmt.Println("\n🧪 Running go test with coverage...")
@@ -553,6 +547,10 @@ func displaySuccessMessage(projectName string, config *generator.GeneratorConfig
 
 	fmt.Printf("   kthulu migrate up           # Run database migrations\n")
 	fmt.Printf("   kthulu dev                  # Start dev server with AI self-healing\n")
+
+	fmt.Printf("\n💡 Troubleshooting:\n")
+	fmt.Printf("   If you see 'local package' errors, try: export GOWORK=off\n")
+	fmt.Printf("   Or add the project to your workspace: go work use .\n")
 
 	if config.Frontend == "react" {
 		fmt.Printf("\n💻 Frontend development:\n")

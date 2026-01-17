@@ -62,6 +62,8 @@ func runDev() error {
 		defer wg.Done()
 		cmd := exec.Command("go", "run", "cmd/server/main.go")
 		cmd.Dir = currentDir
+		cmd.Env = append(os.Environ(), "GOWORK=off")
+
 		
 		mu.Lock()
 		backendCmd = cmd
@@ -175,6 +177,10 @@ func diagnoseError(logLine string) {
 	} else if strings.Contains(logLine, "undefined:") {
 		fmt.Println("      Compilation error: Undefined variable or function.")
 		fmt.Println("      Check for typos or missing imports.")
+	} else if strings.Contains(logLine, "is not in std") || strings.Contains(logLine, "no required module provides package") {
+		fmt.Println("      Dependency resolution error.")
+		fmt.Println("      Try running: export GOWORK=off")
+		fmt.Println("      Or: go mod tidy")
 	} else {
 		fmt.Println("      I'm analyzing the stack trace...")
 		fmt.Println("      (Simulated: Check imports and syntax or recent changes)")

@@ -52,7 +52,13 @@ Controls:
 		}
 
 		// 3. Generate/Update crush.json with Kthulu MCP
-		configPath := filepath.Join(kthuluDir, "crush.json")
+		// We use .kthulu as XDG_CONFIG_HOME, so crush expects config at .kthulu/crush/config.json
+		crushConfigDir := filepath.Join(kthuluDir, "crush")
+		if err := os.MkdirAll(crushConfigDir, 0755); err != nil {
+			return fmt.Errorf("failed to create crush config dir: %w", err)
+		}
+		
+		configPath := filepath.Join(crushConfigDir, "config.json")
 		if err := ensureCrushConfig(configPath); err != nil {
 			return fmt.Errorf("failed to configure crush: %w", err)
 		}
@@ -60,7 +66,16 @@ Controls:
 		fmt.Printf("🐙 Starting Kthulu Coder (via Crush) in %s\n", workingDir)
 
 		// 4. Launch crush
-		crushCmd := exec.Command(crushPath, "-c", configPath)
+		// We set CWD to workingDir
+		crushCmd := exec.Command(crushPath, "-c", workingDir)
+		
+		// Inject Kthulu configuration by overriding XDG_CONFIG_HOME
+		// Crush looks for config in $XDG_CONFIG_HOME/crush/config.json (or similar)
+		// We map .kthulu to be the config home.
+		env := os.Environ()
+		env = append(env, fmt.Sprintf("XDG_CONFIG_HOME=%s", kthuluDir))
+		crushCmd.Env = env
+		
 		crushCmd.Stdin = os.Stdin
 		crushCmd.Stdout = os.Stdout
 		crushCmd.Stderr = os.Stderr
@@ -86,7 +101,7 @@ func ensureCrushConfig(path string) error {
 			},
 		},
 		"options": map[string]any{
-			"instructions": "You are the Kthulu Coder agent. Use the 'kthulu' MCP tools to manage this project's architecture. Prefer using kthulu commands for scaffolding and project analysis.",
+			"instructions": "You are the Kthulu Coder agent. You have access to powerful tools like 'kthulu_add_module' and 'kthulu_create_project'. ALWAYS use these tools to scaffold or modify the project structure. DO NOT manually create files or directories for modules/components unless explicitly asked or if the tools fail. Kthulu tools handle dependency injection, routing, and boilerplate automatically.",
 		},
 	}
 

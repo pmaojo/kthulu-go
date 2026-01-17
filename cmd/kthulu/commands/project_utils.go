@@ -1,7 +1,9 @@
 package commands
 
 import (
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -21,4 +23,14 @@ func getProjectModule(dir string) (string, error) {
 		}
 	}
 	return "", nil
+}
+
+func runGoModTidy(projectPath string) error {
+	fmt.Println("\n🧹 Running go mod tidy...")
+	cmd := exec.Command("go", "mod", "tidy")
+	cmd.Dir = projectPath
+	cmd.Env = append(os.Environ(), "GOWORK=off")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }

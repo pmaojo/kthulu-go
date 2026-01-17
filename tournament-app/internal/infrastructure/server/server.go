@@ -1,0 +1,209 @@
+package server
+
+import (
+	"context"
+	"crypto/tls"
+	"os"
+	"log/slog"
+	"net"
+	"net/http"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/gorilla/mux"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/quic-go/quic-go/http3"
+	"golang.org/x/crypto/acme/autocert"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
+	"google.golang.org/grpc"
+	"go.uber.org/fx"
+
+	"tournament-app/internal/infrastructure/config"
+)
+
+// OmegaServer encapsulates the "Zero-Ops" server logic.
+// It handles:
+// 1. Multiprotocol listening (HTTP/1.1, H2, H3/QUIC, gRPC)
+// 2. Automatic TLS (Let's Encrypt) if configured
+// 3. Graceful shutdown
+// 4. gRPC-Gateway for automatic REST transcoding
+type OmegaServer struct {
+	httpServer *http.Server
+	quicServer *http3.Server
+	grpcServer *grpc.Server
+	gatewayMux *runtime.ServeMux
+	listener   net.Listener
+	logger     *slog.Logger
+	config     *config.Config
+	bufferPool *sync.Pool
+}
+
+// NewServer initializes the Omega server.
+func NewServer(lc fx.Lifecycle, cfg *config.Config, router *mux.Router, logger *slog.Logger) *OmegaServer {
+	srv := &OmegaServer{
+		logger: logger,
+		config: cfg,
+		bufferPool: &sync.Pool{
+			New: func() interface{} {
+				return make([]byte, 32*1024) // 32KB buffer
+			},
+		},
+	}
+
+	// Initialize gRPC Server
+	srv.grpcServer = grpc.NewServer()
+
+	// Initialize gRPC Gateway Mux
+	// This mux handles JSON->gRPC transcoding
+	srv.gatewayMux = runtime.NewServeMux()
+
+	// 1. Configure Handler (Protocol Multiplexing Logic)
+	// We wrap the HTTP router and gRPC server in a hybrid handler
+	// Logic: gRPC -> gRPC Server, REST -> Router (which may include GatewayMux)
+	mixedHandler := grpcHandlerFunc(srv.grpcServer, securityMiddleware(cfg, router))
+
+	// 2. Setup TLS Manager (AutoCert)
+	var tlsConfig *tls.Config
+	if cfg.Domain != "" {
+		// Ensure certs directory exists
+		if err := os.MkdirAll("certs", 0700); err != nil {
+			logger.Error("Failed to create certs directory", "error", err)
+		}
+
+		m := &autocert.Manager{
+			Cache:      autocert.DirCache("certs"),
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: autocert.HostWhitelist(cfg.Domain),
+			Email:      cfg.SSLEmail,
+		}
+		tlsConfig = m.TLSConfig()
+		// Important: Set NextProtos for ALPN (H2 is required for gRPC)
+		tlsConfig.NextProtos = []string{"h2", "http/1.1", "acme-tls/1"}
+		logger.Info("AutoTLS enabled", "domain", cfg.Domain)
+	}
+
+	// 3. Configure HTTP/3 (QUIC) Server
+	// Note: QUIC currently handles Web traffic.
+	srv.quicServer = &http3.Server{
+		Addr:      ":443", // QUIC uses UDP
+		Handler:   securityMiddleware(cfg, router),
+		TLSConfig: tlsConfig,
+	}
+
+	// 4. Configure Standard HTTP Server (TCP)
+	// If TLS is enabled, we listen on 443. If not, we listen on PORT (8080).
+	addr := ":" + cfg.HTTPPort
+	if cfg.Domain != "" {
+		addr = ":443"
+	}
+
+	// Use h2c for cleartext HTTP/2 if no TLS, otherwise standard H2 is negotiated via TLS
+	var rootHandler http.Handler
+	if cfg.Domain == "" {
+		// For H2C (Cleartext), we need to manually enable H2
+		h2s := &http2.Server{}
+		rootHandler = h2c.NewHandler(mixedHandler, h2s)
+	} else {
+		// With TLS, ALPN handles negotiation. The standard library http.Server supports H2 automatically.
+		rootHandler = mixedHandler
+	}
+
+	srv.httpServer = &http.Server{
+		Addr:      addr,
+		Handler:   rootHandler,
+		TLSConfig: tlsConfig,
+		// Aggressive timeouts for performance
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
+	}
+
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			return srv.Start()
+		},
+		OnStop: func(ctx context.Context) error {
+			return srv.Stop(ctx)
+		},
+	})
+
+	return srv
+}
+
+func (s *OmegaServer) Start() error {
+	s.logger.Info("Starting Omega Engine", "port", s.httpServer.Addr, "domain", s.config.Domain)
+
+	// Start HTTP/3 (UDP) if TLS is enabled
+	if s.config.Domain != "" {
+		go func() {
+			if err := s.quicServer.ListenAndServe(); err != nil {
+				s.logger.Error("HTTP/3 server error", "error", err)
+			}
+		}()
+	}
+
+	// Start TCP Server
+	go func() {
+		var err error
+		if s.config.Domain != "" {
+			// AutoCert manages certificates, so we use ListenAndServeTLS with empty cert/key
+			err = s.httpServer.ListenAndServeTLS("", "")
+		} else {
+			err = s.httpServer.ListenAndServe()
+		}
+		if err != nil && err != http.ErrServerClosed {
+			s.logger.Error("HTTP server failed", "error", err)
+		}
+	}()
+
+	return nil
+}
+
+func (s *OmegaServer) Stop(ctx context.Context) error {
+	s.logger.Info("Stopping Omega Engine")
+	if s.quicServer != nil {
+		s.quicServer.Close()
+	}
+	s.grpcServer.GracefulStop()
+	return s.httpServer.Shutdown(ctx)
+}
+
+// GetGRPCServer returns the underlying gRPC server to allow service registration.
+func (s *OmegaServer) GetGRPCServer() *grpc.Server {
+	return s.grpcServer
+}
+
+// GetGatewayMux returns the gRPC-Gateway mux to allow registering handlers.
+func (s *OmegaServer) GetGatewayMux() *runtime.ServeMux {
+	return s.gatewayMux
+}
+
+// grpcHandlerFunc separates gRPC traffic from regular HTTP traffic.
+func grpcHandlerFunc(grpcServer *grpc.Server, otherHandler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") {
+			grpcServer.ServeHTTP(w, r)
+		} else {
+			otherHandler.ServeHTTP(w, r)
+		}
+	})
+}
+
+// securityMiddleware adds HSTS and other security headers
+func securityMiddleware(cfg *config.Config, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// HSTS (Strict-Transport-Security)
+		if cfg.Domain != "" {
+			w.Header().Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
+		}
+
+		// Other security headers (Grade A+)
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("X-XSS-Protection", "1; mode=block")
+
+		next.ServeHTTP(w, r)
+	})
+}

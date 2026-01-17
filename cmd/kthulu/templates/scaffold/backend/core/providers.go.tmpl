@@ -68,11 +68,12 @@ func NewDatabase() (*gorm.DB, error) {
 
     if err != nil { return nil, err }
 
-    {{- if .AutoMigrateCall}}
-    {{.AutoMigrateCall}}
-    {{- else}}
+    // if .AutoMigrateCall
+    // {{.AutoMigrateCall}}
+    // else
+    // return db, nil
+    // end
     return db, nil
-    {{- end}}
 }
 
 func getEnv(key, fallback string) string {

@@ -49,7 +49,7 @@ func runMCPServer(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to resolve kthulu binary: %w", err)
 	}
 
-	executor := mcp.NewBinaryCommandExecutor(execPath)
+	executor := mcp.NewBinaryCommandExecutor(execPath, "KTHULU_MCP_MODE=1")
 	tagParser := parser.NewTagParser(nil)
 	builder := mcp.NewServerBuilder(mcp.ServerBuilderDependencies{
 		RootCmd:   rootCmd,

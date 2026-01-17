@@ -57,7 +57,11 @@ Examples:
 		withIntegrations, _ := cmd.Flags().GetStringSlice("with")
 		compliance, _ := cmd.Flags().GetString("compliance")
 		force, _ := cmd.Flags().GetBool("force")
-		yes, _ := cmd.Flags().GetBool("yes")
+	yes, _ := cmd.Flags().GetBool("yes")
+		if os.Getenv("KTHULU_MCP_MODE") == "1" {
+			yes = true
+		}
+
 		prefix, _ := cmd.Flags().GetString("prefix")
 		protected, _ := cmd.Flags().GetBool("protected")
 		admin, _ := cmd.Flags().GetBool("admin")
@@ -312,6 +316,7 @@ func copyAuthFiles(base string, data map[string]any) error {
 
 func installDependency(pkg string) error {
 	cmd := exec.Command("go", "get", pkg)
+	cmd.Env = append(os.Environ(), "GOWORK=off")
 	cmd.Stdout = nil // Silence output unless needed
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
@@ -456,9 +461,8 @@ func runAddModule(module string, fields []string, integrations []string, complia
 	if prefix != "" {
 		config.CustomValues["route_prefix"] = prefix
 	} else {
-		// Default prefix logic
-		// We can check if main.go has /api/v1 and use it, or default to root
-		// For now let's leave it empty to default to what the generator does
+		// Default to module name as prefix
+		config.CustomValues["route_prefix"] = fmt.Sprintf("/%s", module)
 	}
 
 	if protected {
@@ -496,6 +500,14 @@ func runAddModule(module string, fields []string, integrations []string, complia
 			fmt.Printf("   ⚠️  Warning: Failed to auto-register module in main.go: %v\n", err)
 		} else {
 			fmt.Printf("   🔌 Auto-registered module '%s' in main.go\n", module)
+
+			// Register Routes
+			entityName := generator.Capitalize(generator.Singularize(module))
+			if err := generator.InjectRouteRegistration(config.OutputPath, module, projectModule, moduleRelPath, entityName); err != nil {
+				fmt.Printf("   ⚠️  Warning: Failed to auto-register routes in main.go: %v\n", err)
+			} else {
+				fmt.Printf("   🚦 Auto-registered routes for '%s' in main.go\n", entityName)
+			}
 		}
 	}
 
@@ -524,6 +536,11 @@ func runAddModule(module string, fields []string, integrations []string, complia
 	fmt.Println("🔧 Updating project configuration...")
 	if err := updateProjectConfig(currentDir, plan); err != nil {
 		fmt.Printf("⚠️  Warning: Could not update project config: %v\n", err)
+	}
+
+	// Step 9b: Run go mod tidy to resolve new imports
+	if err := runGoModTidy(currentDir); err != nil {
+		fmt.Printf("⚠️  Warning: Failed to run go mod tidy: %v\n", err)
 	}
 
 	// Step 10: Display success message
@@ -880,3 +897,5 @@ func displayModuleSuccessMessage(moduleName string, plan *resolver.ResolutionPla
 		}
 	}
 }
+
+

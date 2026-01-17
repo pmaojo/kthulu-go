@@ -21,14 +21,14 @@ func New{{.Title}}Handler(service core.{{.Title}}Service) *{{.Title}}Handler {
 
 // RegisterRoutes registers all routes for {{.Name}}
 func (h *{{.Title}}Handler) RegisterRoutes(router *mux.Router) {
-	{{if .RoutePrefix}}sub := router.PathPrefix("{{.RoutePrefix}}").Subrouter(){{else}}sub := router{{end}}
+	{{if .RoutePrefix}}sub := router.PathPrefix("/{{.RoutePrefix}}").Subrouter(){{else}}sub := router{{end}}
 	{{if .Protected}}sub.Use(middleware.AuthMiddleware){{end}}
 
-	sub.HandleFunc("/{{.RoutePrefix}}", h.List).Methods("GET")
-	sub.HandleFunc("/{{.RoutePrefix}}", h.Create).Methods("POST")
-	sub.HandleFunc("/{{.RoutePrefix}}/{id}", h.GetByID).Methods("GET")
-	sub.HandleFunc("/{{.RoutePrefix}}/{id}", h.Update).Methods("PUT")
-	sub.HandleFunc("/{{.RoutePrefix}}/{id}", h.Delete).Methods("DELETE")
+	sub.HandleFunc("/", h.List).Methods("GET")
+	sub.HandleFunc("/", h.Create).Methods("POST")
+	sub.HandleFunc("/{id}", h.GetByID).Methods("GET")
+	sub.HandleFunc("/{id}", h.Update).Methods("PUT")
+	sub.HandleFunc("/{id}", h.Delete).Methods("DELETE")
 }
 
 // Create handles the creation of a new {{.Name}}

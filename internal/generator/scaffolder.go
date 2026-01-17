@@ -32,8 +32,8 @@ func (s *FrontendScaffolder) EnsureFrontend() error {
 
 	fmt.Println("Frontend not found. Scaffolding Base Admin UI...")
 
-	// Copy from templates/frontend/base -> frontend/
-	baseDir := "frontend/base"
+	// Copy from templates/scaffold/frontend/base -> frontend/
+	baseDir := "scaffold/frontend/base"
 
 	return s.copyRecursive(baseDir, frontendPath)
 }
@@ -64,32 +64,9 @@ func (s *FrontendScaffolder) copyRecursive(srcDir, destDir string) error {
 
 			// If it's a template, we might want to execute it (e.g. package.json name)
 			// For now, simple copy or generic execution
-			if strings.HasSuffix(entry.Name(), ".tmpl") {
-				// Execute as template if needed, or just write.
-				// Since base templates don't use much dynamic data (maybe project name?),
-				// I'll execute with empty map for now or a generic struct.
-				// But some files might have {{ }} for React/JSX code!
-				// WARNING: Go templates conflict with JSX {{ }}.
-				// My templates used {{ }} for Go, but JSX uses { }.
-				// I should be careful.
-				// If the file is .tsx.tmpl, I need to assume it might contain template tags.
-				// But looking at my written files, I didn't use any {{ .Var }} in the base templates yet, except maybe package.json?
-				// Actually I wrote them as raw strings in previous steps.
-				// I should probably just WriteFile raw content if no template logic is needed.
-				// BUT `templates.go` logic usually strips .tmpl.
-
-				// HACK: Just write content directly for now to avoid JSX/Template conflicts
-				// unless I explicitly know it needs interpolation.
-				// My `App.tsx` has `/* KTHULU:ROUTES */` which is NOT a template tag.
-				// So I can just write it.
-
-				if err := s.fs.WriteFile(destPath, content, 0644); err != nil {
-					return err
-				}
-			} else {
-				if err := s.fs.WriteFile(destPath, content, 0644); err != nil {
-					return err
-				}
+			// Just write content directly. If template processing is needed later, add specific checks.
+			if err := s.fs.WriteFile(destPath, content, 0644); err != nil {
+				return err
 			}
 		}
 	}

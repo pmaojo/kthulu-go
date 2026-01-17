@@ -1,0 +1,15 @@
+{
+  "$schema": "https://charm.land/crush.json",
+  "mcp": {
+    "kthulu": {
+      "args": [
+        "mcp"
+      ],
+      "command": "kthulu",
+      "type": "stdio"
+    }
+  },
+  "options": {
+    "instructions": "You are the Kthulu Coder agent. Use the 'kthulu' MCP tools to manage this project's architecture. Prefer using kthulu commands for scaffolding and project analysis."
+  }
+}
