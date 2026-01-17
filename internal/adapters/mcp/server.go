@@ -44,7 +44,8 @@ type ServerInstance struct {
 
 // ServerBuilder assembles MCP servers that expose kthulu CLI commands.
 type ServerBuilder struct {
-	factory *ToolFactory
+	factory    *ToolFactory
+	devMonitor *DevMonitorService
 }
 
 // ServerBuilderDependencies configure the builder with shared dependencies.
@@ -57,7 +58,8 @@ type ServerBuilderDependencies struct {
 // NewServerBuilder constructs a builder capable of producing MCP servers.
 func NewServerBuilder(deps ServerBuilderDependencies) *ServerBuilder {
 	factory := NewToolFactory(deps.RootCmd, deps.Executor, deps.TagParser)
-	return &ServerBuilder{factory: factory}
+	monitor := NewDevMonitorService()
+	return &ServerBuilder{factory: factory, devMonitor: monitor}
 }
 
 // BuildServer assembles a ready-to-serve MCP server based on the provided options.
@@ -89,6 +91,13 @@ func (b *ServerBuilder) BuildServer(options ServerOptions) (*ServerInstance, err
 	for _, tool := range tools {
 		if err := server.RegisterTool(tool.Name, tool.Description, tool.Handler); err != nil {
 			return nil, fmt.Errorf("register tool %s: %w", tool.Name, err)
+		}
+	}
+
+	// Register monitoring resources
+	if b.devMonitor != nil {
+		if err := b.devMonitor.RegisterResources(server); err != nil {
+			return nil, fmt.Errorf("register monitor resources: %w", err)
 		}
 	}
 

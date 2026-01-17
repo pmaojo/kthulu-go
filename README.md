@@ -14,6 +14,73 @@ The platform prioritizes:
 - **AI-Native Teams** who want to leverage agents to drastically reduce boilerplate and maintenance overhead.
 - **Go Developers** seeking a modern, opinionated framework that balances simplicity with enterprise readiness.
 
+## Intelligent Coding (TUI)
+
+Kthulu replaces complex internal AI implementations with **high-leverage integrations**.
+
+```sh
+# Autoconfigures & Launches "Crush" with Kthulu tools
+kthulu coder
+```
+
+When you run `kthulu coder`, it:
+
+1. Detects your installation of [Crush](https://github.com/charmbracelet/crush).
+2. Generates a project-specific configuration that **injects Kthulu as an MCP Server**.
+3. Launches the agent, giving it full access to scaffold, analyze, and evolve your code.
+
+## Model Context Protocol (MCP)
+
+Kthulu Go is built first and foremost as an **MCP Server**. This means it is designed to be driven by AI.
+
+To use Kthulu with other agents, you can use our bridge commands:
+
+```sh
+# Configure & Launch Claude CLI
+kthulu claude
+
+# Configure Gemini Code Assist
+kthulu gemini
+```
+
+Or manually register the server in your favorite client:
+
+```json
+{
+  "mcpServers": {
+    "kthulu": {
+      "command": "/absolute/path/to/kthulu",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+## Extensions & Ecosystem
+
+Kthulu is designed to be extensible. We support two primary ways to extend capabilities:
+
+### 1. Kthulu Modules (Vertical Slices)
+
+Native Go plugins that live inside your `internal/modules` directory. They add business logic and API endpoints to your application.
+
+### 2. Agent Skills (MCP)
+
+You can extend the AI's capabilities by registering additional MCP servers (Extensions).
+
+- **Database Skills**: Grants the agent SQL access to your database.
+- **Git Skills**: Allows the agent to open PRs and manage branches.
+- **Browser Skills**: Lets the agent research documentation online.
+
+When using `kthulu coder` (Crush), you can manage these extensions in `.kthulu/crush.json`.
+
+## Key Features
+
+- **Vertical Slice Architecture**: Code is organized by feature, not technical layer.
+- **Dependency Injection**: First-class support for `uber/fx`.
+- **Zero-Boilerplate**: The CLI handles wiring, config, and scaffolding.
+- **Database Agnostic**: Built-in support for SQLite, PostgreSQL, and MySQL via GORM.
+
 ## Project Structure
 
 This repository is a **Monorepo** containing the seed of the foundry:
@@ -67,52 +134,22 @@ my-app/
 └── ...
 ```
 
-## Model Context Protocol (MCP)
-
-Kthulu Go is built first and foremost as an **MCP Server**. This means it is designed to be driven by AI.
-
-To use Kthulu with **Claude Desktop** or other MCP clients:
-
-```json
-{
-  "mcpServers": {
-    "kthulu": {
-      "command": "/absolute/path/to/kthulu",
-      "args": ["mcp"]
-    }
-  }
-}
-```
-
-Once connected, your AI assistant gains the ability to:
-
-- **Analyze** your codebase structure.
-- **Plan** new features and modules.
-- **Generate** code that complies with your project's architecture.
-- **Verify** integration and dependencies.
-
-## Key Features
-
-- **Vertical Slice Architecture**: Code is organized by feature, not technical layer, making it easy to add, remove, or extract capabilities.
-- **Dependency Injection**: First-class support for `uber/fx`.
-- **Zero-Boilerplate**: The CLI handles wiring, config, and scaffolding.
-- **Database Agnostic**: Built-in support for SQLite, PostgreSQL, and MySQL via GORM.
-
 ## CLI Command Reference
-```
-| Command | Description |
-|Utils|---|
-| `kthulu create <name>` | Scaffolds a new project with Modular Monolith structure. |
-| `kthulu dev` | Starts the development server with **AI Self-Healing**. |
-| `kthulu add module <name>` | Adds a new feature module (Vertical Slice). |
-| `kthulu add component <type>` | Adds a component (handler, service, store) to a module. |
-| `kthulu doc` | Generates OpenAPI/Swagger documentation. |
-| `kthulu secure` | Audits dependencies for vulnerabilities. |
-| `kthulu audit` | Runs enterprise compliance checks. |
-| `kthulu analyze` | Analyzes project structure and dependencies. |
-| `kthulu ai suggest` | Asks the AI for code improvements or refactoring. |
 
-```
+| Command                       | Description                                              |
+| ----------------------------- | -------------------------------------------------------- |
+| `kthulu create <name>`        | Scaffolds a new project with Modular Monolith structure. |
+| `kthulu coder`                | Launches the AI Coding Assistant (Crush).                |
+| `kthulu claude`               | Configures and launches Claude CLI.                      |
+| `kthulu gemini`               | Configures Gemini Code Assist.                           |
+| `kthulu dev`                  | Starts the development server with **AI Self-Healing**.  |
+| `kthulu add module <name>`    | Adds a new feature module (Vertical Slice).              |
+| `kthulu add component <type>` | Adds a component (handler, service, store) to a module.  |
+| `kthulu doc`                  | Generates OpenAPI/Swagger documentation.                 |
+| `kthulu secure`               | Audits dependencies for vulnerabilities.                 |
+| `kthulu audit`                | Runs enterprise compliance checks.                       |
+| `kthulu analyze`              | Analyzes project structure and dependencies.             |
+
 ## Contributing
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.

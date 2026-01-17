@@ -39,5 +39,12 @@ func (f *ToolFactory) BuildTools(workingDir string, filter CommandFilter) []Regi
 		bdd.RunScenarioTool(workingDir),
 	)
 
+	// Native Skills (Batteries Included)
+	shell := NewShellService()
+	tools = append(tools, shell.ExecuteTool(workingDir))
+
+	git := NewGitService()
+	tools = append(tools, git.GetTools(workingDir)...)
+
 	return tools
 }
