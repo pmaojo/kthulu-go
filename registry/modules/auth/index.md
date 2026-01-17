@@ -118,3 +118,4 @@ Authenticates a user and returns a token pair.
 - **CORS Errors**: Check your CORS configuration in `internal/infrastructure/config/config.go`.
 
 
+
