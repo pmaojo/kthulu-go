@@ -167,7 +167,7 @@ func ParseBackendFields(rawFields []string) []BackendField {
 		case "int":
 			goType = "int"
 			sqlType = "INTEGER"
-		case "bool":
+		case "bool", "boolean":
 			goType = "bool"
 			sqlType = "BOOLEAN"
 		case "float":

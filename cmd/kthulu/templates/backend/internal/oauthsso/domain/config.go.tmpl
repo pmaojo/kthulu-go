@@ -31,7 +31,7 @@ func NewConfigFromEnv() (*Config, error) {
 		return nil, fmt.Errorf("invalid SSO_ACCESS_TOKEN_LIFETIME: %w", err)
 	}
 
-	refreshTTL, err := time.ParseDuration(getEnvWithDefault("SSO_REFRESH_TOKEN_LIFETIME", "7d"))
+	refreshTTL, err := time.ParseDuration(getEnvWithDefault("SSO_REFRESH_TOKEN_LIFETIME", "168h"))
 	if err != nil {
 		return nil, fmt.Errorf("invalid SSO_REFRESH_TOKEN_LIFETIME: %w", err)
 	}

@@ -10,11 +10,13 @@ import (
 	"time"
 )
 
+
 // OpenAIProvider implements the AIProvider interface for OpenAI
 type OpenAIProvider struct {
 	apiKey    string
 	model     string
 	baseURL   string
+	headers   map[string]string
 	timeout   time.Duration
 	client    *http.Client
 	cache     *LRUCache
@@ -90,7 +92,7 @@ func (p *OpenAIProvider) GenerateText(ctx context.Context, prompt string) (strin
 				Content: prompt,
 			},
 		},
-		MaxTokens:   2000,
+		MaxTokens:   1024,
 		Temperature: 0.7,
 	}
 
@@ -106,6 +108,10 @@ func (p *OpenAIProvider) GenerateText(ctx context.Context, prompt string) (strin
 
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+p.apiKey)
+	
+	for k, v := range p.headers {
+		httpReq.Header.Set(k, v)
+	}
 
 	resp, err := p.client.Do(httpReq)
 	if err != nil {
@@ -170,9 +176,17 @@ func (p *OpenAIProvider) SetModel(model string) {
 }
 
 // Health checks if the provider is healthy
-func (p *OpenAIProvider) Health(ctx context.Context) error {
-	if p.apiKey == "" {
-		return fmt.Errorf("OpenAI API key not configured")
-	}
-	return nil
+// SetBaseURL sets the API base URL
+func (p *OpenAIProvider) SetBaseURL(url string) {
+	p.baseURL = url
+}
+
+// SetHeaders sets additional headers for requests
+func (p *OpenAIProvider) SetHeaders(headers map[string]string) {
+    // We need to store headers in the struct to use them in GenerateText
+    // But struct doesn't have headers field yet.
+    // I need to add it to struct definition too.
+    // Wait, replacing ONLY method block won't work if I rely on new struct field.
+    // I should probably just hardcode OpenRouter headers if URL is OpenRouter?
+    // Or add headers field to struct.
 }

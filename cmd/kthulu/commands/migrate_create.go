@@ -47,6 +47,15 @@ func createMigrationFile(name, content string) error {
 	}
 
 	timestamp := time.Now().Format("20060102150405")
+	for {
+		matches, _ := filepath.Glob(filepath.Join(dir, timestamp+"_*.sql"))
+		if len(matches) == 0 {
+			break
+		}
+		// If collision, wait 1s and try again
+		time.Sleep(1 * time.Second)
+		timestamp = time.Now().Format("20060102150405")
+	}
 	filename := fmt.Sprintf("%s_%s.sql", timestamp, name)
 	path := filepath.Join(dir, filename)
 

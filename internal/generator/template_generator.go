@@ -403,6 +403,23 @@ func (g *TemplateGenerator) generateModuleFiles(moduleName string, structure *Pr
 	// Generate migration
 	if migrationContent != "" {
 		timestamp := time.Now().Format("20060102150405")
+		for {
+			collision := false
+			migrationPath := filepath.Join("migrations", fmt.Sprintf("%s_create_%s_table.sql", timestamp, moduleName))
+			for _, f := range structure.Files {
+				if f.Path == migrationPath {
+					collision = true
+					break
+				}
+			}
+			if !collision {
+				break
+			}
+			// If collision, wait 1s and try again
+			time.Sleep(1 * time.Second)
+			timestamp = time.Now().Format("20060102150405")
+		}
+
 		structure.Files = append(structure.Files, GeneratedFile{
 			Path:    filepath.Join("migrations", fmt.Sprintf("%s_create_%s_table.sql", timestamp, moduleName)),
 			Content: migrationContent,
