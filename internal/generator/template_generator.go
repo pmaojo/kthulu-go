@@ -405,9 +405,9 @@ func (g *TemplateGenerator) generateModuleFiles(moduleName string, structure *Pr
 		timestamp := time.Now().Format("20060102150405")
 		for {
 			collision := false
-			migrationPath := filepath.Join("migrations", fmt.Sprintf("%s_create_%s_table.sql", timestamp, moduleName))
+			timestampPrefix := filepath.Join("migrations", timestamp+"_")
 			for _, f := range structure.Files {
-				if f.Path == migrationPath {
+				if strings.HasPrefix(f.Path, timestampPrefix) {
 					collision = true
 					break
 				}
