@@ -234,22 +234,15 @@ func NewConfig() (*Config, error) {
 	}
 
 	// JWT configuration
-	jwtSecret := os.Getenv("JWT_SECRET")
-	if jwtSecret == "" {
-		return nil, errors.New("JWT_SECRET is required")
-	}
-
-	jwtRefreshSecret := os.Getenv("JWT_REFRESH_SECRET")
-	if jwtRefreshSecret == "" {
-		return nil, errors.New("JWT_REFRESH_SECRET is required")
-	}
+	jwtSecret := getEnvWithDefault("JWT_SECRET", "dev-secret-please-change-in-production")
+	jwtRefreshSecret := getEnvWithDefault("JWT_REFRESH_SECRET", "dev-refresh-secret-please-change-in-production")
 
 	accessTokenTTL, err := time.ParseDuration(getEnvWithDefault("JWT_ACCESS_TOKEN_TTL", "15m"))
 	if err != nil {
 		return nil, fmt.Errorf("invalid JWT_ACCESS_TOKEN_TTL: %w", err)
 	}
 
-	refreshTokenTTL, err := time.ParseDuration(getEnvWithDefault("JWT_REFRESH_TOKEN_TTL", "7d"))
+	refreshTokenTTL, err := time.ParseDuration(getEnvWithDefault("JWT_REFRESH_TOKEN_TTL", "168h"))
 	if err != nil {
 		return nil, fmt.Errorf("invalid JWT_REFRESH_TOKEN_TTL: %w", err)
 	}
