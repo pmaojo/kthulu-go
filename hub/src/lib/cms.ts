@@ -34,10 +34,11 @@ async function readFrontMatter(filePath: string): Promise<Record<string, any>> {
   }
 }
 
-export async function getDocBySlug(slug: string[], baseDir: string = DOCS_DIR, fields: string[] = []): Promise<DocContent | null> {
+// Optimization: Allow passing knownPath to avoid redundant filesystem checks (guessing .md vs /index.md)
+export async function getDocBySlug(slug: string[], baseDir: string = DOCS_DIR, fields: string[] = [], knownPath?: string): Promise<DocContent | null> {
   if (!Array.isArray(slug)) return null;
   
-  const fullPath = path.join(baseDir, ...slug) + '.md';
+  const fullPath = knownPath || (path.join(baseDir, ...slug) + '.md');
   const indexPath = path.join(baseDir, ...slug, 'index.md');
   
   let data: Record<string, any> = {};
@@ -60,6 +61,10 @@ export async function getDocBySlug(slug: string[], baseDir: string = DOCS_DIR, f
   } catch (err: unknown) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if ((err as any).code !== 'ENOENT') throw err;
+
+    // If knownPath was provided, we don't check other paths
+    if (knownPath) return null;
+
     // If fullPath doesn't exist, try indexPath
     try {
       const result = await tryRead(indexPath);
@@ -103,8 +108,9 @@ export async function getAllDocs(subDir: string = '', baseDir: string = DOCS_DIR
     .filter((file) => file.endsWith('.md'))
     .map(async (file) => {
       const relativePath = path.join(subDir, file);
+      const fullPath = path.join(fullDir, file);
       const slug = relativePath.replace(/(\.md|index\.md)$/, '').split(path.sep).filter(Boolean);
-      return getDocBySlug(slug, baseDir, fields);
+      return getDocBySlug(slug, baseDir, fields, fullPath);
     }));
 
   return docs.filter((doc): doc is DocContent => doc !== null);
