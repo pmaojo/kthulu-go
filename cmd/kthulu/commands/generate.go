@@ -53,14 +53,14 @@ func runGenerate(prompt string) error {
 	// We'll execute it as a subprocess to keep it simple and reusing existing CLIs
 	// Skip 'kthulu' executable name
 	cmdArgs := parts[1:]
-	
+
 	// If it's an 'add' command, we might want to auto-confirm if not present
-	// Check if -y is present, if not append it for smoother AI experience? 
+	// Check if -y is present, if not append it for smoother AI experience?
 	// Or maybe ask user confirmation here?
 	// Let's ask via standard input/confirmation simulated here or just run it.
 	// Since the user explicitly asked to generate, let's assume -y for "add" commands if safe.
 	// However, `kthulu add` has prompts. Let's pass what we have.
-	
+
 	finalCmd := exec.Command(os.Args[0], cmdArgs...)
 	finalCmd.Stdout = os.Stdout
 	finalCmd.Stderr = os.Stderr
@@ -92,7 +92,7 @@ func parseIntent(prompt string) (string, error) {
 				name = words[i+1]
 			}
 		}
-		
+
 		if name != "" {
 			cmd := fmt.Sprintf("kthulu add module %s", name)
 			if strings.Contains(prompt, "admin") {

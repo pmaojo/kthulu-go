@@ -12,10 +12,10 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/pmaojo/kthulu-go/internal/adapters/cli/compliance"
+	"github.com/pmaojo/kthulu-go/internal/adapters/cli/parser"
 	"github.com/pmaojo/kthulu-go/internal/infrastructure/ai"
 	"github.com/pmaojo/kthulu-go/internal/usecase"
-	"github.com/pmaojo/kthulu-go/internal/adapters/cli/parser"
-	"github.com/pmaojo/kthulu-go/internal/adapters/cli/compliance"
 )
 
 const ApplyInstruction = "\n\nIMPORTANT: To apply changes, output the code using the following format for each file you want to create or update:\n<<<FILE:path/to/file>>>\n[file content]\n<<<END>>>\n"

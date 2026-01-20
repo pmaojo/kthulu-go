@@ -123,7 +123,7 @@ If you are working in a monorepo or a folder with a parent ` + "`go.work`" + ` f
 - **"bind: address already in use"**: Kill the process on port 8080 or use ` + "`kthulu dev`" + `.
 - **"package ... is not in std"**: You are likely mistakenly using the parent ` + "`go.work`" + `. Set ` + "`GOWORK=off`" + `.
 `
-		// Only write if not exists to avoid overwriting user custom notes? 
+		// Only write if not exists to avoid overwriting user custom notes?
 		// Or maybe overwrite/prepend? Let's write for now as it's a "bridge" command.
 		os.WriteFile(contextPath, []byte(contextContent), 0644)
 

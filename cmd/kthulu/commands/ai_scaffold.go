@@ -98,7 +98,7 @@ User Description:
 	fmt.Print("🔮 Analyzing requirements and designing architecture... ")
 	ctx := context.Background()
 	uc := usecase.NewAIUseCase(client)
-	
+
 	yamlContent, err := uc.Suggest(ctx, schemaPrompt, false, "")
 	if err != nil {
 		fmt.Println("❌")

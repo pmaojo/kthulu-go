@@ -12,10 +12,10 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
+	"github.com/pmaojo/kthulu-go/internal/adapters/cli/parser"
 	"github.com/pmaojo/kthulu-go/internal/blueprint"
 	"github.com/pmaojo/kthulu-go/internal/generator"
 	"github.com/pmaojo/kthulu-go/internal/resolver"
-	"github.com/pmaojo/kthulu-go/internal/adapters/cli/parser"
 )
 
 // Template definitions
@@ -180,7 +180,7 @@ func runNewProjectIntelligent(cmd *cobra.Command, args []string) {
 		rawInput = args[0]
 		// Sanitize project name to be a valid module name (last element of path)
 		projectName = filepath.Base(rawInput)
-		
+
 		// If input looks like a path and output path wasn't explicitly set, use the input as output path
 		if (strings.Contains(rawInput, "/") || strings.Contains(rawInput, "\\")) && newOutputPath == "" {
 			newOutputPath = rawInput
@@ -279,9 +279,6 @@ func runNewProjectIntelligent(cmd *cobra.Command, args []string) {
 	// Step 10: Display success message and next steps
 	displaySuccessMessage(projectName, config, structure)
 }
-
-
-
 
 func runGoTests(projectPath string) error {
 	fmt.Println("\n🧪 Running go test with coverage...")
@@ -387,13 +384,13 @@ func buildProjectConfig(projectName string) (*generator.GeneratorConfig, error) 
 	}
 
 	config := &generator.GeneratorConfig{
-		ProjectName:   projectName,
-		OutputPath:    getOutputPath(projectName),
-		Frontend:      template.Frontend,
-		Database:      template.Database,
-		Auth:          template.Auth,
-		Features:      template.Features,
-		Enterprise:    template.Enterprise,
+		ProjectName:     projectName,
+		OutputPath:      getOutputPath(projectName),
+		Frontend:        template.Frontend,
+		Database:        template.Database,
+		Auth:            template.Auth,
+		Features:        template.Features,
+		Enterprise:      template.Enterprise,
 		Observability:   false,
 		ModuleFields:    newModuleFields,
 		FrontendModules: newFrontendModules, // Convention: 'modules:' = fullstack
@@ -435,7 +432,7 @@ func buildProjectConfig(projectName string) (*generator.GeneratorConfig, error) 
 
 func getOutputPath(projectName string) string {
 	cwd, _ := os.Getwd()
-	
+
 	// If explicit output path is provided
 	if newOutputPath != "" {
 		if filepath.IsAbs(newOutputPath) {

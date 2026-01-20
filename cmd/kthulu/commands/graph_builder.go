@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pmaojo/kthulu-go/pkg/kit"
 	"github.com/pmaojo/kthulu-go/internal/adapters/cli/graph"
+	"github.com/pmaojo/kthulu-go/pkg/kit"
 )
 
 // BuildValidationGraph scans use cases and adapters to construct a graph

@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pmaojo/kthulu-go/internal/deployment"
 	"github.com/pmaojo/kthulu-go/internal/adapters/cli/compliance"
+	"github.com/pmaojo/kthulu-go/internal/deployment"
 	"github.com/spf13/cobra"
 )
 

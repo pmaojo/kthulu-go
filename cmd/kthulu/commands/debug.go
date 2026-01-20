@@ -6,14 +6,14 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/spf13/cobra"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/pmaojo/kthulu-go/internal/adapters/cli/debugui"
+	"github.com/spf13/cobra"
 )
 
 var (
-	debugCmdStr   string
-	debugPersist  bool
+	debugCmdStr    string
+	debugPersist   bool
 	debugTestWatch bool
 )
 

@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/spf13/cobra"
 	"github.com/pmaojo/kthulu-go/internal/generator"
+	"github.com/spf13/cobra"
 )
 
 var makeServiceTestCmd = &cobra.Command{

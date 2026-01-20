@@ -117,7 +117,7 @@ The core value of Kthulu is its ability to generate production-ready code.
 kthulu create my-app
 ```
 
-This generates a project structure optimized for vertical slicing:
+This generates a project structure optimized for vertical slicing with **GTH frontend** (Go + Templ + HTMX):
 
 ```
 my-app/
@@ -130,8 +130,41 @@ my-app/
 │   │   │   ├── store/   # Data Persistence
 │   │   │   └── module.go # FX Dependency Injection
 │   │   └── ...
+│   ├── views/           # GTH Frontend (Templ + HTMX)
+│   │   ├── layouts/     # Base and admin layouts
+│   │   ├── components/  # Reusable table, form, modal
+│   │   ├── pages/       # Full page templates
+│   │   └── partials/    # HTMX partial responses
 │   └── infrastructure/  # Shared tech (Loggers, Middleware)
 └── ...
+```
+
+## GTH Frontend (Go + Templ + HTMX)
+
+Kthulu uses **GTH** - a hypermedia-driven frontend stack that keeps everything in Go:
+
+| Component | Purpose                                   |
+| --------- | ----------------------------------------- |
+| **Go**    | Server-side rendering, business logic     |
+| **Templ** | Type-safe HTML templates (compiles to Go) |
+| **HTMX**  | Dynamic UI without JavaScript frameworks  |
+
+### Why GTH over React/Vue/etc?
+
+- **Single language** - No JS/TS build toolchain
+- **Server-rendered** - State lives on server, no client sync issues
+- **Hypermedia** - Returns HTML fragments, not JSON to transform
+- **14KB** - HTMX is tiny compared to React bundles
+- **Type-safe** - Templ compiles to Go, catches errors at build time
+
+### Frontend Options
+
+```sh
+# Default: GTH frontend (recommended)
+kthulu new my-app --features product
+
+# API-only (no frontend views)
+kthulu new my-app --features product --frontend none
 ```
 
 ## CLI Command Reference

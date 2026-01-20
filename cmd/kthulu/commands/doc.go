@@ -2,11 +2,11 @@ package commands
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -42,13 +42,17 @@ func runDocCommand(cmd *cobra.Command, args []string, generateDiagrams bool) err
 	fmt.Println("📚 Generating API documentation...")
 
 	root, err := detectProjectRoot()
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	bin, err := ensureDocToolInstalled("swag", "github.com/swaggo/swag/cmd/swag@latest")
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	main := detectMainFile(root)
-	
+
 	if err := runSwaggerInit(bin, root, main); err != nil {
 		return err
 	}
@@ -117,20 +121,28 @@ func generateMermaidDiagrams(root string) error {
 	relationships := []string{}
 
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if err != nil { return err }
-		if skipFileForDiagram(path) { return nil }
+		if err != nil {
+			return err
+		}
+		if skipFileForDiagram(path) {
+			return nil
+		}
 
 		// Parse the file using go/parser
 		fset := token.NewFileSet()
 		node, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
-		if err != nil { return nil } // Skip files that can't be parsed
+		if err != nil {
+			return nil
+		} // Skip files that can't be parsed
 
 		pkg := node.Name.Name
-		
+
 		ast.Inspect(node, func(n ast.Node) bool {
 			// Find type definitions
 			ts, ok := n.(*ast.TypeSpec)
-			if !ok { return true }
+			if !ok {
+				return true
+			}
 
 			name := ts.Name.Name
 
@@ -155,11 +167,13 @@ func generateMermaidDiagrams(root string) error {
 
 			return true
 		})
-		
+
 		return nil
 	})
 
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	var sb strings.Builder
 	writeMermaidHeader(&sb)
@@ -187,7 +201,7 @@ func extractRelationship(expr ast.Expr) string {
 func isCustomType(name string) bool {
 	// Simple heuristic to ignore basic types
 	basic := map[string]bool{
-		"string": true, "int": true, "int64": true, "float64": true, 
+		"string": true, "int": true, "int64": true, "float64": true,
 		"bool": true, "error": true, "time.Time": true,
 	}
 	return !basic[name] && len(name) > 0 && name[0] >= 'A' && name[0] <= 'Z'
@@ -199,9 +213,9 @@ type interfaceDef struct {
 }
 
 func skipFileForDiagram(path string) bool {
-	return !strings.HasSuffix(path, ".go") || 
-		strings.HasSuffix(path, "_test.go") || 
-		strings.Contains(path, "vendor") || 
+	return !strings.HasSuffix(path, ".go") ||
+		strings.HasSuffix(path, "_test.go") ||
+		strings.Contains(path, "vendor") ||
 		strings.Contains(path, "mocks")
 }
 
@@ -237,7 +251,6 @@ func writeMermaidRelationships(sb *strings.Builder, rels []string) {
 	}
 }
 
-
 func ensureDocToolInstalled(name, installPath string) (string, error) {
 	bin, err := exec.LookPath(name)
 	if err == nil {
@@ -245,13 +258,13 @@ func ensureDocToolInstalled(name, installPath string) (string, error) {
 	}
 
 	fmt.Printf("📦 Tool '%s' not found. Installing...\n", name)
-	
+
 	// Try to find in GOPATH/bin first
 	goPath := os.Getenv("GOPATH")
 	if goPath == "" {
 		goPath = filepath.Join(os.Getenv("HOME"), "go")
 	}
-	
+
 	binPath := filepath.Join(goPath, "bin", name)
 	if _, err := os.Stat(binPath); err == nil {
 		return binPath, nil

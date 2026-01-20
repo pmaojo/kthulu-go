@@ -1,10 +1,9 @@
 ---
 title: Project Structure
-description: Understanding the Hexagonal Architecture of Kthulu applications.
+description: Understanding the Modular Monolith Architecture of Kthulu applications.
 ---
 
-
-Kthulu generates projects following **Hexagonal Architecture** (also known as Ports and Adapters). This ensures that your business logic is isolated from external concerns like databases or HTTP frameworks.
+Kthulu generates projects following **Modular Monolith Architecture** with Vertical Slices. This ensures that your business logic is organized by feature, not technical layer.
 
 ## Directory Layout
 
@@ -13,38 +12,40 @@ Kthulu generates projects following **Hexagonal Architecture** (also known as Po
 ├── cmd/
 │   └── server/          # Main application entry point
 ├── internal/
-│   ├── core/            # Domain logic (Ports)
+│   ├── modules/         # Vertical Slices (Feature Modules)
 │   │   ├── user/        # User module
+│   │   │   ├── api/     # HTTP Handlers
+│   │   │   ├── core/    # Domain & Services
+│   │   │   └── store/   # Data Persistence
 │   │   └── auth/        # Auth module
-│   ├── adapters/        # Implementation details (Adapters)
-│   │   ├── http/        # REST/gRPC handlers
-│   │   └── postgres/    # Database repositories
-│   └── infrastructure/  # Config, Logger, Metrics
-├── frontend/            # React/Vite application
+│   ├── views/           # GTH Frontend (Templ + HTMX)
+│   │   ├── layouts/     # Base and admin layouts
+│   │   ├── components/  # Reusable table, form, modal
+│   │   ├── pages/       # Full page templates
+│   │   └── partials/    # HTMX partial responses
+│   └── infrastructure/  # Config, Logger, Middleware
 └── kthulu-plan.yaml     # Project definition
 ```
 
-## Core (The Domain)
+## Modules (Vertical Slices)
 
-Located in `internal/core`, this is where your business rules live. It depends on nothing but the Go standard library.
+Located in `internal/modules`, each module contains all layers for a single feature:
 
-- **Entities**: Pure Go structs (e.g., `User`, `Order`).
-- **Ports**: Interfaces defining what the core needs (e.g., `UserRepository`, `EmailService`).
-- **Use Cases**: Application logic (e.g., `CreateUser`, `ProcessOrder`).
+- **api/**: HTTP handlers and DTOs
+- **core/**: Domain entities, interfaces, and business logic
+- **store/**: Database repository implementations
 
-## Adapters (The Infrastructure)
+## GTH Frontend
 
-Located in `internal/adapters`, these packages implement the interfaces defined in the Core.
+Located in `internal/views`, the frontend uses Go + Templ + HTMX:
 
-- **Primary Adapters**: Drive the application (e.g., HTTP Handlers, CLI commands).
-- **Secondary Adapters**: Driven by the application (e.g., Postgres implementation of `UserRepository`).
+- **layouts/**: Base HTML with HTMX CDN and CSS design system
+- **components/**: Reusable table, form, and modal components
+- **pages/**: Full CRUD pages for each module
+- **partials/**: HTML fragments for HTMX dynamic updates
+
+See [GTH Frontend Guide](./gth-frontend.md) for details.
 
 ## Dependency Injection
 
-Kthulu uses [Uber fx](https://uber-go.github.io/fx/) for dependency injection. Modules are wired together in `internal/infrastructure/container/container.go`.
-
-## Frontend
-
-The `frontend/` directory is a standard Vite application, but organized by feature modules to match the backend structure.
-
-- `frontend/src/modules/auth` matches `internal/core/auth`.
+Kthulu uses [Uber fx](https://uber-go.github.io/fx/) for dependency injection. Modules are wired together via providers in each module's `module.go` file.

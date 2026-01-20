@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-
 // MarketplaceItem represents a module, starter, or plugin
 type MarketplaceItem struct {
 	ID          string            `json:"id"`
@@ -57,7 +56,7 @@ func init() {
 	// List command flags
 	marketplaceListCmd.Flags().String("type", "", "Filter by type (starter, module, plugin)")
 	marketplaceListCmd.Flags().String("repo", "/Users/pelayo/projects/kthulu-go/registry", "Path to marketplace repository")
-	
+
 	// Install command flags
 	marketplaceInstallCmd.Flags().String("repo", "/Users/pelayo/projects/kthulu-go/registry", "Path to marketplace repository")
 
@@ -108,11 +107,11 @@ func installModule(item *MarketplaceItem) error {
 
 func installPlugin(item *MarketplaceItem) error {
 	fmt.Printf("🔌 Installing plugin '%s'...\n", item.Name)
-	
+
 	// 1. Check OS
 	// In real app use runtime.GOOS
 	currentOS := "darwin" // Hardcoded for demo environment
-	
+
 	downloadURL, ok := item.Install[currentOS]
 	if !ok {
 		return fmt.Errorf("plugin '%s' does not support OS '%s'", item.Name, currentOS)
@@ -131,9 +130,9 @@ func installPlugin(item *MarketplaceItem) error {
 
 	// 4. Write "Binary" (Mocked Script)
 	destPath := filepath.Join(pluginDir, "kthulu-"+item.ID) // e.g. kthulu-k8s-deploy
-    
-    // Create a dummy executable script that prints something
-    scriptContent := fmt.Sprintf(`#!/bin/sh
+
+	// Create a dummy executable script that prints something
+	scriptContent := fmt.Sprintf(`#!/bin/sh
 echo "🌊 Kthulu Plugin: %s executed!"
 echo "Args: $@"
 `, item.Name)
@@ -182,7 +181,6 @@ func runMarketplaceList(filterType, repoPath string) error {
 	return nil
 }
 
-
 func fetchMarketplaceItems(rootPath string) ([]MarketplaceItem, error) {
 	var items []MarketplaceItem
 	categories := []string{"starters", "modules", "plugins"}
@@ -198,13 +196,12 @@ func fetchMarketplaceItems(rootPath string) ([]MarketplaceItem, error) {
 	return items, nil
 }
 
-
 func scanCategoryItems(rootPath, category string) ([]MarketplaceItem, error) {
 	// Support scanning React 'public' folder if it exists
 	// This allows the same repo to host the Marketplace UI and the Data Registry
 	publicCatPath := filepath.Join(rootPath, "public", category)
 	var catPath string
-	
+
 	if _, err := os.Stat(publicCatPath); err == nil {
 		catPath = publicCatPath
 	} else {
@@ -234,7 +231,7 @@ func scanCategoryItems(rootPath, category string) ([]MarketplaceItem, error) {
 func parseMarketplaceItem(catPath, dirName, category string) MarketplaceItem {
 	itemPath := filepath.Join(catPath, dirName)
 	var item MarketplaceItem
-	
+
 	// Try reading metadata.json
 	metaData, err := os.ReadFile(filepath.Join(itemPath, "metadata.json"))
 	if err == nil {

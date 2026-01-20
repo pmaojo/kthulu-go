@@ -13,11 +13,11 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
+	"github.com/pmaojo/kthulu-go/cmd/kthulu/templates"
+	"github.com/pmaojo/kthulu-go/internal/adapters/cli/parser"
 	"github.com/pmaojo/kthulu-go/internal/blueprint"
 	"github.com/pmaojo/kthulu-go/internal/generator"
 	"github.com/pmaojo/kthulu-go/internal/resolver"
-	"github.com/pmaojo/kthulu-go/cmd/kthulu/templates"
-	"github.com/pmaojo/kthulu-go/internal/adapters/cli/parser"
 )
 
 const DefaultModulesPath = "internal/modules"
@@ -50,14 +50,14 @@ Examples:
   kthulu add module products name:string price:float
   kthulu add module reviews rating:int comment:string user:belongs_to:users
 `,
-	Args:  cobra.MinimumNArgs(1),
+	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		module := args[0]
 		fields := args[1:]
 		withIntegrations, _ := cmd.Flags().GetStringSlice("with")
 		compliance, _ := cmd.Flags().GetString("compliance")
 		force, _ := cmd.Flags().GetBool("force")
-	yes, _ := cmd.Flags().GetBool("yes")
+		yes, _ := cmd.Flags().GetBool("yes")
 		if os.Getenv("KTHULU_MCP_MODE") == "1" {
 			yes = true
 		}
@@ -232,7 +232,7 @@ func runAddAdmin() error {
 		OutputPath:    currentDir,
 		Frontend:      "templ",
 	}
-	
+
 	gen := generator.NewTemplateGenerator(nil)
 	gen.SetConfig(config)
 
@@ -252,7 +252,7 @@ func runAddAdmin() error {
 	if err := gen.WriteProject(structure); err != nil {
 		return fmt.Errorf("failed to write admin files: %w", err)
 	}
-	
+
 	fmt.Println("✅ Admin Dashboard added successfully!")
 	fmt.Println("👉 Check internal/views/ for GTH templates")
 	return nil
@@ -895,5 +895,3 @@ func displayModuleSuccessMessage(moduleName string, plan *resolver.ResolutionPla
 		}
 	}
 }
-
-

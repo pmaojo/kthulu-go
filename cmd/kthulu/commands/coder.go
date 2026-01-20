@@ -57,7 +57,7 @@ Controls:
 		if err := os.MkdirAll(crushConfigDir, 0755); err != nil {
 			return fmt.Errorf("failed to create crush config dir: %w", err)
 		}
-		
+
 		configPath := filepath.Join(crushConfigDir, "config.json")
 		if err := ensureCrushConfig(configPath); err != nil {
 			return fmt.Errorf("failed to configure crush: %w", err)
@@ -68,14 +68,14 @@ Controls:
 		// 4. Launch crush
 		// We set CWD to workingDir
 		crushCmd := exec.Command(crushPath, "-c", workingDir)
-		
+
 		// Inject Kthulu configuration by overriding XDG_CONFIG_HOME
 		// Crush looks for config in $XDG_CONFIG_HOME/crush/config.json (or similar)
 		// We map .kthulu to be the config home.
 		env := os.Environ()
 		env = append(env, fmt.Sprintf("XDG_CONFIG_HOME=%s", kthuluDir))
 		crushCmd.Env = env
-		
+
 		crushCmd.Stdin = os.Stdin
 		crushCmd.Stdout = os.Stdout
 		crushCmd.Stderr = os.Stderr

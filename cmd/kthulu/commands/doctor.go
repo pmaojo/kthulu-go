@@ -33,11 +33,11 @@ func init() {
 }
 
 type diagnosticCheck struct {
-	Category    string
-	Name        string
-	Run         func() (string, error) // Returns version/info string, or error
-	Remedy      string
-	Essential   bool
+	Category  string
+	Name      string
+	Run       func() (string, error) // Returns version/info string, or error
+	Remedy    string
+	Essential bool
 }
 
 func runDoctor(cmd *cobra.Command, args []string) {

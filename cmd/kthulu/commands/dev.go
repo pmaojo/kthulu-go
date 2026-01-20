@@ -64,7 +64,6 @@ func runDev() error {
 		cmd.Dir = currentDir
 		cmd.Env = append(os.Environ(), "GOWORK=off")
 
-		
 		mu.Lock()
 		backendCmd = cmd
 		mu.Unlock()
@@ -92,14 +91,14 @@ func runDev() error {
 			defer wg.Done()
 			cmd := exec.Command("npm", "run", "dev")
 			cmd.Dir = filepath.Join(currentDir, "frontend")
-			
+
 			mu.Lock()
 			frontendCmd = cmd
 			mu.Unlock()
-			
+
 			stdout, _ := cmd.StdoutPipe()
 			stderr, _ := cmd.StderrPipe()
-			
+
 			if err := cmd.Start(); err != nil {
 				fmt.Printf("❌ Frontend failed to start: %v\n", err)
 				return
@@ -124,7 +123,7 @@ func runDev() error {
 	fmt.Println("🚀 Services are running. Press Ctrl+C to stop.")
 	<-sigChan
 	fmt.Println("\n🛑 Shutting down...")
-	
+
 	mu.Lock()
 	if backendCmd != nil && backendCmd.Process != nil {
 		backendCmd.Process.Signal(syscall.SIGTERM)
@@ -141,13 +140,13 @@ func monitorOutput(r io.Reader, prefix string, isError bool, errChan chan string
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		line := scanner.Text()
-		
+
 		// Colorize output
 		color := "\033[36m" // Cyan for backend
 		if prefix == "FRONTEND" {
 			color = "\033[35m" // Magenta for frontend
 		}
-		
+
 		fmt.Printf("%s[%s] %s\033[0m\n", color, prefix, line)
 
 		if isError || strings.Contains(strings.ToLower(line), "panic") || strings.Contains(strings.ToLower(line), "error") {
@@ -165,9 +164,9 @@ func diagnoseError(logLine string) {
 	// Debounce or simple logic could go here
 	fmt.Println("\n🤖 \033[1;33mAI DOCTOR DETECTED AN ISSUE\033[0m")
 	fmt.Printf("   Error: %s\n", strings.TrimSpace(logLine))
-	
+
 	fmt.Println("   💡 \033[1;32mSuggested Fix:\033[0m")
-	
+
 	if strings.Contains(logLine, "panic: runtime error: invalid memory address") {
 		fmt.Println("      You are dereferencing a nil pointer.")
 		fmt.Println("      Check for uninitialized structs or unavailable services.")

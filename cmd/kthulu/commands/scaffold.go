@@ -10,8 +10,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/pmaojo/kthulu-go/internal/generator"
 	"github.com/pmaojo/kthulu-go/cmd/kthulu/templates"
+	"github.com/pmaojo/kthulu-go/internal/generator"
 )
 
 const goVersion = "1.24"

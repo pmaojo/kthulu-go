@@ -26,7 +26,7 @@ func init() {
 func createMigrationFile(name, content string) error {
 	// Robust detection of migrations directory
 	dir := "migrations"
-	
+
 	// Check if we are in the project root
 	if _, err := os.Stat("go.mod"); err == nil {
 		dir = "migrations"
