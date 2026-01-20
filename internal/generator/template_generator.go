@@ -57,6 +57,12 @@ const (
 	TmplGTHDashboard    = "scaffold/frontend/gth/pages/dashboard.templ.tmpl"
 	TmplGTHTableRows    = "scaffold/frontend/gth/partials/table_rows.templ.tmpl"
 	TmplLayerHandlerGTH = "scaffold/backend/layers/handler_gth.go.tmpl"
+
+	// Vercel Deployment Templates
+	TmplVercelAPIIndex    = "scaffold/vercel/api_index.go.tmpl"
+	TmplVercelConfig      = "scaffold/vercel/vercel.json.tmpl"
+	TmplVercelDBFactory   = "scaffold/vercel/database_factory.go.tmpl"
+	TmplVercelDBMigrate   = "scaffold/vercel/database_automigrate.go.tmpl"
 )
 
 // TemplateGenerator generates code templates based on dependency analysis
@@ -253,6 +259,13 @@ func (g *TemplateGenerator) GenerateProject(config *GeneratorConfig) (*ProjectSt
 	// Step 7: Generate build scripts
 	if err := g.generateBuildScripts(structure); err != nil {
 		return nil, fmt.Errorf("failed to generate build scripts: %w", err)
+	}
+
+	// Step 8: Generate Vercel deployment config (default: enabled)
+	if config.CustomValues["no_vercel"] != "true" {
+		if err := g.generateVercelConfig(structure); err != nil {
+			return nil, fmt.Errorf("failed to generate Vercel config: %w", err)
+		}
 	}
 
 	fmt.Printf("✅ Project generated successfully: %d files, %d directories\n",
@@ -987,6 +1000,62 @@ func (g *TemplateGenerator) generateBuildScripts(structure *ProjectStructure) er
 		Executable: true,
 	}
 	structure.Files = append(structure.Files, buildScript)
+
+	return nil
+}
+
+// generateVercelConfig generates Vercel deployment files
+func (g *TemplateGenerator) generateVercelConfig(structure *ProjectStructure) error {
+	fmt.Println("  ☁️  Setting up Vercel deployment...")
+
+	data := map[string]interface{}{
+		"ProjectName":   g.config.ProjectName,
+		"ProjectModule": g.modulePath(),
+	}
+
+	// Add api directory
+	structure.Directories = append(structure.Directories, "api")
+	structure.Directories = append(structure.Directories, "internal/infrastructure/database")
+
+	// Generate api/index.go (Vercel entrypoint)
+	apiContent, err := g.executeTemplate("vercel_api", TmplVercelAPIIndex, data)
+	if err != nil {
+		return fmt.Errorf("failed to generate api/index.go: %w", err)
+	}
+	structure.Files = append(structure.Files, GeneratedFile{
+		Path:    "api/index.go",
+		Content: apiContent,
+	})
+
+	// Generate vercel.json
+	vercelContent, err := g.executeTemplate("vercel_config", TmplVercelConfig, data)
+	if err != nil {
+		return fmt.Errorf("failed to generate vercel.json: %w", err)
+	}
+	structure.Files = append(structure.Files, GeneratedFile{
+		Path:    "vercel.json",
+		Content: vercelContent,
+	})
+
+	// Generate database factory
+	dbFactoryContent, err := g.executeTemplate("db_factory", TmplVercelDBFactory, data)
+	if err != nil {
+		return fmt.Errorf("failed to generate database factory: %w", err)
+	}
+	structure.Files = append(structure.Files, GeneratedFile{
+		Path:    "internal/infrastructure/database/factory.go",
+		Content: dbFactoryContent,
+	})
+
+	// Generate auto-migrate
+	dbMigrateContent, err := g.executeTemplate("db_migrate", TmplVercelDBMigrate, data)
+	if err != nil {
+		return fmt.Errorf("failed to generate auto-migrate: %w", err)
+	}
+	structure.Files = append(structure.Files, GeneratedFile{
+		Path:    "internal/infrastructure/database/automigrate.go",
+		Content: dbMigrateContent,
+	})
 
 	return nil
 }

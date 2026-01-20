@@ -142,6 +142,7 @@ var (
 	newModulePath      string
 	newEnterprise      bool
 	newObservability   bool
+	newNoVercel        bool
 	newOutputPath      string
 	newDryRun          bool
 	newInteractive     bool
@@ -164,6 +165,7 @@ func init() {
 	newCmd.Flags().StringVar(&newModulePath, "module-path", "", "Go module path (default: project name)")
 	newCmd.Flags().BoolVar(&newEnterprise, "enterprise", false, "Enable enterprise features")
 	newCmd.Flags().BoolVar(&newObservability, "observability", false, "Enable observability stack")
+	newCmd.Flags().BoolVar(&newNoVercel, "no-vercel", false, "Skip Vercel deployment files")
 	newCmd.Flags().StringVarP(&newOutputPath, "output", "o", "", "Output directory (default: current directory)")
 	newCmd.Flags().BoolVar(&newDryRun, "dry-run", false, "Show what would be generated without creating files")
 	newCmd.Flags().BoolVar(&newInteractive, "interactive", false, "Interactive project configuration")
@@ -405,6 +407,10 @@ func buildProjectConfig(projectName string) (*generator.GeneratorConfig, error) 
 
 	if newModulePath != "" {
 		config.CustomValues["module_path"] = newModulePath
+	}
+
+	if newNoVercel {
+		config.CustomValues["no_vercel"] = "true"
 	}
 
 	// Override with command flags
