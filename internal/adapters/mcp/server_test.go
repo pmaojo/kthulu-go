@@ -47,7 +47,7 @@ func TestServerBuilderBuildServer(t *testing.T) {
 	// 7. list_features (bdd)
 	// 8. read_feature (bdd)
 	// 9. run_scenario (bdd)
-	require.Equal(t, 9, len(instance.Tools))
+	require.Equal(t, 13, len(instance.Tools))
 }
 
 func TestBuildTransportHTTP(t *testing.T) {

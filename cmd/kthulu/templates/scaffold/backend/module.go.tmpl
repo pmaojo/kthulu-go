@@ -4,7 +4,6 @@ package {{.Name}}
 
 import (
 	"go.uber.org/fx"
-	"github.com/gorilla/mux"
 
 	"{{.ProjectModule}}/{{.ModuleRelPath}}/{{.Name}}/api"
 	"{{.ProjectModule}}/{{.ModuleRelPath}}/{{.Name}}/store"
@@ -19,8 +18,5 @@ func Providers() fx.Option {
                         core.New{{.Title}}Service,
                         api.New{{.Title}}Handler,
                 ),
-                fx.Invoke(func(r *mux.Router, h *api.{{.Title}}Handler) {
-                        h.RegisterRoutes(r)
-                }),
         )
 }

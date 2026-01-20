@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=localhost
+      - DB_PORT=0
+      - DB_NAME=todo-gth
+      - DB_USER=admin
+      - DB_PASSWORD=password
+    networks:
+      - todo-gth-network
+
+
+volumes:
+  todo-gth-data:
+
+networks:
+  todo-gth-network:
+    driver: bridge

@@ -24,6 +24,17 @@ const (
 	TmplDockerfile    = "Dockerfile.tmpl"
 	TmplBuildScript   = "build.sh.tmpl"
 
+	// Common constants
+	FieldNameString         = "name:string"
+	PathAdaptersHttpModules = "internal/adapters/http/modules"
+
+	// File paths
+	FileGoMod    = "go.mod"
+	FileReadme   = "README.md"
+
+	// Error format
+	ErrGenerateFmt = "failed to generate %s: %w"
+
 	// Go Source Templates
 	TmplMainTest      = "scaffold/backend/project/main_test.go.tmpl"
 	TmplMigrateMain   = "scaffold/backend/project/migrate_main.go.tmpl"
@@ -41,6 +52,16 @@ const (
 	TmplLayerStore   = "scaffold/backend/layers/store.go.tmpl"
 	TmplMigration    = "scaffold/backend/migration.sql.tmpl"
 
+	// Infrastructure Templates
+	TmplInfraRecovery   = "scaffold/backend/internal/infrastructure/middleware/recovery.go.tmpl"
+	TmplInfraMiddleware = "scaffold/backend/internal/infrastructure/middleware/middleware.go.tmpl"
+	TmplInfraLogger     = "scaffold/backend/internal/infrastructure/observability/logger.go.tmpl"
+	TmplInfraMetrics    = "scaffold/backend/internal/infrastructure/observability/metrics.go.tmpl"
+	TmplInfraServer     = "scaffold/backend/internal/infrastructure/server/server.go.tmpl"
+	TmplInfraStaticFS   = "scaffold/backend/internal/infrastructure/static/fs.go.tmpl"
+	TmplInfraConfig     = "scaffold/backend/internal/infrastructure/config/config.go.tmpl"
+	TmplBootstrapApp    = "scaffold/backend/internal/bootstrap/app.go.tmpl"
+
 	// Test Templates
 	TmplModuleTest  = "scaffold/backend/layers/module_providers_test.go.tmpl"
 	TmplRepoTest    = "scaffold/backend/layers/repository_test.go.tmpl"
@@ -57,6 +78,9 @@ const (
 	TmplGTHDashboard    = "scaffold/frontend/gth/pages/dashboard.templ.tmpl"
 	TmplGTHTableRows    = "scaffold/frontend/gth/partials/table_rows.templ.tmpl"
 	TmplLayerHandlerGTH = "scaffold/backend/layers/handler_gth.go.tmpl"
+	TmplGTHRoutes       = "scaffold/frontend/gth/routes_gth.go.tmpl"
+	TmplGTHShared       = "scaffold/frontend/gth/components/shared.go.tmpl"
+	TmplGTHLandingPage  = "scaffold/frontend/gth/pages/landing.templ.tmpl"
 
 	// Vercel Deployment Templates
 	TmplVercelAPIIndex    = "scaffold/vercel/api_index.go.tmpl"
@@ -235,7 +259,36 @@ func (g *TemplateGenerator) GenerateProject(config *GeneratorConfig) (*ProjectSt
 		return nil, fmt.Errorf("failed to generate structure: %w", errGen)
 	}
 
-	// Step 4: Generate module files (only for server templates)
+	// Step 4: Ensure default fields for GTH and Backend consistency
+	for _, feature := range config.Features {
+		if feature == "auth" || feature == "user" || feature == "organization" {
+			continue
+		}
+		if len(config.ModuleFields[feature]) == 0 {
+	        if config.ModuleFields == nil {
+				config.ModuleFields = make(map[string][]string)
+			}
+			
+			switch feature {
+			case "product":
+				config.ModuleFields[feature] = []string{FieldNameString, "sku:string", "price:int", "description:text", "stock:int"}
+			case "contact":
+				config.ModuleFields[feature] = []string{FieldNameString, "email:string", "phone:string", "company:string"}
+			case "calendar":
+				config.ModuleFields[feature] = []string{FieldNameString, "start_time:string", "end_time:string", "location:string"}
+			case "inventory":
+				config.ModuleFields[feature] = []string{"product_id:int", "quantity:int", "warehouse:string"}
+			case "invoice":
+				config.ModuleFields[feature] = []string{"customer_id:int", "amount:int", "status:string", "due_date:string"}
+			case "verifactu":
+				config.ModuleFields[feature] = []string{"invoice_id:int", "status:string", "fiscal_data:text"}
+			default:
+				config.ModuleFields[feature] = []string{FieldNameString}
+			}
+		}
+	}
+
+	// Step 4.1: Generate module files (only for server templates)
 	if config.TemplateType == "server" || config.TemplateType == "" {
 		for _, module := range plan.InstallOrder {
 			if err := g.generateModuleFiles(module, structure); err != nil {
@@ -303,7 +356,16 @@ func (g *TemplateGenerator) generateBaseStructure(structure *ProjectStructure) e
 		"internal/infrastructure/static",
 		"internal/infrastructure/static/dist",
 		"internal/infrastructure/config",
+		"internal/bootstrap",
 	)
+
+	// Generate bootstrap/app.go
+	bootstrapFile := GeneratedFile{
+		Path:    "internal/bootstrap/app.go",
+		Content: g.generateBootstrapApp(),
+	}
+	structure.Files = append(structure.Files, bootstrapFile)
+
 
 	// Generate main.go
 	mainFile := GeneratedFile{
@@ -322,7 +384,7 @@ func (g *TemplateGenerator) generateBaseStructure(structure *ProjectStructure) e
 
 	// Generate go.mod
 	goModFile := GeneratedFile{
-		Path:     "go.mod",
+		Path:     FileGoMod,
 		Template: "go.mod.tmpl",
 		Content:  g.generateGoMod(),
 	}
@@ -330,7 +392,7 @@ func (g *TemplateGenerator) generateBaseStructure(structure *ProjectStructure) e
 
 	// Generate README.md
 	readmeFile := GeneratedFile{
-		Path:     "README.md",
+		Path:     FileReadme,
 		Template: "README.md.tmpl",
 		Content:  g.generateReadme(),
 	}
@@ -350,13 +412,13 @@ func (g *TemplateGenerator) generateBaseStructure(structure *ProjectStructure) e
 
 	// Generate Infrastructure Files
 	infraFiles := map[string]string{
-		"internal/infrastructure/middleware/recovery.go":   "backend/internal/infrastructure/middleware/recovery.go.tmpl",
-		"internal/infrastructure/middleware/middleware.go": "backend/internal/infrastructure/middleware/middleware.go.tmpl",
-		"internal/infrastructure/observability/logger.go":  "backend/internal/infrastructure/observability/logger.go.tmpl",
-		"internal/infrastructure/observability/metrics.go": "backend/internal/infrastructure/observability/metrics.go.tmpl",
-		"internal/infrastructure/server/server.go":         "scaffold/backend/internal/infrastructure/server/server.go.tmpl",
-		"internal/infrastructure/static/fs.go":             "scaffold/backend/internal/infrastructure/static/fs.go.tmpl",
-		"internal/infrastructure/config/config.go":         "scaffold/backend/internal/infrastructure/config/config.go.tmpl",
+		"internal/infrastructure/middleware/recovery.go":   TmplInfraRecovery,
+		"internal/infrastructure/middleware/middleware.go": TmplInfraMiddleware,
+		"internal/infrastructure/observability/logger.go":  TmplInfraLogger,
+		"internal/infrastructure/observability/metrics.go": TmplInfraMetrics,
+		"internal/infrastructure/server/server.go":         TmplInfraServer,
+		"internal/infrastructure/static/fs.go":             TmplInfraStaticFS,
+		"internal/infrastructure/config/config.go":         TmplInfraConfig,
 	}
 
 	// Generate placeholder static file to prevent go:embed error
@@ -370,7 +432,7 @@ func (g *TemplateGenerator) generateBaseStructure(structure *ProjectStructure) e
 			"ModuleName": g.modulePath(),
 		})
 		if err != nil {
-			return fmt.Errorf("failed to generate %s: %w", path, err)
+			return fmt.Errorf(ErrGenerateFmt, path, err)
 		}
 		structure.Files = append(structure.Files, GeneratedFile{
 			Path:    path,
@@ -404,7 +466,7 @@ func (g *TemplateGenerator) generateModuleFiles(moduleName string, structure *Pr
 
 	// Generate module files using GenerateBackendModule to ensure consistency
 	fields := g.config.ModuleFields[moduleName]
-	files, migrationContent, err := g.GenerateBackendModule(moduleName, fields, relPath, "", false)
+	files, migrationContent, err := g.GenerateBackendModule(moduleName, fields, relPath, ToKebabCase(moduleName), false)
 	if err != nil {
 		return err
 	}
@@ -447,16 +509,34 @@ func (g *TemplateGenerator) generateModuleFiles(moduleName string, structure *Pr
 
 // generateMainFile generates the main.go file
 // generateMainFile generates the main.go file
-func (g *TemplateGenerator) generateMainFile() string {
+// generateBootstrapApp generates the bootstrap/app.go file
+func (g *TemplateGenerator) generateBootstrapApp() string {
 	coreImport := g.moduleImportPath("internal/core")
 	data := map[string]interface{}{
-		"ProjectName":     g.config.ProjectName,
-		"Features":        strings.Join(g.config.Features, ","),
+		"ProjectModule":   g.modulePath(),
 		"CoreImport":      coreImport,
 		"ModuleImports":   g.generateModuleImports(),
 		"ModuleProviders": g.generateModuleProviders(),
 		"InvokeParams":    g.generateInvokeParams(),
 		"ModuleRoutes":    g.generateModuleRoutes(),
+		"GTHEnabled":      g.config.Frontend != "none",
+		"FeatureList":     g.config.Features,
+	}
+
+	content, err := g.executeTemplate("bootstrap_app", TmplBootstrapApp, data)
+	if err != nil {
+		fmt.Printf("⚠️  Error generating bootstrap/app.go: %v\n", err)
+		return ""
+	}
+	return content
+}
+
+// generateMainFile generates the main.go file
+func (g *TemplateGenerator) generateMainFile() string {
+	data := map[string]interface{}{
+		"ProjectName":   g.config.ProjectName,
+		"Features":      strings.Join(g.config.Features, ","),
+		"ProjectModule": g.modulePath(),
 	}
 
 	content, err := g.executeTemplate("main", "scaffold/backend/project/main.go.tmpl", data)
@@ -467,7 +547,7 @@ func (g *TemplateGenerator) generateMainFile() string {
 	return content
 }
 
-// generateGoMod generates the go.mod file
+
 // generateGoMod generates the go.mod file
 func (g *TemplateGenerator) generateGoMod() string {
 	modulePath := g.modulePath()
@@ -490,8 +570,10 @@ func (g *TemplateGenerator) generateGoMod() string {
 	addDep("gorm.io/gorm v1.25.5")
 	addDep(fmt.Sprintf("gorm.io/driver/%s v1.5.4", g.config.Database))
 	addDep("gorm.io/driver/sqlite v1.5.4")
+	addDep("gorm.io/driver/postgres v1.5.4") // For Vercel/Neon
 	addDep("github.com/golang-jwt/jwt/v5 v5.2.0")
 	addDep("github.com/pressly/goose/v3 v3.24.3")
+	addDep("github.com/a-h/templ v0.2.793") // GTH frontend
 
 	if extra := strings.Split(strings.TrimSpace(g.generateDependencies()), "\n"); len(extra) > 0 {
 		for _, dep := range extra {
@@ -512,7 +594,6 @@ func (g *TemplateGenerator) generateGoMod() string {
 	return content
 }
 
-// generateReadme generates the README.md file
 // generateReadme generates the README.md file
 func (g *TemplateGenerator) generateReadme() string {
 	data := map[string]interface{}{
@@ -662,7 +743,7 @@ func (g *TemplateGenerator) generateFeatureList() string {
 // getModuleRelPath returns the relative path for modules based on configuration
 func (g *TemplateGenerator) getModuleRelPath() string {
 	if g.config.Enterprise {
-		return "internal/adapters/http/modules"
+		return PathAdaptersHttpModules
 	}
 	return "internal/modules"
 }
@@ -804,7 +885,7 @@ func (g *TemplateGenerator) GenerateBackendModule(moduleName string, fields []st
 	for relPath, tmplPath := range layers {
 		content, err := g.executeTemplate(relPath, tmplPath, data)
 		if err != nil {
-			return nil, "", fmt.Errorf("failed to generate %s: %w", relPath, err)
+			return nil, "", fmt.Errorf(ErrGenerateFmt, relPath, err)
 		}
 		files[relPath] = content
 	}
@@ -828,7 +909,9 @@ func (g *TemplateGenerator) generateGTHFrontend(structure *ProjectStructure) err
 		"internal/views/components",
 		"internal/views/pages",
 		"internal/views/partials",
+		"internal/adapters/http/gth",
 	}
+
 	structure.Directories = append(structure.Directories, dirs...)
 
 	// Generate base layouts
@@ -858,6 +941,16 @@ func (g *TemplateGenerator) generateGTHFrontend(structure *ProjectStructure) err
 		Content: adminContent,
 	})
 
+	// Landing Page
+	landingContent, err := g.executeTemplate("gth_landing", TmplGTHLandingPage, layoutData)
+	if err != nil {
+		return fmt.Errorf("failed to generate landing page: %w", err)
+	}
+	structure.Files = append(structure.Files, GeneratedFile{
+		Path:    "internal/views/pages/landing.templ",
+		Content: landingContent,
+	})
+
 	// Modal component (shared)
 	modalContent, err := g.executeTemplate("gth_modal", TmplGTHModal, layoutData)
 	if err != nil {
@@ -878,6 +971,27 @@ func (g *TemplateGenerator) generateGTHFrontend(structure *ProjectStructure) err
 		Content: dashContent,
 	})
 
+	// Shared components
+	sharedContent, err := g.executeTemplate("gth_shared", TmplGTHShared, layoutData)
+	if err != nil {
+		return fmt.Errorf("failed to generate shared components: %w", err)
+	}
+	structure.Files = append(structure.Files, GeneratedFile{
+		Path:    "internal/views/components/shared.go",
+		Content: sharedContent,
+	})
+
+	// GTH routes file (in adapters)
+	routesContent, err := g.executeTemplate("gth_routes", TmplGTHRoutes, layoutData)
+	if err != nil {
+		return fmt.Errorf("failed to generate GTH routes: %w", err)
+	}
+	structure.Files = append(structure.Files, GeneratedFile{
+		Path:    "internal/adapters/http/gth/routes.go",
+		Content: routesContent,
+	})
+
+
 	// Generate module-specific views
 	for _, feature := range g.config.Features {
 		if feature == "auth" || feature == "users" {
@@ -885,9 +999,6 @@ func (g *TemplateGenerator) generateGTHFrontend(structure *ProjectStructure) err
 		}
 
 		fields := g.config.ModuleFields[feature]
-		if len(fields) == 0 {
-			fields = []string{"name:string"}
-		}
 
 		if err := g.GenerateGTHModule(feature, fields, structure); err != nil {
 			return fmt.Errorf("failed to generate GTH module for %s: %w", feature, err)
@@ -925,7 +1036,7 @@ func (g *TemplateGenerator) GenerateGTHModule(moduleName string, fields []string
 	for filePath, tmplPath := range templates {
 		content, err := g.executeTemplate(filePath, tmplPath, data)
 		if err != nil {
-			return fmt.Errorf("failed to generate %s: %w", filePath, err)
+			return fmt.Errorf(ErrGenerateFmt, filePath, err)
 		}
 		structure.Files = append(structure.Files, GeneratedFile{
 			Path:    filePath,
@@ -1139,7 +1250,7 @@ func (g *TemplateGenerator) generateRepositoryTestFile(name string) string {
 	data := map[string]interface{}{
 		"Name":         name,
 		"Title":        Capitalize(inflection.Singular(name)),
-		"DomainImport": g.moduleImportPath("internal/adapters/http/modules", name, "domain"),
+		"DomainImport": g.moduleImportPath(PathAdaptersHttpModules, name, "domain"),
 	}
 
 	content, err := g.executeTemplate("repository_test", TmplRepoTest, data)
@@ -1155,7 +1266,7 @@ func (g *TemplateGenerator) generateServiceTestFile(name string) string {
 		"Name":         name,
 		"Title":        Capitalize(inflection.Singular(name)),
 		"PluralTitle":  Pluralize(Capitalize(name)),
-		"DomainImport": g.moduleImportPath("internal/adapters/http/modules", name, "domain"),
+		"DomainImport": g.moduleImportPath(PathAdaptersHttpModules, name, "domain"),
 	}
 
 	content, err := g.executeTemplate("service_test", "scaffold/backend/layers/service_test.go.tmpl", data)
@@ -1171,7 +1282,7 @@ func (g *TemplateGenerator) generateHandlerTestFile(name string) string {
 		"Name":         name,
 		"Title":        Capitalize(inflection.Singular(name)),
 		"PluralTitle":  Pluralize(Capitalize(name)),
-		"DomainImport": g.moduleImportPath("internal/adapters/http/modules", name, "domain"),
+		"DomainImport": g.moduleImportPath(PathAdaptersHttpModules, name, "domain"),
 	}
 
 	content, err := g.executeTemplate("handler_test", "scaffold/backend/layers/handler_test.go.tmpl", data)
@@ -1269,70 +1380,27 @@ func (g *TemplateGenerator) ResultRegisterFrontendNavigation(title, name, rootPa
 }
 
 func (g *TemplateGenerator) generateCLIStructure(structure *ProjectStructure) error {
-	structure.Directories = append(structure.Directories, "cmd/"+g.config.ProjectName, "internal/cli")
-
-	// main.go
 	structure.Files = append(structure.Files, GeneratedFile{
-		Path:     "cmd/" + g.config.ProjectName + "/main.go",
-		Template: "cli_main",
-		Content:  g.generateCLIMain(),
-	})
-
-	// root.go
-	structure.Files = append(structure.Files, GeneratedFile{
-		Path:     "internal/cli/root.go",
-		Template: "cli_root",
-		Content:  g.generateCLIRoot(),
-	})
-
-	// go.mod
-	structure.Files = append(structure.Files, GeneratedFile{
-		Path:     "go.mod",
-		Template: "cli_gomod",
-		Content:  g.generateCLIGoMod(),
-	})
-
-	// README.md
-	structure.Files = append(structure.Files, GeneratedFile{
-		Path:     "README.md",
-		Template: "readme",
-		Content:  g.generateReadme(),
+		Path:    FileReadme,
+		Content: g.generateReadme(),
 	})
 
 	return nil
 }
 
 func (g *TemplateGenerator) generateMCPStructure(structure *ProjectStructure) error {
-	structure.Directories = append(structure.Directories, "cmd/"+g.config.ProjectName, "internal/tools")
-
-	// main.go
 	structure.Files = append(structure.Files, GeneratedFile{
-		Path:     "cmd/" + g.config.ProjectName + "/main.go",
-		Template: "mcp_main",
-		Content:  g.generateMCPMain(),
+		Path:    FileGoMod,
+		Content: g.generateMCPGoMod(),
 	})
-
-	// tools.go
 	structure.Files = append(structure.Files, GeneratedFile{
-		Path:     "internal/tools/tools.go",
-		Template: "mcp_tools",
-		Content:  g.generateMCPTools(),
+		Path:    "main.go",
+		Content: g.generateMCPMain(),
 	})
-
-	// go.mod
 	structure.Files = append(structure.Files, GeneratedFile{
-		Path:     "go.mod",
-		Template: "mcp_gomod",
-		Content:  g.generateMCPGoMod(),
+		Path:    "tools.go",
+		Content: g.generateMCPTools(),
 	})
-
-	// README.md
-	structure.Files = append(structure.Files, GeneratedFile{
-		Path:     "README.md",
-		Template: "readme",
-		Content:  g.generateReadme(),
-	})
-
 	return nil
 }
 

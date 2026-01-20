@@ -1,0 +1,105 @@
+package components
+
+import (
+	"strconv"
+	"kitchen-sink-test/internal/modules/contact/core"
+)
+
+templ ContactForm(item *core.Contact, isEdit bool) {
+	<form 
+		if isEdit {
+			hx-put={ "/api/v1/contact/" + strconv.FormatUint(uint64(item.ID), 10) }
+		} else {
+			hx-post="/api/v1/contact/"
+		}
+		hx-target="#modal-container"
+		hx-swap="none"
+		hx-ext="json-enc"
+		hx-on::after-request="if(event.detail.successful) { htmx.trigger('#table-body', 'refresh'); document.getElementById('modal-container').innerHTML = ''; }"
+	>
+		<div class="modal-header">
+			if isEdit {
+				Edit Contact
+			} else {
+				Create Contact
+			}
+		</div>
+		
+		<div class="modal-body" style="display: flex; flex-direction: column; gap: 1rem;">
+			
+			<div>
+				<label class="label" for="name">Name</label>
+				
+				<input 
+					type="text" 
+					id="name" 
+					name="name" 
+					class="input"
+					value={ item.Name }
+				/>
+				
+			</div>
+			
+			<div>
+				<label class="label" for="email">Email</label>
+				
+				<input 
+					type="text" 
+					id="email" 
+					name="email" 
+					class="input"
+					value={ item.Email }
+				/>
+				
+			</div>
+			
+			<div>
+				<label class="label" for="phone">Phone</label>
+				
+				<input 
+					type="text" 
+					id="phone" 
+					name="phone" 
+					class="input"
+					value={ item.Phone }
+				/>
+				
+			</div>
+			
+			<div>
+				<label class="label" for="company">Company</label>
+				
+				<input 
+					type="text" 
+					id="company" 
+					name="company" 
+					class="input"
+					value={ item.Company }
+				/>
+				
+			</div>
+			
+		</div>
+		
+		<div class="modal-footer">
+			<button type="button" class="btn btn-ghost" onclick="document.getElementById('modal-container').innerHTML = ''">
+				Cancel
+			</button>
+			<button type="submit" class="btn btn-primary">
+				if isEdit {
+					Update
+				} else {
+					Create
+				}
+			</button>
+		</div>
+	</form>
+}
+
+templ ContactFormModal(item *core.Contact, isEdit bool) {
+	<div class="modal-backdrop" onclick="if(event.target === this) this.remove()">
+		<div class="modal">
+			@ContactForm(item, isEdit)
+		</div>
+	</div>
+}

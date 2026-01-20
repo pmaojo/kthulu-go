@@ -181,12 +181,7 @@ func (p *OpenAIProvider) SetBaseURL(url string) {
 	p.baseURL = url
 }
 
-// SetHeaders sets additional headers for requests
+// SetHeaders sets additional headers for requests (e.g., OpenRouter requires HTTP-Referer)
 func (p *OpenAIProvider) SetHeaders(headers map[string]string) {
-    // We need to store headers in the struct to use them in GenerateText
-    // But struct doesn't have headers field yet.
-    // I need to add it to struct definition too.
-    // Wait, replacing ONLY method block won't work if I rely on new struct field.
-    // I should probably just hardcode OpenRouter headers if URL is OpenRouter?
-    // Or add headers field to struct.
+	p.headers = headers
 }

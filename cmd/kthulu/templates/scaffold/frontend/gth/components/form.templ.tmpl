@@ -10,12 +10,13 @@ import (
 templ {{.Title}}Form(item *core.{{.Title}}, isEdit bool) {
 	<form 
 		if isEdit {
-			hx-put={ "/api/{{.RoutePrefix}}/" + strconv.FormatUint(uint64(item.ID), 10) }
+			hx-put={ "/api/v1/{{.RoutePrefix}}/" + strconv.FormatUint(uint64(item.ID), 10) }
 		} else {
-			hx-post="/api/{{.RoutePrefix}}"
+			hx-post="/api/v1/{{.RoutePrefix}}/"
 		}
 		hx-target="#modal-container"
-		hx-swap="innerHTML"
+		hx-swap="none"
+		hx-ext="json-enc"
 		hx-on::after-request="if(event.detail.successful) { htmx.trigger('#table-body', 'refresh'); document.getElementById('modal-container').innerHTML = ''; }"
 	>
 		<div class="modal-header">

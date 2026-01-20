@@ -45,7 +45,7 @@ func (p *EntityParser) ParseFile(filePath string) ([]EntityDefinition, error) {
 		}
 
 		// Check if it's an entity (heuristic: has ID or specific tags)
-		if p.isEntity(structType, typeSpec.Name.Name) {
+		if p.isEntity(structType, typeSpec.Name.Name, typeSpec.Doc) {
 			entity := p.parseEntity(typeSpec.Name.Name, structType)
 			entities = append(entities, entity)
 		}
@@ -57,8 +57,17 @@ func (p *EntityParser) ParseFile(filePath string) ([]EntityDefinition, error) {
 }
 
 // isEntity determines if a struct is an entity worth generating an admin UI for
-func (p *EntityParser) isEntity(structType *ast.StructType, name string) bool {
-	// Heuristic 1: Has an "ID" field
+func (p *EntityParser) isEntity(structType *ast.StructType, name string, doc *ast.CommentGroup) bool {
+	// Heuristic 1: explicitly tagged with @kthulu:entity or @kthulu:domain
+	if doc != nil {
+		for _, comment := range doc.List {
+			if strings.Contains(comment.Text, "@kthulu:entity") || strings.Contains(comment.Text, "@kthulu:domain") {
+				return true
+			}
+		}
+	}
+
+	// Heuristic 2: Has an "ID" field
 	for _, field := range structType.Fields.List {
 		for _, name := range field.Names {
 			if name.Name == "ID" {
@@ -67,8 +76,6 @@ func (p *EntityParser) isEntity(structType *ast.StructType, name string) bool {
 		}
 	}
 
-	// TODO: Check for doc comments / tags once we have access to the full comment map
-	// For now, implicit check based on ID is a good start for the MVP
 	return false
 }
 
@@ -78,51 +85,49 @@ func (p *EntityParser) parseEntity(name string, structType *ast.StructType) Enti
 	}
 
 	for _, field := range structType.Fields.List {
-		// Handle embedded fields or multiple names
 		if len(field.Names) == 0 {
-			// Embedded field (e.g. generic.Model)
-			// For now, skip or handle basic cases if needed.
-			// Real-world entities in Kthulu seem to have explicit ID fields.
 			continue
 		}
 
 		for _, fieldName := range field.Names {
-			def := FieldDefinition{
-				Name: fieldName.Name,
-				Type: p.extractType(field.Type),
-			}
-
-			if field.Tag != nil {
-				// Strip backticks
-				tagValue := strings.Trim(field.Tag.Value, "`")
-				tags := reflect.StructTag(tagValue)
-
-				// Parse JSON tag
-				if jsonTag := tags.Get("json"); jsonTag != "" {
-					parts := strings.Split(jsonTag, ",")
-					def.JSONName = parts[0]
-				}
-
-				// Parse Validate tag
-				if validateTag := tags.Get("validate"); validateTag != "" {
-					def.ValidationRules = p.parseValidation(validateTag)
-				}
-			}
-
-			// Detect relationships
-			if p.isSliceOfStructs(field.Type) {
-				def.IsRelation = true
-				def.RelationType = "HasMany" // Simplified
-			} else if p.isStructPointer(field.Type) {
-				def.IsRelation = true
-				def.RelationType = "BelongsTo" // Simplified
-			}
-
+			def := p.parseField(fieldName.Name, field)
 			entity.Fields = append(entity.Fields, def)
 		}
 	}
 
 	return entity
+}
+
+func (p *EntityParser) parseField(name string, field *ast.Field) FieldDefinition {
+	def := FieldDefinition{
+		Name: name,
+		Type: p.extractType(field.Type),
+	}
+
+	if field.Tag != nil {
+		tagValue := strings.Trim(field.Tag.Value, "`")
+		tags := reflect.StructTag(tagValue)
+
+		if jsonTag := tags.Get("json"); jsonTag != "" {
+			parts := strings.Split(jsonTag, ",")
+			def.JSONName = parts[0]
+		}
+
+		if validateTag := tags.Get("validate"); validateTag != "" {
+			def.ValidationRules = p.parseValidation(validateTag)
+		}
+	}
+
+	// Detect relationships
+	if p.isSliceOfStructs(field.Type) {
+		def.IsRelation = true
+		def.RelationType = "HasMany"
+	} else if p.isStructPointer(field.Type) {
+		def.IsRelation = true
+		def.RelationType = "BelongsTo"
+	}
+
+	return def
 }
 
 func (p *EntityParser) extractType(expr ast.Expr) string {

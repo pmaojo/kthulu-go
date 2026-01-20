@@ -60,7 +60,15 @@ func runDev() error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		cmd := exec.Command("go", "run", "cmd/server/main.go")
+
+		// Run templ generate before starting
+		if _, err := os.Stat(filepath.Join(currentDir, "internal", "views")); err == nil {
+			if err := runTemplGenerate(currentDir); err != nil {
+				fmt.Printf("⚠️  Templ generation failed: %v\n", err)
+			}
+		}
+
+		cmd := exec.Command("go", "run", "./cmd/server")
 		cmd.Dir = currentDir
 		cmd.Env = append(os.Environ(), "GOWORK=off")
 

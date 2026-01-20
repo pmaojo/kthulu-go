@@ -1,0 +1,54 @@
+package bootstrap
+
+import (
+	"net/http"
+	
+	"github.com/gorilla/mux"
+	"go.uber.org/fx"
+
+	"{{.CoreImport}}"
+{{.ModuleImports}}
+{{if .GTHEnabled}}
+	"{{.ProjectModule}}/internal/views"
+	"{{.ProjectModule}}/internal/adapters/http/gth"
+{{end}}
+)
+
+// AppOptions returns the common Fx options for the application
+func AppOptions() []fx.Option {
+	return []fx.Option{
+		// Core providers
+		core.CoreRepositoryProviders(),
+		fx.Provide(NewRouter),
+
+		// Module providers
+{{.ModuleProviders}}
+
+		// Route Registration
+		fx.Invoke(RegisterRoutes),
+	}
+}
+
+// RegisterRoutes registers all application routes
+func RegisterRoutes(router *mux.Router, {{.InvokeParams}}) {
+{{if .GTHEnabled}}
+	// Register GTH (HTML) web routes
+	gth.RegisterRoutes(router, {{range .FeatureList}}{{if ne . "auth"}}{{.}}Service, {{end}}{{end}})
+{{end}}
+	// Register API routes
+	apiRouter := router.PathPrefix("/api/v1").Subrouter()
+
+{{.ModuleRoutes}}
+}
+
+// NewRouter creates a new mux router with health check
+func NewRouter() *mux.Router {
+	router := mux.NewRouter()
+
+	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("OK"))
+	})
+
+	return router
+}

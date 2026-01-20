@@ -92,21 +92,13 @@ var migrateValidateCmd = &cobra.Command{
 	Use:   "validate",
 	Short: "Validate all migrations are correct",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := core.NewConfig()
-		if err != nil {
-			return err
-		}
-		l, err := core.NewLogger(cfg)
-		if err != nil {
-			return err
-		}
-		defer l.Sync()
-		logger := core.GetZapLogger(l)
-		if err := core.ValidateMigrations(logger); err != nil {
-			return err
-		}
-		fmt.Println("All migrations are valid")
-		return nil
+		return withDB(func(db *sql.DB, logger *zap.Logger) error {
+			if err := core.ValidateMigrations(db, logger); err != nil {
+				return err
+			}
+			fmt.Println("All migrations are valid")
+			return nil
+		})
 	},
 }
 

@@ -2,13 +2,11 @@
 {{- /* Reusable Table Component */ -}}
 package components
 
-import "{{.ProjectModule}}/internal/modules/{{.Name}}/core"
+import (
+	"{{.ProjectModule}}/internal/modules/{{.Name}}/core"
+	"{{.ProjectModule}}/internal/views/partials"
+)
 
-type TableColumn struct {
-	Key      string
-	Label    string
-	Sortable bool
-}
 
 templ {{.Title}}Table(items []core.{{.Title}}, columns []TableColumn) {
 	<div class="card" style="overflow: hidden;">
@@ -21,7 +19,7 @@ templ {{.Title}}Table(items []core.{{.Title}}, columns []TableColumn) {
 								<button 
 									class="btn-ghost" 
 									style="padding: 0; font-size: inherit; text-transform: inherit;"
-									hx-get={ "/admin/{{.Name}}?sort=" + col.Key }
+									hx-get={ "/admin/{{.RoutePrefix}}?sort=" + col.Key }
 									hx-target="#table-body"
 									hx-swap="innerHTML"
 								>
@@ -36,8 +34,13 @@ templ {{.Title}}Table(items []core.{{.Title}}, columns []TableColumn) {
 					<th style="text-align: right;">Actions</th>
 				</tr>
 			</thead>
-			<tbody id="table-body" hx-indicator="#loading">
-				@{{.Title}}TableRows(items)
+			<tbody 
+				id="table-body" 
+				hx-indicator="#loading"
+				hx-get={ "/admin/{{.RoutePrefix}}/search" }
+				hx-trigger="refresh from:body"
+			>
+				@partials.{{.Title}}TableRows(items)
 			</tbody>
 		</table>
 	</div>

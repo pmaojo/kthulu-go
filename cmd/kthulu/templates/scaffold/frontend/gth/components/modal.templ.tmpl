@@ -2,6 +2,8 @@
 {{- /* Modal Component */ -}}
 package components
 
+import "fmt"
+
 templ Modal(title string) {
 	<div class="modal-backdrop" onclick="if(event.target === this) this.remove()">
 		<div class="modal">
@@ -79,7 +81,7 @@ templ Pagination(currentPage, totalPages int, baseURL string) {
 		if currentPage > 1 {
 			<button 
 				class="btn btn-ghost"
-				hx-get={ baseURL + "?page=" + templ.SafeURL(fmt.Sprintf("%d", currentPage-1)) }
+				hx-get={ baseURL + "?page=" + fmt.Sprintf("%d", currentPage-1) }
 				hx-target="#table-body"
 			>
 				Previous
@@ -93,7 +95,7 @@ templ Pagination(currentPage, totalPages int, baseURL string) {
 		if currentPage < totalPages {
 			<button 
 				class="btn btn-ghost"
-				hx-get={ baseURL + "?page=" + templ.SafeURL(fmt.Sprintf("%d", currentPage+1)) }
+				hx-get={ baseURL + "?page=" + fmt.Sprintf("%d", currentPage+1) }
 				hx-target="#table-body"
 			>
 				Next

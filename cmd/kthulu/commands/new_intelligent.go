@@ -272,6 +272,13 @@ func runNewProjectIntelligent(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
+	// Step 8b: Run templ generate if needed
+	if config.Frontend == "templ" {
+		if err := runTemplGenerate(structure.RootPath); err != nil {
+			fmt.Printf("⚠️  Warning: Failed to run templ generate: %v\n", err)
+		}
+	}
+
 	// Step 9: Execute tests with coverage requirements
 	if err := runGoTests(structure.RootPath); err != nil {
 		fmt.Printf("❌ Error running go test: %v\n", err)

@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "kthulu": {
+      "command": "/Users/pelayo/go/bin/kthulu",
+      "args": [
+        "mcp"
+      ]
+    }
+  }
+}

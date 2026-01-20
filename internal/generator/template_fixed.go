@@ -10,54 +10,12 @@ func (g *TemplateGenerator) generateDomainFileFixed(name string, info *resolver.
 	capName := Capitalize(name)
 	pluralName := Pluralize(capName)
 
-	template := `// @kthulu:domain:%s
+	template := `// @kthulu:domain:%[1]s
 package domain
 
 import "time"
 
-// %s represents a %s entity
-type %s struct {
-	ID        uint      ` + "`json:\"id\" gorm:\"primaryKey\"`" + `
-	CreatedAt time.Time ` + "`json:\"created_at\"`" + `
-	UpdatedAt time.Time ` + "`json:\"updated_at\"`" + `
-	
-	// Add your fields here
-}
-
-// TableName overrides the table name used by User to ` + "`%[3]ss`" + `
-func (%[1]s) TableName() string {
-	return "%[3]ss"
-}
-
-// %sRepository defines the repository interface
-type %sRepository interface {
-	Create(entity *%s) error
-	GetByID(id uint) (*%s, error)
-	Update(entity *%s) error
-	Delete(id uint) error
-	List() ([]*%s, error)
-}
-
-// %sService defines the service interface  
-type %sService interface {
-	Create%s(entity *%s) error
-	Get%sByID(id uint) (*%s, error)
-	Update%s(entity *%s) error
-	Delete%s(id uint) error
-	List%s() ([]*%s, error)
-}
-`
-	// Note: We are using Pluralize() which handles simple cases.
-	// For "TableName", we assume pluralName is correct.
-	// But wait, the template string uses `s` hardcoded in `TableName`.
-	// Let's fix that to use the pluralName variable.
-
-	template = `// @kthulu:domain:%[1]s
-package domain
-
-import "time"
-
-// %[2]s represents a %[3]s entity
+// %[2]s represents a %[1]s entity
 type %[2]s struct {
 	ID        uint      ` + "`json:\"id\" gorm:\"primaryKey\"`" + `
 	CreatedAt time.Time ` + "`json:\"created_at\"`" + `
@@ -66,7 +24,7 @@ type %[2]s struct {
 	// Add your fields here
 }
 
-// TableName overrides the table name used by User to ` + "`%[4]s`" + `
+// TableName overrides the table name used by %[2]s to %[4]s
 func (%[2]s) TableName() string {
 	return "%[4]s"
 }
@@ -89,8 +47,7 @@ type %[2]sService interface {
 	List%[4]s() ([]*%[2]s, error)
 }
 `
-	return fmt.Sprintf(template,
-		name, capName, name, pluralName)
+	return fmt.Sprintf(template, name, capName, name, pluralName)
 }
 
 func (g *TemplateGenerator) generateRepositoryFileFixed(name string, info *resolver.ModuleInfo) string {

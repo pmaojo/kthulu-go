@@ -138,7 +138,12 @@ func MigrateToVersion(db *sql.DB, version int64, logger *zap.Logger) error {
 
 // GetMigrationStatus returns the current migration status
 func GetMigrationStatus(db *sql.DB, logger *zap.Logger) (int64, error) {
-	if err := goose.SetDialect("postgres"); err != nil {
+	dialect := "postgres"
+	if driverName := fmt.Sprintf("%T", db.Driver()); strings.Contains(strings.ToLower(driverName), "sqlite") {
+		dialect = "sqlite3"
+	}
+
+	if err := goose.SetDialect(dialect); err != nil {
 		return 0, fmt.Errorf("failed to set goose dialect: %w", err)
 	}
 
@@ -153,12 +158,17 @@ func GetMigrationStatus(db *sql.DB, logger *zap.Logger) (int64, error) {
 }
 
 // ValidateMigrations checks if all migrations are valid
-func ValidateMigrations(logger *zap.Logger) error {
+func ValidateMigrations(db *sql.DB, logger *zap.Logger) error {
 	dir := filepath.Join("migrations")
 
 	logger.Info("Validating migrations", zap.String("directory", dir))
 
-	if err := goose.SetDialect("postgres"); err != nil {
+	dialect := "postgres"
+	if driverName := fmt.Sprintf("%T", db.Driver()); strings.Contains(strings.ToLower(driverName), "sqlite") {
+		dialect = "sqlite3"
+	}
+
+	if err := goose.SetDialect(dialect); err != nil {
 		return fmt.Errorf("failed to set goose dialect: %w", err)
 	}
 
@@ -173,7 +183,12 @@ func ResetDatabase(db *sql.DB, logger *zap.Logger) error {
 
 	logger.Warn("RESETTING DATABASE - This will drop all data!")
 
-	if err := goose.SetDialect("postgres"); err != nil {
+	dialect := "postgres"
+	if driverName := fmt.Sprintf("%T", db.Driver()); strings.Contains(strings.ToLower(driverName), "sqlite") {
+		dialect = "sqlite3"
+	}
+
+	if err := goose.SetDialect(dialect); err != nil {
 		return fmt.Errorf("failed to set goose dialect: %w", err)
 	}
 

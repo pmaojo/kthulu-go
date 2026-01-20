@@ -2,10 +2,8 @@
 {{- /* Admin Layout with Sidebar */ -}}
 package layouts
 
-import "{{.ProjectModule}}/internal/views/layouts"
-
 templ Admin(title string, currentPath string) {
-	@layouts.Base(title) {
+	@Base(title) {
 		<aside class="sidebar">
 			<div style="margin-bottom: 2rem;">
 				<h1 style="color: white; font-size: 1.25rem; font-weight: 700;">{{.ProjectName}}</h1>

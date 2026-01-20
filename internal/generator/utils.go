@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/jinzhu/inflection"
@@ -83,6 +84,7 @@ func ParseFrontendFields(rawFields []string) []FrontendField {
 	for _, f := range rawFields {
 		parts := strings.Split(f, ":")
 		if len(parts) < 2 {
+			fmt.Printf("⚠️  Warning: skipping malformed field string '%s' (expected name:type)\n", f)
 			continue
 		}
 		name := parts[0]
@@ -127,6 +129,7 @@ func ParseBackendFields(rawFields []string) []BackendField {
 	for _, f := range rawFields {
 		parts := strings.Split(f, ":")
 		if len(parts) < 2 {
+			fmt.Printf("⚠️  Warning: skipping malformed field string '%s' (expected name:type)\n", f)
 			continue
 		}
 		name := Capitalize(parts[0])
