@@ -35,7 +35,7 @@ var projectTemplates = map[string]ProjectTemplate{
 		Description: "Lightweight microservice with essential features",
 		Features:    []string{"user", "auth"},
 		Database:    "sqlite",
-		Frontend:    "none",
+		Frontend:    "templ",
 		Auth:        "jwt",
 		Enterprise:  false,
 	},
@@ -44,7 +44,7 @@ var projectTemplates = map[string]ProjectTemplate{
 		Description: "Full-featured monolithic application",
 		Features:    []string{"user", "auth", "organization", "contact", "product"},
 		Database:    "postgres",
-		Frontend:    "none",
+		Frontend:    "templ",
 		Auth:        "jwt",
 		Enterprise:  false,
 	},
@@ -53,7 +53,7 @@ var projectTemplates = map[string]ProjectTemplate{
 		Description: "API Gateway with routing and load balancing",
 		Features:    []string{"user", "auth", "oauthsso", "realtime"},
 		Database:    "postgres",
-		Frontend:    "none",
+		Frontend:    "templ",
 		Auth:        "oauth",
 		Enterprise:  true,
 	},
@@ -62,7 +62,7 @@ var projectTemplates = map[string]ProjectTemplate{
 		Description: "Financial services with compliance and security",
 		Features:    []string{"user", "auth", "organization", "contact", "product", "invoice", "payment", "verifactu", "audit"},
 		Database:    "postgres",
-		Frontend:    "none",
+		Frontend:    "templ",
 		Auth:        "both",
 		Enterprise:  true,
 	},
@@ -71,7 +71,7 @@ var projectTemplates = map[string]ProjectTemplate{
 		Description: "Complete e-commerce platform",
 		Features:    []string{"user", "auth", "organization", "contact", "product", "inventory", "invoice", "payment", "notification", "calendar"},
 		Database:    "postgres",
-		Frontend:    "none",
+		Frontend:    "templ",
 		Auth:        "oauth",
 		Enterprise:  false,
 	},
@@ -80,7 +80,7 @@ var projectTemplates = map[string]ProjectTemplate{
 		Description: "Multi-tenant SaaS application",
 		Features:    []string{"user", "auth", "organization", "contact", "product", "invoice", "payment", "oauthsso", "notification", "audit", "realtime"},
 		Database:    "postgres",
-		Frontend:    "none",
+		Frontend:    "templ",
 		Auth:        "both",
 		Enterprise:  true,
 	},
@@ -159,7 +159,7 @@ func init() {
 	newCmd.Flags().StringVarP(&newTemplate, "template", "t", "microservice", "Project template")
 	newCmd.Flags().StringSliceVarP(&newFeatures, "features", "f", []string{}, "Comma-separated list of features/modules")
 	newCmd.Flags().StringVarP(&newDatabase, "database", "d", "", "Database type (sqlite, postgres, mysql)")
-	newCmd.Flags().StringVar(&newFrontend, "frontend", "none", "Frontend type (react, templ, fyne, none)")
+	newCmd.Flags().StringVar(&newFrontend, "frontend", "templ", "Frontend type: templ (GTH - default), none")
 	newCmd.Flags().StringVar(&newAuth, "auth", "", "Auth type (jwt, oauth, both)")
 	newCmd.Flags().StringVar(&newModulePath, "module-path", "", "Go module path (default: project name)")
 	newCmd.Flags().BoolVar(&newEnterprise, "enterprise", false, "Enable enterprise features")

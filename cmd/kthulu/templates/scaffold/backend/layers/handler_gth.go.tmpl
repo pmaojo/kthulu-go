@@ -1,0 +1,186 @@
+// @kthulu:handler:{{.Name}}:gth
+package api
+
+import (
+	"net/http"
+	"strconv"
+	
+	"github.com/gorilla/mux"
+	"{{.CoreImport}}"
+	"{{.ProjectModule}}/internal/views/pages"
+	"{{.ProjectModule}}/internal/views/partials"
+	"{{.ProjectModule}}/internal/views/components"
+	{{if .Protected}}"{{.ProjectModule}}/internal/infrastructure/middleware"{{end}}
+)
+
+type {{.Title}}Handler struct {
+	service core.{{.Title}}Service
+}
+
+func New{{.Title}}Handler(service core.{{.Title}}Service) *{{.Title}}Handler {
+	return &{{.Title}}Handler{service: service}
+}
+
+// RegisterRoutes registers all routes for {{.Name}} (HTML + API)
+func (h *{{.Title}}Handler) RegisterRoutes(router *mux.Router) {
+	{{if .RoutePrefix}}sub := router.PathPrefix("/{{.RoutePrefix}}").Subrouter(){{else}}sub := router{{end}}
+	{{if .Protected}}sub.Use(middleware.AuthMiddleware){{end}}
+
+	// HTML Routes (Admin Panel)
+	sub.HandleFunc("", h.ListPage).Methods("GET")
+	sub.HandleFunc("/new", h.NewForm).Methods("GET")
+	sub.HandleFunc("/search", h.SearchRows).Methods("GET")
+	sub.HandleFunc("/{id}/edit", h.EditForm).Methods("GET")
+	sub.HandleFunc("/{id}/delete", h.DeleteConfirm).Methods("GET")
+	
+	// API Routes (HTMX Actions)
+	api := router.PathPrefix("/api/{{.RoutePrefix}}").Subrouter()
+	{{if .Protected}}api.Use(middleware.AuthMiddleware){{end}}
+	api.HandleFunc("", h.Create).Methods("POST")
+	api.HandleFunc("/{id}", h.Update).Methods("PUT")
+	api.HandleFunc("/{id}", h.Delete).Methods("DELETE")
+}
+
+// isHTMXRequest checks if the request is from HTMX
+func isHTMXRequest(r *http.Request) bool {
+	return r.Header.Get("HX-Request") == "true"
+}
+
+// ListPage renders the full {{.PluralTitle}} page or table rows for HTMX
+func (h *{{.Title}}Handler) ListPage(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query().Get("q")
+	filter := core.SearchFilter{Query: query}
+	
+	entities, err := h.service.List{{.PluralTitle}}(filter)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	
+	// HTMX partial request - return only table rows
+	if isHTMXRequest(r) {
+		partials.{{.Title}}TableRows(entities).Render(r.Context(), w)
+		return
+	}
+	
+	// Full page render
+	pages.{{.PluralTitle}}Page(entities).Render(r.Context(), w)
+}
+
+// SearchRows handles HTMX live search, returns table rows partial
+func (h *{{.Title}}Handler) SearchRows(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query().Get("q")
+	filter := core.SearchFilter{Query: query}
+	
+	entities, err := h.service.List{{.PluralTitle}}(filter)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	
+	partials.{{.Title}}TableRows(entities).Render(r.Context(), w)
+}
+
+// NewForm renders the create form modal
+func (h *{{.Title}}Handler) NewForm(w http.ResponseWriter, r *http.Request) {
+	components.{{.Title}}FormModal(&core.{{.Title}}{}, false).Render(r.Context(), w)
+}
+
+// EditForm renders the edit form modal
+func (h *{{.Title}}Handler) EditForm(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := strconv.ParseUint(vars["id"], 10, 32)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+	
+	entity, err := h.service.Get{{.Title}}ByID(uint(id))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	
+	components.{{.Title}}FormModal(entity, true).Render(r.Context(), w)
+}
+
+// DeleteConfirm renders the delete confirmation modal
+func (h *{{.Title}}Handler) DeleteConfirm(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := strconv.ParseUint(vars["id"], 10, 32)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+	
+	endpoint := "/api/{{.RoutePrefix}}/" + vars["id"]
+	components.ConfirmDelete("{{.Title}}", uint(id), endpoint).Render(r.Context(), w)
+}
+
+// Create handles the creation of a new {{.Name}}
+func (h *{{.Title}}Handler) Create(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	
+	entity := &core.{{.Title}}{
+		{{range .Fields}}
+		{{.Title}}: r.FormValue("{{.Name}}"),
+		{{end}}
+	}
+	
+	if err := h.service.Create{{.Title}}(entity); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	
+	// Return empty to close modal, HTMX will refresh table
+	w.WriteHeader(http.StatusOK)
+}
+
+// Update handles the update of a {{.Name}}
+func (h *{{.Title}}Handler) Update(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := strconv.ParseUint(vars["id"], 10, 32)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+	
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	
+	entity := &core.{{.Title}}{
+		ID: uint(id),
+		{{range .Fields}}
+		{{.Title}}: r.FormValue("{{.Name}}"),
+		{{end}}
+	}
+	
+	if err := h.service.Update{{.Title}}(entity); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	
+	w.WriteHeader(http.StatusOK)
+}
+
+// Delete handles the deletion of a {{.Name}}
+func (h *{{.Title}}Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := strconv.ParseUint(vars["id"], 10, 32)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+	
+	if err := h.service.Delete{{.Title}}(uint(id)); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	
+	w.WriteHeader(http.StatusNoContent)
+}

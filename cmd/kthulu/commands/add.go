@@ -212,7 +212,7 @@ var addAdminCmd = &cobra.Command{
 }
 
 func runAddAdmin() error {
-	fmt.Println("👑 Adding Admin Dashboard Module...")
+	fmt.Println("👑 Adding Admin Dashboard (GTH)...")
 
 	currentDir, err := os.Getwd()
 	if err != nil {
@@ -230,6 +230,7 @@ func runAddAdmin() error {
 		ProjectName:   filepath.Base(currentDir),
 		ProjectModule: projectModule,
 		OutputPath:    currentDir,
+		Frontend:      "templ",
 	}
 	
 	gen := generator.NewTemplateGenerator(nil)
@@ -242,9 +243,9 @@ func runAddAdmin() error {
 		Files:       []generator.GeneratedFile{},
 	}
 
-	// Generate Admin Module
-	if err := gen.GenerateAdminModule(structure); err != nil {
-		return fmt.Errorf("failed to generate admin module: %w", err)
+	// Generate GTH dashboard views
+	if err := gen.GenerateGTHModule("admin", []string{"name:string"}, structure); err != nil {
+		return fmt.Errorf("failed to generate admin views: %w", err)
 	}
 
 	// Write files
@@ -253,7 +254,7 @@ func runAddAdmin() error {
 	}
 	
 	fmt.Println("✅ Admin Dashboard added successfully!")
-	fmt.Println("👉 Check frontend/src/modules/admin/presentation/")
+	fmt.Println("👉 Check internal/views/ for GTH templates")
 	return nil
 }
 
@@ -511,23 +512,23 @@ func runAddModule(module string, fields []string, integrations []string, complia
 		}
 	}
 
-	// Step 8b: Generate frontend module if frontend exists
-	if config.Frontend == "react" {
-		// Create a mock structure to capture generated files
+	// Step 8b: Generate GTH frontend views if frontend is not 'none'
+	if config.Frontend != "none" {
+		// Create a structure to capture generated files
 		structure := &generator.ProjectStructure{
 			RootPath:    currentDir,
 			Directories: []string{},
 			Files:       []generator.GeneratedFile{},
 		}
 
-		if err := templateGenerator.GenerateFrontendModule(module, fields, structure); err != nil {
-			fmt.Printf("   ⚠️  Failed to generate frontend module: %v\n", err)
+		if err := templateGenerator.GenerateGTHModule(module, fields, structure); err != nil {
+			fmt.Printf("   ⚠️  Failed to generate GTH views: %v\n", err)
 		} else {
-			// Write the generated frontend files
+			// Write the generated GTH files
 			if err := templateGenerator.WriteProject(structure); err != nil {
-				fmt.Printf("   ⚠️  Failed to write frontend files: %v\n", err)
+				fmt.Printf("   ⚠️  Failed to write GTH view files: %v\n", err)
 			} else {
-				fmt.Printf("   🎨 Generated frontend module for %s\n", module)
+				fmt.Printf("   🎨 Generated GTH views for %s\n", module)
 			}
 		}
 	}
@@ -682,15 +683,12 @@ func detectDatabase(dir string) string {
 }
 
 func detectFrontend(dir string) string {
-	// Check for frontend directories/files
-	if _, err := os.Stat(filepath.Join(dir, "frontend", "package.json")); err == nil {
-		return "react"
+	// Check for GTH (templ) views directory first
+	if _, err := os.Stat(filepath.Join(dir, "internal", "views")); err == nil {
+		return "templ"
 	}
 	if _, err := os.Stat(filepath.Join(dir, "templates")); err == nil {
 		return "templ"
-	}
-	if _, err := os.Stat(filepath.Join(dir, "cmd", "desktop")); err == nil {
-		return "fyne"
 	}
 	return "none"
 }

@@ -47,13 +47,16 @@ const (
 	TmplServiceTest = "scaffold/backend/layers/service_test.go.tmpl"
 	TmplHandlerTest = "scaffold/backend/layers/handler_test.go.tmpl"
 
-	// Frontend Templates
-	TmplAdminLayout    = "scaffold/frontend/react/AdminLayout.tsx.tmpl"
-	TmplAdminDashboard = "scaffold/frontend/react/modules/admin/DashboardPage.tsx.tmpl"
-	TmplAdminUsers     = "scaffold/frontend/react/modules/admin/UsersPage.tsx.tmpl"
-	TmplAdminSettings  = "scaffold/frontend/react/modules/admin/SettingsPage.tsx.tmpl"
-	TmplAdminCRUDPage  = "scaffold/frontend/react/AdminCRUDPage.tsx.tmpl"
-	TmplNavigation     = "scaffold/frontend/react/config/navigation.ts.tmpl"
+	// Frontend Templates (GTH: Go+Templ+HTMX) - The KING of frontend
+	TmplGTHBaseLayout   = "scaffold/frontend/gth/layouts/base.templ.tmpl"
+	TmplGTHAdminLayout  = "scaffold/frontend/gth/layouts/admin.templ.tmpl"
+	TmplGTHTable        = "scaffold/frontend/gth/components/table.templ.tmpl"
+	TmplGTHForm         = "scaffold/frontend/gth/components/form.templ.tmpl"
+	TmplGTHModal        = "scaffold/frontend/gth/components/modal.templ.tmpl"
+	TmplGTHCrudPage     = "scaffold/frontend/gth/pages/crud_page.templ.tmpl"
+	TmplGTHDashboard    = "scaffold/frontend/gth/pages/dashboard.templ.tmpl"
+	TmplGTHTableRows    = "scaffold/frontend/gth/partials/table_rows.templ.tmpl"
+	TmplLayerHandlerGTH = "scaffold/backend/layers/handler_gth.go.tmpl"
 )
 
 // TemplateGenerator generates code templates based on dependency analysis
@@ -235,10 +238,10 @@ func (g *TemplateGenerator) GenerateProject(config *GeneratorConfig) (*ProjectSt
 		}
 	}
 
-	// Step 5: Generate frontend if requested
-	if config.Frontend == "react" {
-		if err := g.generateFrontend(structure); err != nil {
-			return nil, fmt.Errorf("failed to generate frontend: %w", err)
+	// Step 5: Generate GTH (Go+Templ+HTMX) frontend if not disabled
+	if config.Frontend != "none" {
+		if err := g.generateGTHFrontend(structure); err != nil {
+			return nil, fmt.Errorf("failed to generate GTH frontend: %w", err)
 		}
 	}
 
@@ -801,99 +804,118 @@ func (g *TemplateGenerator) GenerateBackendModule(moduleName string, fields []st
 
 	return files, migrationContent, nil
 }
-func (g *TemplateGenerator) generateFrontend(structure *ProjectStructure) error {
-	// Generate frontend modules for each feature
-	// Note: We only generate the basic structure here.
-	// Field-specific generation happens in generateFrontendModule
-	// which is called by the 'add module' command or when we have field info.
+// generateGTHFrontend generates GTH (Go+Templ+HTMX) frontend structure
+func (g *TemplateGenerator) generateGTHFrontend(structure *ProjectStructure) error {
+	fmt.Println("  🎨 Setting up GTH (Go+Templ+HTMX) frontend...")
 
-	// For initial project generation, we don't have field info for the modules
-	// in g.config.Features, so we skip detailed generation unless we implement
-	// a way to pass schema definitions during project creation.
+	// Create views directory structure inside internal/
+	dirs := []string{
+		"internal/views",
+		"internal/views/layouts",
+		"internal/views/components",
+		"internal/views/pages",
+		"internal/views/partials",
+	}
+	structure.Directories = append(structure.Directories, dirs...)
 
-	// However, we can create the directory structure.
-
-	fmt.Println("  🎨 Setting up frontend structure...")
-	
-	// Generate base scaffold (Vite, React, etc.)
-	if err := g.generateFrontendBase(structure); err != nil {
-		return err
+	// Generate base layouts
+	layoutData := map[string]interface{}{
+		"ProjectName":   g.config.ProjectName,
+		"ProjectModule": g.modulePath(),
+		"Features":      g.config.Features,
 	}
 
+	// Base layout
+	baseContent, err := g.executeTemplate("gth_base", TmplGTHBaseLayout, layoutData)
+	if err != nil {
+		return fmt.Errorf("failed to generate base layout: %w", err)
+	}
+	structure.Files = append(structure.Files, GeneratedFile{
+		Path:    "internal/views/layouts/base.templ",
+		Content: baseContent,
+	})
+
+	// Admin layout
+	adminContent, err := g.executeTemplate("gth_admin", TmplGTHAdminLayout, layoutData)
+	if err != nil {
+		return fmt.Errorf("failed to generate admin layout: %w", err)
+	}
+	structure.Files = append(structure.Files, GeneratedFile{
+		Path:    "internal/views/layouts/admin.templ",
+		Content: adminContent,
+	})
+
+	// Modal component (shared)
+	modalContent, err := g.executeTemplate("gth_modal", TmplGTHModal, layoutData)
+	if err != nil {
+		return fmt.Errorf("failed to generate modal component: %w", err)
+	}
+	structure.Files = append(structure.Files, GeneratedFile{
+		Path:    "internal/views/components/modal.templ",
+		Content: modalContent,
+	})
+
+	// Dashboard page
+	dashContent, err := g.executeTemplate("gth_dashboard", TmplGTHDashboard, layoutData)
+	if err != nil {
+		return fmt.Errorf("failed to generate dashboard: %w", err)
+	}
+	structure.Files = append(structure.Files, GeneratedFile{
+		Path:    "internal/views/pages/dashboard.templ",
+		Content: dashContent,
+	})
+
+	// Generate module-specific views
 	for _, feature := range g.config.Features {
 		if feature == "auth" || feature == "users" {
-			// Skip special modules for now or handle them differently
 			continue
 		}
 
-		// For standard modules, we create the folder structure AND the basic content.
-		// Since we don't have field info at this stage, we'll generate a basic "Hello World"
-		// version of the module with just a name field, so the user has something runnable.
-		if err := g.GenerateFrontendModule(feature, []string{"name:string"}, structure); err != nil {
-			return fmt.Errorf("failed to generate frontend module for %s: %w", feature, err)
+		fields := g.config.ModuleFields[feature]
+		if len(fields) == 0 {
+			fields = []string{"name:string"}
+		}
+
+		if err := g.GenerateGTHModule(feature, fields, structure); err != nil {
+			return fmt.Errorf("failed to generate GTH module for %s: %w", feature, err)
 		}
 	}
 
 	return nil
 }
 
-// GenerateFrontendModule generates a specific frontend module with fields
-func (g *TemplateGenerator) GenerateFrontendModule(moduleName string, fields []string, structure *ProjectStructure) error {
-	fmt.Printf("  🎨 Generating frontend module: %s\n", moduleName)
+// GenerateGTHModule generates GTH views for a specific module
+func (g *TemplateGenerator) GenerateGTHModule(moduleName string, fields []string, structure *ProjectStructure) error {
+	fmt.Printf("  🎨 Generating GTH views for: %s\n", moduleName)
 
-	frontendFields := ParseFrontendFields(fields)
-	data := FrontendTemplateData{
-		Name:       moduleName,
-		Title:      Capitalize(moduleName),
-		PluralName: Pluralize(moduleName),
-		Fields:     frontendFields,
+	backendFields := ParseBackendFields(fields)
+	relPath := g.getModuleRelPath()
+
+	data := map[string]interface{}{
+		"Name":          moduleName,
+		"Title":         Capitalize(moduleName),
+		"PluralTitle":   Pluralize(Capitalize(moduleName)),
+		"Fields":        backendFields,
+		"ProjectModule": g.modulePath(),
+		"RoutePrefix":   ToKebabCase(moduleName),
+		"CoreImport":    g.moduleImportPath(relPath, moduleName, "core"),
 	}
 
-	moduleDir := fmt.Sprintf("frontend/src/modules/%s", moduleName)
-
-	// Create directories
-	dirs := []string{
-		moduleDir,
-		path.Join(moduleDir, "domain"),
-		path.Join(moduleDir, "infrastructure"),
-		path.Join(moduleDir, "application"),
-		path.Join(moduleDir, "presentation"),
-		path.Join(moduleDir, "presentation", "components"),
-	}
-	structure.Directories = append(structure.Directories, dirs...)
-
-	// Generate files
-	files := map[string]string{
-		"domain/" + data.Title + ".ts":                       "scaffold/frontend/react/domain.ts.tmpl",
-		"infrastructure/" + data.Title + "Service.ts":        "scaffold/frontend/react/service.ts.tmpl",
-		"application/use" + data.Title + "s.ts":              "scaffold/frontend/react/hook.ts.tmpl",
-		"presentation/components/" + data.Title + "List.tsx": "scaffold/frontend/react/list.tsx.tmpl",
-		"presentation/components/" + data.Title + "Form.tsx": "scaffold/frontend/react/form.tsx.tmpl",
-		"presentation/" + data.Title + "Page.tsx":            "scaffold/frontend/react/page.tsx.tmpl",
-		"index.ts":                                           "scaffold/frontend/react/index.tsx.tmpl",
-		"../../../tests/e2e/" + data.Name + ".spec.ts":       "scaffold/frontend/react/e2e/module.spec.ts.tmpl",
+	// Generate module-specific templ files
+	templates := map[string]string{
+		fmt.Sprintf("internal/views/components/%s_table.templ", moduleName):    TmplGTHTable,
+		fmt.Sprintf("internal/views/components/%s_form.templ", moduleName):     TmplGTHForm,
+		fmt.Sprintf("internal/views/pages/%s_page.templ", moduleName):          TmplGTHCrudPage,
+		fmt.Sprintf("internal/views/partials/%s_table_rows.templ", moduleName): TmplGTHTableRows,
 	}
 
-	// Conditionally add Admin CRUD page
-	if g.config.CustomValues["with_admin"] == "true" {
-		files["presentation/Admin"+data.Title+"Page.tsx"] = TmplAdminCRUDPage
-		
-		// Attempt to register in navigation
-		if err := g.ResultRegisterFrontendNavigation(data.Title, data.Name, structure.RootPath); err != nil {
-			fmt.Printf("   ⚠️  Warning: Failed to auto-register navigation: %v\n", err)
-		} else {
-			fmt.Printf("   🧭 Auto-registered navigation for %s\n", data.Name)
-		}
-	}
-
-	for relPath, tmplPath := range files {
-		content, err := g.executeTemplate(relPath, tmplPath, data)
+	for filePath, tmplPath := range templates {
+		content, err := g.executeTemplate(filePath, tmplPath, data)
 		if err != nil {
-			return fmt.Errorf("failed to generate %s: %w", relPath, err)
+			return fmt.Errorf("failed to generate %s: %w", filePath, err)
 		}
-
 		structure.Files = append(structure.Files, GeneratedFile{
-			Path:    path.Join(moduleDir, relPath),
+			Path:    filePath,
 			Content: content,
 		})
 	}
