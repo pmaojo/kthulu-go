@@ -1,6 +1,6 @@
 // @kthulu:project:vercel-test
 // @kthulu:generated:true
-// @kthulu:features:task
+// @kthulu:features:product,user
 package main
 
 import (
@@ -15,10 +15,7 @@ import (
 	"github.com/gorilla/mux"
 	"go.uber.org/fx"
 
-	"vercel-test/internal/core"
- "vercel-test/internal/modules/task"
- taskCore "vercel-test/internal/modules/task/core"
- taskAPI "vercel-test/internal/modules/task/api"
+	"vercel-test/internal/bootstrap"
 )
 
 type httpServer interface {
@@ -60,40 +57,28 @@ func (n *noopHTTPServer) Shutdown(context.Context) error {
 	return nil
 }
 
-var serverBuilder = func(handler http.Handler) httpServer {
+var serverBuilder = func(handler *mux.Router) httpServer {
 	if os.Getenv("KTHULU_TEST_MODE") == "1" {
 		return &noopHTTPServer{}
 	}
+	// *mux.Router satisfies http.Handler
 	return newHTTPServer(handler)
 }
 
 func main() {
-	if err := runApplication(context.Background(), serverBuilder); err != nil {
+	if err := runApplication(context.Background()); err != nil {
 		log.Fatal("Failed to start application:", err)
 	}
 }
 
-func runApplication(ctx context.Context, builder func(http.Handler) httpServer) error {
+func runApplication(ctx context.Context) error {
 	ctx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	app := fx.New(
-		// Core providers
-		core.CoreRepositoryProviders(),
-		fx.Provide(NewRouter),
-
-		// Module providers
-		task.Providers(),
-
-		fx.Invoke(func(lc fx.Lifecycle, router *mux.Router, taskService taskCore.TaskService) {
-			apiRouter := router.PathPrefix("/api/v1").Subrouter()
-
-	// task routes
-	taskHandler := taskAPI.NewTaskHandler(taskService)
-	taskHandler.RegisterRoutes(apiRouter)
-
-			server := builder(router)
-
+	opts := bootstrap.AppOptions()
+	opts = append(opts, 
+		fx.Provide(serverBuilder),
+		fx.Invoke(func(lc fx.Lifecycle, server httpServer) {
 			lc.Append(fx.Hook{
 				OnStart: func(context.Context) error {
 					go func() {
@@ -110,6 +95,8 @@ func runApplication(ctx context.Context, builder func(http.Handler) httpServer) 
 		}),
 	)
 
+	app := fx.New(opts...)
+
 	if err := app.Start(ctx); err != nil {
 		return err
 	}
@@ -120,15 +107,4 @@ func runApplication(ctx context.Context, builder func(http.Handler) httpServer) 
 	defer cancel()
 
 	return app.Stop(shutdownCtx)
-}
-
-func NewRouter() *mux.Router {
-	router := mux.NewRouter()
-
-	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("OK"))
-	})
-
-	return router
 }

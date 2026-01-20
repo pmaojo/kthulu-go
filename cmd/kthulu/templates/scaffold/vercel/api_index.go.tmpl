@@ -4,15 +4,14 @@ package handler
 import (
 	"context"
 	"net/http"
-	"os"
 	"sync"
 	"time"
+
 
 	"github.com/gorilla/mux"
 	"go.uber.org/fx"
 	
-	"{{.ProjectModule}}/internal/infrastructure/database"
-	"{{.ProjectModule}}/internal/bootstrap"
+	"{{.ProjectModule}}/pkg/bootstrap"
 )
 
 var (
@@ -23,12 +22,7 @@ var (
 func init() {
 	once.Do(func() {
 		// Auto-migrate if enabled
-		if os.Getenv("RUN_MIGRATIONS") == "true" {
-			db, err := database.NewDB()
-			if err == nil {
-				database.AutoMigrate(db)
-			}
-		}
+		bootstrap.RunMigrations()
 		
 		// Initialize the application via Fx
 		var router *mux.Router

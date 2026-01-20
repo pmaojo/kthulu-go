@@ -1,0 +1,49 @@
+package components
+
+import (
+	"my-app/internal/modules/product/core"
+	"my-app/internal/views/partials"
+)
+
+
+templ ProductTable(items []core.Product, columns []TableColumn) {
+	<div class="card" style="overflow: hidden;">
+		<table class="table">
+			<thead>
+				<tr>
+					for _, col := range columns {
+						<th>
+							if col.Sortable {
+								<button 
+									class="btn-ghost" 
+									style="padding: 0; font-size: inherit; text-transform: inherit;"
+									hx-get={ "/admin/product?sort=" + col.Key }
+									hx-target="#table-body"
+									hx-swap="innerHTML"
+								>
+									{ col.Label }
+									<svg width="12" height="12" fill="currentColor" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+								</button>
+							} else {
+								{ col.Label }
+							}
+						</th>
+					}
+					<th style="text-align: right;">Actions</th>
+				</tr>
+			</thead>
+			<tbody 
+				id="table-body" 
+				hx-indicator="#loading"
+				hx-get={ "/admin/product/search" }
+				hx-trigger="refresh from:body"
+			>
+				@partials.ProductTableRows(items)
+			</tbody>
+		</table>
+	</div>
+	
+	<div id="loading" class="htmx-indicator" style="text-align: center; padding: 1rem; color: #64748b;">
+		Loading...
+	</div>
+}

@@ -356,15 +356,16 @@ func (g *TemplateGenerator) generateBaseStructure(structure *ProjectStructure) e
 		"internal/infrastructure/static",
 		"internal/infrastructure/static/dist",
 		"internal/infrastructure/config",
-		"internal/bootstrap",
+		"pkg/bootstrap",
 	)
 
 	// Generate bootstrap/app.go
 	bootstrapFile := GeneratedFile{
-		Path:    "internal/bootstrap/app.go",
+		Path:    "pkg/bootstrap/app.go",
 		Content: g.generateBootstrapApp(),
 	}
 	structure.Files = append(structure.Files, bootstrapFile)
+
 
 
 	// Generate main.go
@@ -573,7 +574,7 @@ func (g *TemplateGenerator) generateGoMod() string {
 	addDep("gorm.io/driver/postgres v1.5.4") // For Vercel/Neon
 	addDep("github.com/golang-jwt/jwt/v5 v5.2.0")
 	addDep("github.com/pressly/goose/v3 v3.24.3")
-	addDep("github.com/a-h/templ v0.2.793") // GTH frontend
+	addDep("github.com/a-h/templ v0.3.977") // GTH frontend
 
 	if extra := strings.Split(strings.TrimSpace(g.generateDependencies()), "\n"); len(extra) > 0 {
 		for _, dep := range extra {

@@ -8,7 +8,10 @@ import (
     "gorm.io/gorm"
     "gorm.io/driver/sqlite"
     "path/filepath"
-    	taskCore "vercel-test/internal/modules/task/core"
+    	userCore "vercel-test/internal/modules/user/core"
+    	organizationCore "vercel-test/internal/modules/organization/core"
+    	authCore "vercel-test/internal/modules/auth/core"
+    	productCore "vercel-test/internal/modules/product/core"
 )
 
 func CoreRepositoryProviders() fx.Option {
@@ -24,7 +27,7 @@ func NewDatabase() (*gorm.DB, error) {
         if err != nil { return nil, err }
         
     // Auto-migrate all domain models
-    if err := db.AutoMigrate(&taskCore.Task{}); err != nil {
+    if err := db.AutoMigrate(&userCore.User{}, &organizationCore.Organization{}, &authCore.Auth{}, &productCore.Product{}); err != nil {
         return nil, fmt.Errorf("auto-migrate failed: %w", err)
     }
     return db, nil
@@ -41,7 +44,7 @@ func NewDatabase() (*gorm.DB, error) {
     // if .AutoMigrateCall
     // 
     // Auto-migrate all domain models
-    if err := db.AutoMigrate(&taskCore.Task{}); err != nil {
+    if err := db.AutoMigrate(&userCore.User{}, &organizationCore.Organization{}, &authCore.Auth{}, &productCore.Product{}); err != nil {
         return nil, fmt.Errorf("auto-migrate failed: %w", err)
     }
     return db, nil

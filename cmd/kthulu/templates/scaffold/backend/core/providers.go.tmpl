@@ -12,6 +12,7 @@ import (
     "gorm.io/driver/mysql"
 {{- else}}
     "gorm.io/driver/sqlite"
+    "gorm.io/driver/postgres"
     "path/filepath"
 {{- end}}
 {{- range .DomainImports}}
@@ -30,6 +31,18 @@ func NewDatabase() (*gorm.DB, error) {
         log.Println("Using in-memory SQLite database for tests")
         db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
         if err != nil { return nil, err }
+        {{- if .AutoMigrateCall}}
+        {{.AutoMigrateCall}}
+        {{- else}}
+        return db, nil
+        {{- end}}
+    }
+
+    // Vercel/Production: Check for DATABASE_URL first (Neon, Supabase, etc.)
+    if url := os.Getenv("DATABASE_URL"); url != "" {
+        log.Println("Connecting to PostgreSQL via DATABASE_URL")
+        db, err := gorm.Open(postgres.Open(url), &gorm.Config{})
+        if err != nil { return nil, fmt.Errorf("failed to connect to postgres: %w", err) }
         {{- if .AutoMigrateCall}}
         {{.AutoMigrateCall}}
         {{- else}}
@@ -68,12 +81,11 @@ func NewDatabase() (*gorm.DB, error) {
 
     if err != nil { return nil, err }
 
-    // if .AutoMigrateCall
-    // {{.AutoMigrateCall}}
-    // else
-    // return db, nil
-    // end
+    {{- if .AutoMigrateCall}}
+    {{.AutoMigrateCall}}
+    {{- else}}
     return db, nil
+    {{- end}}
 }
 
 func getEnv(key, fallback string) string {

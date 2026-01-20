@@ -1,9 +1,7 @@
 package layouts
 
-import "vercel-test/internal/views/layouts"
-
 templ Admin(title string, currentPath string) {
-	@layouts.Base(title) {
+	@Base(title) {
 		<aside class="sidebar">
 			<div style="margin-bottom: 2rem;">
 				<h1 style="color: white; font-size: 1.25rem; font-weight: 700;">vercel-test</h1>
@@ -16,9 +14,14 @@ templ Admin(title string, currentPath string) {
 					Dashboard
 				</a>
 				
-				<a href="/admin/task" class={ "sidebar-link", templ.KV("active", currentPath == "/admin/task") }>
+				<a href="/admin/product" class={ "sidebar-link", templ.KV("active", currentPath == "/admin/product") }>
 					<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-					Task
+					Product
+				</a>
+				
+				<a href="/admin/user" class={ "sidebar-link", templ.KV("active", currentPath == "/admin/user") }>
+					<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+					User
 				</a>
 				
 			</nav>
