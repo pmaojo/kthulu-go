@@ -1,9 +1,0 @@
-{
-  "id": "invoices",
-  "name": "Invoices Module",
-  "type": "module",
-  "description": "High-performance invoices module for Kthulu Go ecosystems.",
-  "author": "Kthulu Core",
-  "stars": 0,
-  "icon": "Box"
-}

@@ -1,9 +1,0 @@
-{
-  "id": "products",
-  "name": "Products Module",
-  "type": "module",
-  "description": "High-performance products module for Kthulu Go ecosystems.",
-  "author": "Kthulu Core",
-  "stars": 0,
-  "icon": "Box"
-}
