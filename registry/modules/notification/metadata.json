@@ -1,0 +1,9 @@
+{
+  "id": "notification",
+  "name": "Notification Module",
+  "type": "module",
+  "description": "User notification and alert system.",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "MessageSquare"
+}

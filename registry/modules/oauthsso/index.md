@@ -1,10 +1,8 @@
 ---
-title: "Oauthsso Module"
-description: "Automatically discovered Kthulu module: oauthsso"
-type: "module"
-author: "Kthulu Core"
-stars: 0
-icon: "Box"
+title: Oauthsso Module
+description: OAuth 2.0 and Single Sign-On integration.
 ---
 
 # Oauthsso Module
+
+OAuth 2.0 and Single Sign-On integration.

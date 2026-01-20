@@ -1,0 +1,9 @@
+{
+  "id": "generator",
+  "name": "Generator Module",
+  "type": "module",
+  "description": "Code generation and scaffolding engine.",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "Cpu"
+}

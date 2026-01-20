@@ -1,9 +1,0 @@
-{
-  "id": "projects",
-  "name": "Projects Module",
-  "type": "module",
-  "description": "Automatically discovered Kthulu module: projects",
-  "author": "Kthulu Core",
-  "stars": 0,
-  "icon": "Box"
-}

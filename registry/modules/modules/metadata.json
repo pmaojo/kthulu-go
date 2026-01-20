@@ -1,9 +1,0 @@
-{
-  "id": "modules",
-  "name": "Modules Module",
-  "type": "module",
-  "description": "Automatically discovered Kthulu module: modules",
-  "author": "Kthulu Core",
-  "stars": 0,
-  "icon": "Box"
-}

@@ -2,8 +2,8 @@
   "id": "ai",
   "name": "Ai Module",
   "type": "module",
-  "description": "Automatically discovered Kthulu module: ai",
+  "description": "Agentic coding assistant and automated code generation.",
   "author": "Kthulu Core",
   "stars": 100,
-  "icon": "Sparkles"
+  "icon": "Zap"
 }

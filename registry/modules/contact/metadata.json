@@ -2,8 +2,8 @@
   "id": "contact",
   "name": "Contact Module",
   "type": "module",
-  "description": "Automatically discovered Kthulu module: contact",
+  "description": "Contact management and CRM integration.",
   "author": "Kthulu Core",
   "stars": 0,
-  "icon": "Box"
+  "icon": "Users"
 }

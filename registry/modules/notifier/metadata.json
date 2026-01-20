@@ -2,8 +2,8 @@
   "id": "notifier",
   "name": "Notifier Module",
   "type": "module",
-  "description": "Automatically discovered Kthulu module: notifier",
+  "description": "Multi-channel notification system (Email, Slack, SMS).",
   "author": "Kthulu Core",
   "stars": 0,
-  "icon": "Box"
+  "icon": "Bell"
 }

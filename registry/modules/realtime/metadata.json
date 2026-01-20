@@ -2,8 +2,8 @@
   "id": "realtime",
   "name": "Realtime Module",
   "type": "module",
-  "description": "Automatically discovered Kthulu module: realtime",
+  "description": "Live updates and WebSocket communication layer.",
   "author": "Kthulu Core",
   "stars": 0,
-  "icon": "Box"
+  "icon": "Activity"
 }

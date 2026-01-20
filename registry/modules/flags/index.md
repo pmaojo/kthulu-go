@@ -1,10 +1,8 @@
 ---
-title: "Flags Module"
-description: "Automatically discovered Kthulu module: flags"
-type: "module"
-author: "Kthulu Core"
-stars: 0
-icon: "Box"
+title: Flags Module
+description: Feature flag management and remote configuration.
 ---
 
 # Flags Module
+
+Feature flag management and remote configuration.

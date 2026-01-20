@@ -2,8 +2,8 @@
   "id": "invoice",
   "name": "Invoice Module",
   "type": "module",
-  "description": "Automatically discovered Kthulu module: invoice",
+  "description": "Automated invoicing and billing system.",
   "author": "Kthulu Core",
   "stars": 0,
-  "icon": "Box"
+  "icon": "FileText"
 }

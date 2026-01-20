@@ -2,8 +2,8 @@
   "id": "health",
   "name": "Health Module",
   "type": "module",
-  "description": "Automatically discovered Kthulu module: health",
+  "description": "System monitoring and health checks.",
   "author": "Kthulu Core",
   "stars": 0,
-  "icon": "Box"
+  "icon": "Heart"
 }

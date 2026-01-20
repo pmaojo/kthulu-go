@@ -1,10 +1,8 @@
 ---
-title: "Organization Module"
-description: "Automatically discovered Kthulu module: organization"
-type: "module"
-author: "Kthulu Core"
-stars: 0
-icon: "Box"
+title: Organization Module
+description: Multi-tenant organization and team management.
 ---
 
 # Organization Module
+
+Multi-tenant organization and team management.

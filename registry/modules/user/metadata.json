@@ -2,8 +2,8 @@
   "id": "user",
   "name": "User Module",
   "type": "module",
-  "description": "Automatically discovered Kthulu module: user",
+  "description": "Comprehensive user management and profile system.",
   "author": "Kthulu Core",
   "stars": 0,
-  "icon": "Box"
+  "icon": "User"
 }

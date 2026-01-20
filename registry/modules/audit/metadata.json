@@ -1,11 +1,9 @@
 {
   "id": "audit",
-  "name": "Audit Log",
+  "name": "Audit Module",
   "type": "module",
-  "description": "Track every user action for compliance and security.",
+  "description": "Audit logging and compliance tracking.",
   "author": "Kthulu Core",
-  "stars": 85,
-  "icon": "FileText",
-  "tags": ["compliance", "security", "logging"],
-  "version": "1.0.0"
+  "stars": 0,
+  "icon": "FileSearch"
 }

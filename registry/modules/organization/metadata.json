@@ -2,8 +2,8 @@
   "id": "organization",
   "name": "Organization Module",
   "type": "module",
-  "description": "Automatically discovered Kthulu module: organization",
+  "description": "Multi-tenant organization and team management.",
   "author": "Kthulu Core",
   "stars": 0,
-  "icon": "Box"
+  "icon": "Briefcase"
 }

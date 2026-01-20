@@ -1,10 +1,8 @@
 ---
-title: "Contact Module"
-description: "Automatically discovered Kthulu module: contact"
-type: "module"
-author: "Kthulu Core"
-stars: 0
-icon: "Box"
+title: Contact Module
+description: Contact management and CRM integration.
 ---
 
 # Contact Module
+
+Contact management and CRM integration.

@@ -1,0 +1,9 @@
+{
+  "id": "resolver",
+  "name": "Resolver Module",
+  "type": "module",
+  "description": "Intelligent module dependency resolution.",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "GitBranch"
+}

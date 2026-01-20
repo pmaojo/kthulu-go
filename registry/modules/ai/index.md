@@ -1,10 +1,8 @@
 ---
-title: "Ai Module"
-description: "Automatically discovered Kthulu module: ai"
-type: "module"
-author: "Kthulu Core"
-stars: 100
-icon: "Sparkles"
+title: Ai Module
+description: Agentic coding assistant and automated code generation.
 ---
 
 # Ai Module
+
+Agentic coding assistant and automated code generation.

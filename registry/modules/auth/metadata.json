@@ -2,10 +2,8 @@
   "id": "auth",
   "name": "Auth Module",
   "type": "module",
-  "description": "Production-ready authentication with JWT, OAuth2, and RBAC support.",
+  "description": "Secure JWT authentication with role-based access control.",
   "author": "Kthulu Core",
-  "stars": 124,
-  "icon": "Shield",
-  "tags": ["security", "jwt", "oauth2", "rbac"],
-  "version": "1.2.0"
+  "stars": 100,
+  "icon": "Shield"
 }

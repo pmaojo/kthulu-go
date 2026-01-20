@@ -1,10 +1,8 @@
 ---
-title: "Product Module"
-description: "Automatically discovered Kthulu module: product"
-type: "module"
-author: "Kthulu Core"
-stars: 0
-icon: "Box"
+title: Product Module
+description: Product catalog and SKU management.
 ---
 
 # Product Module
+
+Product catalog and SKU management.

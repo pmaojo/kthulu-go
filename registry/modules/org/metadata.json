@@ -1,0 +1,9 @@
+{
+  "id": "org",
+  "name": "Org Module",
+  "type": "module",
+  "description": "High-performance org module for Kthulu Go ecosystems.",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "Box"
+}

@@ -2,8 +2,8 @@
   "id": "calendar",
   "name": "Calendar Module",
   "type": "module",
-  "description": "Automatically discovered Kthulu module: calendar",
+  "description": "Event scheduling and calendar integration.",
   "author": "Kthulu Core",
   "stars": 0,
-  "icon": "Box"
+  "icon": "Calendar"
 }
