@@ -1,0 +1,506 @@
+// @kthulu:infrastructure:validate
+package validate
+
+import (
+	"fmt"
+	"net/mail"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
+	"unicode"
+)
+
+// Validator handles validation
+type Validator struct {
+	rules    map[string]RuleFunc
+	messages map[string]string
+}
+
+// RuleFunc is a validation rule function
+type RuleFunc func(field string, value interface{}, params ...string) error
+
+// Errors holds validation errors
+type Errors map[string][]string
+
+func (e Errors) HasErrors() bool {
+	return len(e) > 0
+}
+
+func (e Errors) First(field string) string {
+	if errs, ok := e[field]; ok && len(errs) > 0 {
+		return errs[0]
+	}
+	return ""
+}
+
+func (e Errors) All() map[string][]string {
+	return e
+}
+
+func (e Errors) Add(field, message string) {
+	e[field] = append(e[field], message)
+}
+
+// NewValidator creates a new validator with default rules
+func NewValidator() *Validator {
+	v := &Validator{
+		rules:    make(map[string]RuleFunc),
+		messages: defaultMessages(),
+	}
+	v.registerDefaultRules()
+	return v
+}
+
+func defaultMessages() map[string]string {
+	return map[string]string{
+		"required":   "The %s field is required.",
+		"email":      "The %s field must be a valid email address.",
+		"min":        "The %s field must be at least %s characters.",
+		"max":        "The %s field may not be greater than %s characters.",
+		"min_value":  "The %s field must be at least %s.",
+		"max_value":  "The %s field may not be greater than %s.",
+		"numeric":    "The %s field must be a number.",
+		"alpha":      "The %s field may only contain letters.",
+		"alphanumeric": "The %s field may only contain letters and numbers.",
+		"url":        "The %s field must be a valid URL.",
+		"uuid":       "The %s field must be a valid UUID.",
+		"date":       "The %s field must be a valid date.",
+		"in":         "The %s field must be one of: %s.",
+		"not_in":     "The %s field must not be one of: %s.",
+		"regex":      "The %s field format is invalid.",
+		"confirmed":  "The %s confirmation does not match.",
+		"unique":     "The %s has already been taken.",
+		"exists":     "The selected %s is invalid.",
+	}
+}
+
+func (v *Validator) registerDefaultRules() {
+	v.AddRule("required", ruleRequired)
+	v.AddRule("email", ruleEmail)
+	v.AddRule("min", ruleMin)
+	v.AddRule("max", ruleMax)
+	v.AddRule("min_value", ruleMinValue)
+	v.AddRule("max_value", ruleMaxValue)
+	v.AddRule("numeric", ruleNumeric)
+	v.AddRule("alpha", ruleAlpha)
+	v.AddRule("alphanumeric", ruleAlphanumeric)
+	v.AddRule("url", ruleURL)
+	v.AddRule("uuid", ruleUUID)
+	v.AddRule("date", ruleDate)
+	v.AddRule("in", ruleIn)
+	v.AddRule("not_in", ruleNotIn)
+	v.AddRule("regex", ruleRegex)
+}
+
+// AddRule registers a custom validation rule
+func (v *Validator) AddRule(name string, fn RuleFunc) {
+	v.rules[name] = fn
+}
+
+// SetMessage sets a custom error message for a rule
+func (v *Validator) SetMessage(rule, message string) {
+	v.messages[rule] = message
+}
+
+// Validate validates data against rules
+func (v *Validator) Validate(data map[string]interface{}, rules map[string]string) Errors {
+	errors := make(Errors)
+	
+	for field, ruleStr := range rules {
+		value := data[field]
+		fieldRules := parseRules(ruleStr)
+		
+		for _, rule := range fieldRules {
+			ruleName, params := parseRule(rule)
+			
+			ruleFn, exists := v.rules[ruleName]
+			if !exists {
+				continue
+			}
+			
+			if err := ruleFn(field, value, params...); err != nil {
+				message := v.formatMessage(ruleName, field, params...)
+				errors.Add(field, message)
+			}
+		}
+	}
+	
+	return errors
+}
+
+// ValidateStruct validates a struct using struct tags
+func (v *Validator) ValidateStruct(s interface{}) Errors {
+	// TODO: Implement reflection-based struct validation
+	return make(Errors)
+}
+
+func (v *Validator) formatMessage(rule, field string, params ...string) string {
+	msg, exists := v.messages[rule]
+	if !exists {
+		return fmt.Sprintf("Validation failed for %s", field)
+	}
+	
+	args := []interface{}{field}
+	for _, p := range params {
+		args = append(args, p)
+	}
+	
+	return fmt.Sprintf(msg, args...)
+}
+
+func parseRules(ruleStr string) []string {
+	return strings.Split(ruleStr, "|")
+}
+
+func parseRule(rule string) (string, []string) {
+	parts := strings.SplitN(rule, ":", 2)
+	name := parts[0]
+	
+	var params []string
+	if len(parts) > 1 {
+		params = strings.Split(parts[1], ",")
+	}
+	
+	return name, params
+}
+
+// ===============================
+// Built-in Rules
+// ===============================
+
+func ruleRequired(field string, value interface{}, params ...string) error {
+	if value == nil {
+		return fmt.Errorf("required")
+	}
+	
+	switch v := value.(type) {
+	case string:
+		if strings.TrimSpace(v) == "" {
+			return fmt.Errorf("required")
+		}
+	case []interface{}:
+		if len(v) == 0 {
+			return fmt.Errorf("required")
+		}
+	}
+	
+	return nil
+}
+
+func ruleEmail(field string, value interface{}, params ...string) error {
+	str, ok := value.(string)
+	if !ok || str == "" {
+		return nil // Skip if not string or empty (use required for mandatory)
+	}
+	
+	_, err := mail.ParseAddress(str)
+	if err != nil {
+		return fmt.Errorf("email")
+	}
+	return nil
+}
+
+func ruleMin(field string, value interface{}, params ...string) error {
+	if len(params) == 0 {
+		return nil
+	}
+	
+	minLen, err := strconv.Atoi(params[0])
+	if err != nil {
+		return nil
+	}
+	
+	str, ok := value.(string)
+	if !ok {
+		return nil
+	}
+	
+	if len(str) < minLen {
+		return fmt.Errorf("min")
+	}
+	return nil
+}
+
+func ruleMax(field string, value interface{}, params ...string) error {
+	if len(params) == 0 {
+		return nil
+	}
+	
+	maxLen, err := strconv.Atoi(params[0])
+	if err != nil {
+		return nil
+	}
+	
+	str, ok := value.(string)
+	if !ok {
+		return nil
+	}
+	
+	if len(str) > maxLen {
+		return fmt.Errorf("max")
+	}
+	return nil
+}
+
+func ruleMinValue(field string, value interface{}, params ...string) error {
+	if len(params) == 0 {
+		return nil
+	}
+	
+	minVal, err := strconv.ParseFloat(params[0], 64)
+	if err != nil {
+		return nil
+	}
+	
+	var numVal float64
+	switch v := value.(type) {
+	case int:
+		numVal = float64(v)
+	case float64:
+		numVal = v
+	case string:
+		numVal, _ = strconv.ParseFloat(v, 64)
+	default:
+		return nil
+	}
+	
+	if numVal < minVal {
+		return fmt.Errorf("min_value")
+	}
+	return nil
+}
+
+func ruleMaxValue(field string, value interface{}, params ...string) error {
+	if len(params) == 0 {
+		return nil
+	}
+	
+	maxVal, err := strconv.ParseFloat(params[0], 64)
+	if err != nil {
+		return nil
+	}
+	
+	var numVal float64
+	switch v := value.(type) {
+	case int:
+		numVal = float64(v)
+	case float64:
+		numVal = v
+	case string:
+		numVal, _ = strconv.ParseFloat(v, 64)
+	default:
+		return nil
+	}
+	
+	if numVal > maxVal {
+		return fmt.Errorf("max_value")
+	}
+	return nil
+}
+
+func ruleNumeric(field string, value interface{}, params ...string) error {
+	switch v := value.(type) {
+	case int, int64, float64:
+		return nil
+	case string:
+		if _, err := strconv.ParseFloat(v, 64); err != nil {
+			return fmt.Errorf("numeric")
+		}
+	default:
+		return fmt.Errorf("numeric")
+	}
+	return nil
+}
+
+func ruleAlpha(field string, value interface{}, params ...string) error {
+	str, ok := value.(string)
+	if !ok || str == "" {
+		return nil
+	}
+	
+	for _, r := range str {
+		if !unicode.IsLetter(r) {
+			return fmt.Errorf("alpha")
+		}
+	}
+	return nil
+}
+
+func ruleAlphanumeric(field string, value interface{}, params ...string) error {
+	str, ok := value.(string)
+	if !ok || str == "" {
+		return nil
+	}
+	
+	for _, r := range str {
+		if !unicode.IsLetter(r) && !unicode.IsDigit(r) {
+			return fmt.Errorf("alphanumeric")
+		}
+	}
+	return nil
+}
+
+func ruleURL(field string, value interface{}, params ...string) error {
+	str, ok := value.(string)
+	if !ok || str == "" {
+		return nil
+	}
+	
+	urlRegex := regexp.MustCompile(`^https?://[^\s/$.?#].[^\s]*$`)
+	if !urlRegex.MatchString(str) {
+		return fmt.Errorf("url")
+	}
+	return nil
+}
+
+func ruleUUID(field string, value interface{}, params ...string) error {
+	str, ok := value.(string)
+	if !ok || str == "" {
+		return nil
+	}
+	
+	uuidRegex := regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$`)
+	if !uuidRegex.MatchString(str) {
+		return fmt.Errorf("uuid")
+	}
+	return nil
+}
+
+func ruleDate(field string, value interface{}, params ...string) error {
+	str, ok := value.(string)
+	if !ok || str == "" {
+		return nil
+	}
+	
+	formats := []string{
+		"2006-01-02",
+		"2006-01-02 15:04:05",
+		time.RFC3339,
+	}
+	
+	for _, format := range formats {
+		if _, err := time.Parse(format, str); err == nil {
+			return nil
+		}
+	}
+	
+	return fmt.Errorf("date")
+}
+
+func ruleIn(field string, value interface{}, params ...string) error {
+	str, ok := value.(string)
+	if !ok {
+		return nil
+	}
+	
+	for _, p := range params {
+		if str == p {
+			return nil
+		}
+	}
+	
+	return fmt.Errorf("in")
+}
+
+func ruleNotIn(field string, value interface{}, params ...string) error {
+	str, ok := value.(string)
+	if !ok {
+		return nil
+	}
+	
+	for _, p := range params {
+		if str == p {
+			return fmt.Errorf("not_in")
+		}
+	}
+	
+	return nil
+}
+
+func ruleRegex(field string, value interface{}, params ...string) error {
+	if len(params) == 0 {
+		return nil
+	}
+	
+	str, ok := value.(string)
+	if !ok || str == "" {
+		return nil
+	}
+	
+	pattern := params[0]
+	matched, err := regexp.MatchString(pattern, str)
+	if err != nil || !matched {
+		return fmt.Errorf("regex")
+	}
+	
+	return nil
+}
+
+// ===============================
+// Fluent Builder API
+// ===============================
+
+// RuleBuilder provides a fluent interface for building validation rules
+type RuleBuilder struct {
+	rules []string
+}
+
+// Make starts a new rule builder
+func Make() *RuleBuilder {
+	return &RuleBuilder{rules: make([]string, 0)}
+}
+
+func (rb *RuleBuilder) Required() *RuleBuilder {
+	rb.rules = append(rb.rules, "required")
+	return rb
+}
+
+func (rb *RuleBuilder) Email() *RuleBuilder {
+	rb.rules = append(rb.rules, "email")
+	return rb
+}
+
+func (rb *RuleBuilder) Min(length int) *RuleBuilder {
+	rb.rules = append(rb.rules, fmt.Sprintf("min:%d", length))
+	return rb
+}
+
+func (rb *RuleBuilder) Max(length int) *RuleBuilder {
+	rb.rules = append(rb.rules, fmt.Sprintf("max:%d", length))
+	return rb
+}
+
+func (rb *RuleBuilder) Numeric() *RuleBuilder {
+	rb.rules = append(rb.rules, "numeric")
+	return rb
+}
+
+func (rb *RuleBuilder) Alpha() *RuleBuilder {
+	rb.rules = append(rb.rules, "alpha")
+	return rb
+}
+
+func (rb *RuleBuilder) URL() *RuleBuilder {
+	rb.rules = append(rb.rules, "url")
+	return rb
+}
+
+func (rb *RuleBuilder) UUID() *RuleBuilder {
+	rb.rules = append(rb.rules, "uuid")
+	return rb
+}
+
+func (rb *RuleBuilder) In(values ...string) *RuleBuilder {
+	rb.rules = append(rb.rules, fmt.Sprintf("in:%s", strings.Join(values, ",")))
+	return rb
+}
+
+func (rb *RuleBuilder) Regex(pattern string) *RuleBuilder {
+	rb.rules = append(rb.rules, fmt.Sprintf("regex:%s", pattern))
+	return rb
+}
+
+func (rb *RuleBuilder) String() string {
+	return strings.Join(rb.rules, "|")
+}

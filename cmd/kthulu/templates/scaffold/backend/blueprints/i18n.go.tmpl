@@ -1,0 +1,14 @@
+// @kthulu:module:i18n
+package modules
+
+import (
+	"go.uber.org/fx"
+
+	"{{.ProjectModule}}/internal/infrastructure/i18n"
+)
+
+// I18nModule provides internationalization functionality.
+// Supports JSON/YAML translation files and pluralization.
+var I18nModule = fx.Options(
+	fx.Provide(i18n.NewTranslator),
+)

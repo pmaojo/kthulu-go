@@ -1,0 +1,14 @@
+// @kthulu:module:validate
+package modules
+
+import (
+	"go.uber.org/fx"
+
+	"{{.ProjectModule}}/internal/infrastructure/validate"
+)
+
+// ValidateModule provides advanced validation functionality.
+// Supports rule builder pattern, custom rules, and error messages.
+var ValidateModule = fx.Options(
+	fx.Provide(validate.NewValidator),
+)

@@ -1,0 +1,300 @@
+// @kthulu:infrastructure:i18n
+package i18n
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+)
+
+// Translator handles internationalization
+type Translator struct {
+	translations map[string]map[string]string // locale -> key -> value
+	defaultLang  string
+	fallbackLang string
+	mu           sync.RWMutex
+}
+
+// Config holds i18n configuration
+type Config struct {
+	DefaultLang   string
+	FallbackLang  string
+	TranslationsDir string
+}
+
+// NewTranslator creates a new translator
+func NewTranslator() *Translator {
+	config := loadConfig()
+	
+	t := &Translator{
+		translations: make(map[string]map[string]string),
+		defaultLang:  config.DefaultLang,
+		fallbackLang: config.FallbackLang,
+	}
+	
+	// Load translations from directory
+	if config.TranslationsDir != "" {
+		if err := t.LoadFromDir(config.TranslationsDir); err != nil {
+			fmt.Printf("⚠️  Failed to load translations: %v\n", err)
+		}
+	}
+	
+	return t
+}
+
+func loadConfig() *Config {
+	return &Config{
+		DefaultLang:    getEnv("APP_LOCALE", "en"),
+		FallbackLang:   getEnv("APP_FALLBACK_LOCALE", "en"),
+		TranslationsDir: getEnv("TRANSLATIONS_DIR", "./translations"),
+	}
+}
+
+func getEnv(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
+}
+
+// LoadFromDir loads all translation files from a directory
+func (t *Translator) LoadFromDir(dir string) error {
+	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		
+		if info.IsDir() {
+			return nil
+		}
+		
+		ext := filepath.Ext(path)
+		if ext != ".json" {
+			return nil
+		}
+		
+		// Extract locale from filename (e.g., "en.json" -> "en")
+		locale := strings.TrimSuffix(filepath.Base(path), ext)
+		
+		return t.LoadFile(locale, path)
+	})
+}
+
+// LoadFile loads a single translation file
+func (t *Translator) LoadFile(locale, path string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("failed to read %s: %w", path, err)
+	}
+	
+	var translations map[string]interface{}
+	if err := json.Unmarshal(data, &translations); err != nil {
+		return fmt.Errorf("failed to parse %s: %w", path, err)
+	}
+	
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	
+	if t.translations[locale] == nil {
+		t.translations[locale] = make(map[string]string)
+	}
+	
+	// Flatten nested keys
+	flattenTranslations(translations, "", t.translations[locale])
+	
+	return nil
+}
+
+// flattenTranslations converts nested map to flat keys (e.g., "auth.login.title")
+func flattenTranslations(input map[string]interface{}, prefix string, output map[string]string) {
+	for key, value := range input {
+		fullKey := key
+		if prefix != "" {
+			fullKey = prefix + "." + key
+		}
+		
+		switch v := value.(type) {
+		case string:
+			output[fullKey] = v
+		case map[string]interface{}:
+			flattenTranslations(v, fullKey, output)
+		}
+	}
+}
+
+// T translates a key to the given locale
+func (t *Translator) T(locale, key string, args ...interface{}) string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	
+	// Try requested locale
+	if translations, ok := t.translations[locale]; ok {
+		if val, ok := translations[key]; ok {
+			return t.interpolate(val, args...)
+		}
+	}
+	
+	// Try fallback locale
+	if locale != t.fallbackLang {
+		if translations, ok := t.translations[t.fallbackLang]; ok {
+			if val, ok := translations[key]; ok {
+				return t.interpolate(val, args...)
+			}
+		}
+	}
+	
+	// Return key if not found
+	return key
+}
+
+// Trans is an alias for T using default locale
+func (t *Translator) Trans(key string, args ...interface{}) string {
+	return t.T(t.defaultLang, key, args...)
+}
+
+// interpolate replaces placeholders in the translation
+func (t *Translator) interpolate(template string, args ...interface{}) string {
+	if len(args) == 0 {
+		return template
+	}
+	
+	// Simple positional replacement: %s, %d, etc.
+	return fmt.Sprintf(template, args...)
+}
+
+// Choice handles pluralization
+func (t *Translator) Choice(locale, key string, count int, args ...interface{}) string {
+	translation := t.T(locale, key, args...)
+	
+	// Simple pluralization: "item|items"
+	parts := strings.Split(translation, "|")
+	if len(parts) == 2 {
+		if count == 1 {
+			return parts[0]
+		}
+		return parts[1]
+	}
+	
+	// Extended pluralization: "{0} none|{1} one|[2,*] many"
+	// TODO: Implement full ICU message format
+	
+	return translation
+}
+
+// HasTranslation checks if a translation exists
+func (t *Translator) HasTranslation(locale, key string) bool {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	
+	if translations, ok := t.translations[locale]; ok {
+		_, exists := translations[key]
+		return exists
+	}
+	return false
+}
+
+// Locales returns all loaded locales
+func (t *Translator) Locales() []string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	
+	locales := make([]string, 0, len(t.translations))
+	for locale := range t.translations {
+		locales = append(locales, locale)
+	}
+	return locales
+}
+
+// SetDefault sets the default locale
+func (t *Translator) SetDefault(locale string) {
+	t.defaultLang = locale
+}
+
+// Add adds a single translation
+func (t *Translator) Add(locale, key, value string) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	
+	if t.translations[locale] == nil {
+		t.translations[locale] = make(map[string]string)
+	}
+	t.translations[locale][key] = value
+}
+
+// ===============================
+// HTTP Middleware
+// ===============================
+
+type contextKey string
+
+const localeKey contextKey = "locale"
+
+// Middleware detects and sets locale from request
+func Middleware(t *Translator) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			locale := detectLocale(r, t.defaultLang)
+			ctx := context.WithValue(r.Context(), localeKey, locale)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
+// LocaleFromContext gets locale from context
+func LocaleFromContext(ctx context.Context) string {
+	if locale, ok := ctx.Value(localeKey).(string); ok {
+		return locale
+	}
+	return "en"
+}
+
+// detectLocale determines locale from request
+func detectLocale(r *http.Request, defaultLang string) string {
+	// 1. Query parameter (?lang=es)
+	if lang := r.URL.Query().Get("lang"); lang != "" {
+		return lang
+	}
+	
+	// 2. Cookie
+	if cookie, err := r.Cookie("locale"); err == nil {
+		return cookie.Value
+	}
+	
+	// 3. Accept-Language header
+	acceptLang := r.Header.Get("Accept-Language")
+	if acceptLang != "" {
+		// Parse first language: "en-US,en;q=0.9,es;q=0.8" -> "en"
+		parts := strings.Split(acceptLang, ",")
+		if len(parts) > 0 {
+			lang := strings.Split(parts[0], "-")[0]
+			lang = strings.Split(lang, ";")[0]
+			return strings.TrimSpace(lang)
+		}
+	}
+	
+	return defaultLang
+}
+
+// ===============================
+// Template Helpers
+// ===============================
+
+// Helper returns a template function map for translations
+func (t *Translator) TemplateFuncs(locale string) map[string]interface{} {
+	return map[string]interface{}{
+		"__": func(key string, args ...interface{}) string {
+			return t.T(locale, key, args...)
+		},
+		"trans": func(key string, args ...interface{}) string {
+			return t.T(locale, key, args...)
+		},
+		"choice": func(key string, count int, args ...interface{}) string {
+			return t.Choice(locale, key, count, args...)
+		},
+	}
+}
