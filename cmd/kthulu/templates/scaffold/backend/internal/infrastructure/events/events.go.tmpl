@@ -1,0 +1,204 @@
+// @kthulu:infrastructure:events
+package events
+
+import (
+	"context"
+	"log"
+	"reflect"
+	"sync"
+)
+
+// Event is the base interface for all events
+type Event interface {
+	Name() string
+}
+
+// Listener handles events
+type Listener interface {
+	Handle(ctx context.Context, event Event) error
+}
+
+// ListenerFunc is a function that implements Listener
+type ListenerFunc func(ctx context.Context, event Event) error
+
+func (f ListenerFunc) Handle(ctx context.Context, event Event) error {
+	return f(ctx, event)
+}
+
+// EventBus manages event dispatching
+type EventBus struct {
+	listeners map[string][]Listener
+	mu        sync.RWMutex
+	async     bool
+}
+
+// NewEventBus creates a new event bus
+func NewEventBus() *EventBus {
+	return &EventBus{
+		listeners: make(map[string][]Listener),
+		async:     false,
+	}
+}
+
+// Listen registers a listener for an event type
+func (b *EventBus) Listen(eventName string, listener Listener) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.listeners[eventName] = append(b.listeners[eventName], listener)
+}
+
+// ListenFunc registers a function listener for an event type
+func (b *EventBus) ListenFunc(eventName string, handler func(ctx context.Context, event Event) error) {
+	b.Listen(eventName, ListenerFunc(handler))
+}
+
+// Subscribe registers a listener for a specific event type using generics
+func Subscribe[T Event](b *EventBus, handler func(ctx context.Context, event T) error) {
+	var zero T
+	eventName := zero.Name()
+	b.Listen(eventName, ListenerFunc(func(ctx context.Context, event Event) error {
+		if typedEvent, ok := event.(T); ok {
+			return handler(ctx, typedEvent)
+		}
+		return nil
+	}))
+}
+
+// Dispatch sends an event to all registered listeners
+func (b *EventBus) Dispatch(ctx context.Context, event Event) error {
+	b.mu.RLock()
+	listeners, exists := b.listeners[event.Name()]
+	b.mu.RUnlock()
+	
+	if !exists {
+		return nil
+	}
+	
+	for _, listener := range listeners {
+		if b.async {
+			go func(l Listener) {
+				if err := l.Handle(ctx, event); err != nil {
+					log.Printf("❌ Event listener error for '%s': %v", event.Name(), err)
+				}
+			}(listener)
+		} else {
+			if err := listener.Handle(ctx, event); err != nil {
+				log.Printf("❌ Event listener error for '%s': %v", event.Name(), err)
+				return err
+			}
+		}
+	}
+	
+	return nil
+}
+
+// DispatchAsync sends an event asynchronously
+func (b *EventBus) DispatchAsync(ctx context.Context, event Event) {
+	go func() {
+		_ = b.Dispatch(ctx, event)
+	}()
+}
+
+// HasListeners checks if an event has any listeners
+func (b *EventBus) HasListeners(eventName string) bool {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	listeners, exists := b.listeners[eventName]
+	return exists && len(listeners) > 0
+}
+
+// ListenerCount returns the number of listeners for an event
+func (b *EventBus) ListenerCount(eventName string) int {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	return len(b.listeners[eventName])
+}
+
+// List returns all registered event names
+func (b *EventBus) List() []string {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	
+	names := make([]string, 0, len(b.listeners))
+	for name := range b.listeners {
+		names = append(names, name)
+	}
+	return names
+}
+
+// SetAsync enables or disables async dispatching by default
+func (b *EventBus) SetAsync(async bool) {
+	b.async = async
+}
+
+// ===============================
+// Common Events
+// ===============================
+
+// BaseEvent provides common event functionality
+type BaseEvent struct {
+	EventName string
+	Payload   interface{}
+}
+
+func (e BaseEvent) Name() string {
+	return e.EventName
+}
+
+// UserCreated is dispatched when a user is created
+type UserCreated struct {
+	UserID uint
+	Email  string
+}
+
+func (e UserCreated) Name() string { return "user.created" }
+
+// UserUpdated is dispatched when a user is updated
+type UserUpdated struct {
+	UserID uint
+}
+
+func (e UserUpdated) Name() string { return "user.updated" }
+
+// UserDeleted is dispatched when a user is deleted
+type UserDeleted struct {
+	UserID uint
+}
+
+func (e UserDeleted) Name() string { return "user.deleted" }
+
+// OrderCreated is dispatched when an order is created
+type OrderCreated struct {
+	OrderID uint
+	UserID  uint
+	Total   float64
+}
+
+func (e OrderCreated) Name() string { return "order.created" }
+
+// PaymentReceived is dispatched when a payment is received
+type PaymentReceived struct {
+	PaymentID uint
+	OrderID   uint
+	Amount    float64
+}
+
+func (e PaymentReceived) Name() string { return "payment.received" }
+
+// GetEventType returns the reflect.Type for an event name (for discovery)
+func GetEventType(eventName string) reflect.Type {
+	switch eventName {
+	case "user.created":
+		return reflect.TypeOf(UserCreated{})
+	case "user.updated":
+		return reflect.TypeOf(UserUpdated{})
+	case "user.deleted":
+		return reflect.TypeOf(UserDeleted{})
+	case "order.created":
+		return reflect.TypeOf(OrderCreated{})
+	case "payment.received":
+		return reflect.TypeOf(PaymentReceived{})
+	default:
+		return reflect.TypeOf(BaseEvent{})
+	}
+}

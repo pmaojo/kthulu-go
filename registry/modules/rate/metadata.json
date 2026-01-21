@@ -1,0 +1,9 @@
+{
+  "id": "rate",
+  "name": "Rate Module",
+  "type": "module",
+  "description": "Rate limiting (Token Bucket, Sliding Window).",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "Gauge"
+}

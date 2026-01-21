@@ -1,0 +1,9 @@
+{
+  "id": "validate",
+  "name": "Validate Module",
+  "type": "module",
+  "description": "Advanced validation rules and messages.",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "CheckCircle"
+}

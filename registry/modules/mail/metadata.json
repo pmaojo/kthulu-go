@@ -1,0 +1,9 @@
+{
+  "id": "mail",
+  "name": "Mail Module",
+  "type": "module",
+  "description": "Multi-provider email service (SMTP, SES, SendGrid).",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "Mail"
+}

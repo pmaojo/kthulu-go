@@ -1,0 +1,9 @@
+{
+  "id": "cache",
+  "name": "Cache Module",
+  "type": "module",
+  "description": "High-performance caching (Memory, Redis, Memcached).",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "Database"
+}

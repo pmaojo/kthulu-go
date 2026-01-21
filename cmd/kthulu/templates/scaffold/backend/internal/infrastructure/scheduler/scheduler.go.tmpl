@@ -1,0 +1,205 @@
+// @kthulu:infrastructure:scheduler
+package scheduler
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"sync"
+	"time"
+)
+
+// Scheduler manages scheduled tasks
+type Scheduler struct {
+	jobs    []*Job
+	running bool
+	mu      sync.RWMutex
+	ctx     context.Context
+	cancel  context.CancelFunc
+}
+
+// Job represents a scheduled task
+type Job struct {
+	Name     string
+	Schedule string // cron expression or shorthand
+	Handler  func(ctx context.Context) error
+	
+	// Internal
+	lastRun  time.Time
+	nextRun  time.Time
+	interval time.Duration
+}
+
+// NewScheduler creates a new scheduler
+func NewScheduler() *Scheduler {
+	ctx, cancel := context.WithCancel(context.Background())
+	return &Scheduler{
+		jobs:   make([]*Job, 0),
+		ctx:    ctx,
+		cancel: cancel,
+	}
+}
+
+// Register adds a new scheduled job
+func (s *Scheduler) Register(name, schedule string, handler func(ctx context.Context) error) *Scheduler {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	
+	interval, err := parseSchedule(schedule)
+	if err != nil {
+		log.Printf("⚠️  Invalid schedule for '%s': %v", name, err)
+		return s
+	}
+	
+	job := &Job{
+		Name:     name,
+		Schedule: schedule,
+		Handler:  handler,
+		interval: interval,
+		nextRun:  time.Now().Add(interval),
+	}
+	
+	s.jobs = append(s.jobs, job)
+	return s
+}
+
+// Hourly registers a job to run every hour
+func (s *Scheduler) Hourly(name string, handler func(ctx context.Context) error) *Scheduler {
+	return s.Register(name, "@hourly", handler)
+}
+
+// Daily registers a job to run every day at midnight
+func (s *Scheduler) Daily(name string, handler func(ctx context.Context) error) *Scheduler {
+	return s.Register(name, "@daily", handler)
+}
+
+// EveryMinute registers a job to run every minute
+func (s *Scheduler) EveryMinute(name string, handler func(ctx context.Context) error) *Scheduler {
+	return s.Register(name, "@every 1m", handler)
+}
+
+// Every registers a job with a custom interval
+func (s *Scheduler) Every(name string, duration time.Duration, handler func(ctx context.Context) error) *Scheduler {
+	return s.Register(name, fmt.Sprintf("@every %s", duration), handler)
+}
+
+// Start begins running the scheduler
+func (s *Scheduler) Start() {
+	s.mu.Lock()
+	if s.running {
+		s.mu.Unlock()
+		return
+	}
+	s.running = true
+	s.mu.Unlock()
+	
+	log.Printf("🕐 Scheduler started with %d jobs", len(s.jobs))
+	
+	ticker := time.NewTicker(time.Second)
+	go func() {
+		for {
+			select {
+			case <-s.ctx.Done():
+				ticker.Stop()
+				return
+			case now := <-ticker.C:
+				s.tick(now)
+			}
+		}
+	}()
+}
+
+// Stop halts the scheduler
+func (s *Scheduler) Stop() {
+	s.cancel()
+	s.mu.Lock()
+	s.running = false
+	s.mu.Unlock()
+	log.Println("🛑 Scheduler stopped")
+}
+
+// List returns all registered jobs
+func (s *Scheduler) List() []*Job {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.jobs
+}
+
+func (s *Scheduler) tick(now time.Time) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	
+	for _, job := range s.jobs {
+		if now.After(job.nextRun) || now.Equal(job.nextRun) {
+			go s.runJob(job)
+			job.lastRun = now
+			job.nextRun = now.Add(job.interval)
+		}
+	}
+}
+
+func (s *Scheduler) runJob(job *Job) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("❌ Job '%s' panicked: %v", job.Name, r)
+		}
+	}()
+	
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+	
+	log.Printf("▶️  Running job: %s", job.Name)
+	start := time.Now()
+	
+	if err := job.Handler(ctx); err != nil {
+		log.Printf("❌ Job '%s' failed: %v", job.Name, err)
+	} else {
+		log.Printf("✅ Job '%s' completed in %v", job.Name, time.Since(start))
+	}
+}
+
+// parseSchedule converts schedule strings to intervals
+func parseSchedule(schedule string) (time.Duration, error) {
+	switch schedule {
+	case "@yearly", "@annually":
+		return 365 * 24 * time.Hour, nil
+	case "@monthly":
+		return 30 * 24 * time.Hour, nil
+	case "@weekly":
+		return 7 * 24 * time.Hour, nil
+	case "@daily", "@midnight":
+		return 24 * time.Hour, nil
+	case "@hourly":
+		return time.Hour, nil
+	}
+	
+	// Parse "@every <duration>" format
+	if len(schedule) > 7 && schedule[:7] == "@every " {
+		duration, err := time.ParseDuration(schedule[7:])
+		if err != nil {
+			return 0, fmt.Errorf("invalid duration: %w", err)
+		}
+		return duration, nil
+	}
+	
+	// TODO: Parse full cron expressions
+	// For now, default to hourly
+	return time.Hour, fmt.Errorf("cron expressions not yet supported, using hourly")
+}
+
+// StartScheduler is an Fx lifecycle hook to start the scheduler
+func StartScheduler(lc fx.Lifecycle, s *Scheduler) {
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			s.Start()
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			s.Stop()
+			return nil
+		},
+	})
+}
+
+// fx import for lifecycle
+import "go.uber.org/fx"

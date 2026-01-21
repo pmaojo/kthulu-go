@@ -1,0 +1,14 @@
+// @kthulu:module:events
+package modules
+
+import (
+	"go.uber.org/fx"
+
+	"{{.ProjectModule}}/internal/infrastructure/events"
+)
+
+// EventsModule provides event-driven architecture support.
+// Supports sync and async event dispatching with listeners.
+var EventsModule = fx.Options(
+	fx.Provide(events.NewEventBus),
+)

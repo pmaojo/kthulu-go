@@ -1,0 +1,254 @@
+// @kthulu:infrastructure:policy
+package policy
+
+import (
+	"context"
+	"fmt"
+	"sync"
+)
+
+// User represents an authenticated user for authorization
+type User interface {
+	GetID() uint
+	GetRoles() []string
+	HasRole(role string) bool
+}
+
+// Gate handles authorization checks
+type Gate struct {
+	abilities map[string]AbilityFunc
+	policies  map[string]Policy
+	before    []BeforeFunc
+	after     []AfterFunc
+	mu        sync.RWMutex
+}
+
+// AbilityFunc defines a simple ability check
+type AbilityFunc func(user User, args ...interface{}) bool
+
+// BeforeFunc runs before authorization checks
+type BeforeFunc func(user User, ability string) *bool
+
+// AfterFunc runs after authorization checks
+type AfterFunc func(user User, ability string, result bool) bool
+
+// Policy defines resource-specific authorization
+type Policy interface {
+	// Before runs before any policy method
+	Before(user User, ability string) *bool
+}
+
+// NewGate creates a new authorization gate
+func NewGate() *Gate {
+	return &Gate{
+		abilities: make(map[string]AbilityFunc),
+		policies:  make(map[string]Policy),
+		before:    make([]BeforeFunc, 0),
+		after:     make([]AfterFunc, 0),
+	}
+}
+
+// Define registers a new ability
+func (g *Gate) Define(ability string, callback AbilityFunc) *Gate {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.abilities[ability] = callback
+	return g
+}
+
+// RegisterPolicy registers a policy for a resource type
+func (g *Gate) RegisterPolicy(resource string, policy Policy) *Gate {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.policies[resource] = policy
+	return g
+}
+
+// Before registers a callback to run before authorization
+func (g *Gate) Before(callback BeforeFunc) *Gate {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.before = append(g.before, callback)
+	return g
+}
+
+// After registers a callback to run after authorization
+func (g *Gate) After(callback AfterFunc) *Gate {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.after = append(g.after, callback)
+	return g
+}
+
+// Allows checks if a user can perform an action
+func (g *Gate) Allows(user User, ability string, args ...interface{}) bool {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	
+	// Run before callbacks
+	for _, before := range g.before {
+		if result := before(user, ability); result != nil {
+			return *result
+		}
+	}
+	
+	// Check ability
+	if check, exists := g.abilities[ability]; exists {
+		result := check(user, args...)
+		
+		// Run after callbacks
+		for _, after := range g.after {
+			result = after(user, ability, result)
+		}
+		
+		return result
+	}
+	
+	return false
+}
+
+// Denies checks if a user cannot perform an action
+func (g *Gate) Denies(user User, ability string, args ...interface{}) bool {
+	return !g.Allows(user, ability, args...)
+}
+
+// Authorize checks authorization and returns an error if denied
+func (g *Gate) Authorize(ctx context.Context, user User, ability string, args ...interface{}) error {
+	if g.Denies(user, ability, args...) {
+		return fmt.Errorf("unauthorized: %s", ability)
+	}
+	return nil
+}
+
+// Can is an alias for Allows (Laravel-style)
+func (g *Gate) Can(user User, ability string, args ...interface{}) bool {
+	return g.Allows(user, ability, args...)
+}
+
+// Cannot is an alias for Denies (Laravel-style)
+func (g *Gate) Cannot(user User, ability string, args ...interface{}) bool {
+	return g.Denies(user, ability, args...)
+}
+
+// ForUser returns a gate instance bound to a specific user
+func (g *Gate) ForUser(user User) *UserGate {
+	return &UserGate{gate: g, user: user}
+}
+
+// UserGate is a gate bound to a specific user
+type UserGate struct {
+	gate *Gate
+	user User
+}
+
+func (ug *UserGate) Can(ability string, args ...interface{}) bool {
+	return ug.gate.Can(ug.user, ability, args...)
+}
+
+func (ug *UserGate) Cannot(ability string, args ...interface{}) bool {
+	return ug.gate.Cannot(ug.user, ability, args...)
+}
+
+func (ug *UserGate) Authorize(ctx context.Context, ability string, args ...interface{}) error {
+	return ug.gate.Authorize(ctx, ug.user, ability, args...)
+}
+
+// ===============================
+// Base Policy Implementation
+// ===============================
+
+// BasePolicy provides common policy functionality
+type BasePolicy struct{}
+
+func (p *BasePolicy) Before(user User, ability string) *bool {
+	// Super admin can do anything
+	if user.HasRole("super-admin") {
+		allow := true
+		return &allow
+	}
+	return nil
+}
+
+// ResourcePolicy is a generic policy for CRUD operations
+type ResourcePolicy struct {
+	BasePolicy
+	ownerField string
+}
+
+func NewResourcePolicy(ownerField string) *ResourcePolicy {
+	return &ResourcePolicy{ownerField: ownerField}
+}
+
+// View checks if user can view a resource
+func (p *ResourcePolicy) View(user User, resource interface{}) bool {
+	return true // Default: anyone can view
+}
+
+// Create checks if user can create a resource
+func (p *ResourcePolicy) Create(user User) bool {
+	return user != nil
+}
+
+// Update checks if user can update a resource
+func (p *ResourcePolicy) Update(user User, resource interface{}) bool {
+	return p.isOwner(user, resource)
+}
+
+// Delete checks if user can delete a resource
+func (p *ResourcePolicy) Delete(user User, resource interface{}) bool {
+	return p.isOwner(user, resource) || user.HasRole("admin")
+}
+
+func (p *ResourcePolicy) isOwner(user User, resource interface{}) bool {
+	// TODO: Use reflection to check owner field
+	return true
+}
+
+// ===============================
+// HTTP Middleware
+// ===============================
+
+// RequireAbility returns middleware that checks an ability
+func RequireAbility(gate *Gate, ability string) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			user := getUserFromContext(r.Context())
+			if user == nil || gate.Cannot(user, ability) {
+				http.Error(w, "Forbidden", http.StatusForbidden)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// RequireRole returns middleware that checks for a role
+func RequireRole(roles ...string) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			user := getUserFromContext(r.Context())
+			if user == nil {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+			
+			for _, role := range roles {
+				if user.HasRole(role) {
+					next.ServeHTTP(w, r)
+					return
+				}
+			}
+			
+			http.Error(w, "Forbidden", http.StatusForbidden)
+		})
+	}
+}
+
+func getUserFromContext(ctx context.Context) User {
+	if user, ok := ctx.Value("user").(User); ok {
+		return user
+	}
+	return nil
+}
+
+import "net/http"

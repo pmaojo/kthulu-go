@@ -1,0 +1,15 @@
+// @kthulu:module:scheduler
+package modules
+
+import (
+	"go.uber.org/fx"
+
+	"{{.ProjectModule}}/internal/infrastructure/scheduler"
+)
+
+// SchedulerModule provides task scheduling functionality.
+// Supports cron-like syntax for recurring jobs.
+var SchedulerModule = fx.Options(
+	fx.Provide(scheduler.NewScheduler),
+	fx.Invoke(scheduler.StartScheduler),
+)

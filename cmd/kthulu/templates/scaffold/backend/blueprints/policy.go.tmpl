@@ -1,0 +1,14 @@
+// @kthulu:module:policy
+package modules
+
+import (
+	"go.uber.org/fx"
+
+	"{{.ProjectModule}}/internal/infrastructure/policy"
+)
+
+// PolicyModule provides authorization functionality.
+// Implements resource-based policies and gates.
+var PolicyModule = fx.Options(
+	fx.Provide(policy.NewGate),
+)

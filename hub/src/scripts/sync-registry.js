@@ -28,6 +28,18 @@ const DESCRIPTIONS = {
   observability: 'Metrics, tracing, and logging infrastructure.',
   resolver: 'Intelligent module dependency resolution.',
   generator: 'Code generation and scaffolding engine.',
+  // Laravel parity modules
+  mail: 'Multi-provider email service (SMTP, SES, SendGrid).',
+  cache: 'High-performance caching (Memory, Redis, Memcached).',
+  storage: 'File storage abstraction (Local, S3, GCS, Azure).',
+  scheduler: 'Task scheduling with cron-like syntax.',
+  events: 'Event-driven architecture with pub/sub pattern.',
+  policy: 'Resource-based authorization and gates.',
+  rate: 'Rate limiting (Token Bucket, Sliding Window).',
+  seeder: 'Database seeding with faker helpers.',
+  session: 'Session management (Cookie, Redis, DB).',
+  i18n: 'Internationalization and localization.',
+  validate: 'Advanced validation rules and messages.',
 };
 
 const ICONS = {
@@ -51,6 +63,18 @@ const ICONS = {
   observability: 'BarChart',
   resolver: 'GitBranch',
   generator: 'Cpu',
+  // Laravel parity modules
+  mail: 'Mail',
+  cache: 'Database',
+  storage: 'HardDrive',
+  scheduler: 'Clock',
+  events: 'Radio',
+  policy: 'ShieldCheck',
+  rate: 'Gauge',
+  seeder: 'Sprout',
+  session: 'Cookie',
+  i18n: 'Globe',
+  validate: 'CheckCircle',
 };
 
 function getAllFiles(dirPath, arrayOfFiles = []) {
@@ -102,7 +126,10 @@ function syncModules() {
     'auth', 'user', 'ai', 'inventory', 'invoice', 'product', 
     'organization', 'notifier', 'calendar', 'realtime', 
     'contact', 'verifactu', 'oauthsso', 'audit', 'notification',
-    'health', 'flags', 'observability', 'resolver', 'generator'
+    'health', 'flags', 'observability', 'resolver', 'generator',
+    // Laravel parity modules
+    'mail', 'cache', 'storage', 'scheduler', 'events', 'policy',
+    'rate', 'seeder', 'session', 'i18n', 'validate'
   ];
   coreModules.forEach(id => discoveredModules.add(id));
 

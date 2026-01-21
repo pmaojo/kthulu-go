@@ -1,0 +1,9 @@
+{
+  "id": "storage",
+  "name": "Storage Module",
+  "type": "module",
+  "description": "File storage abstraction (Local, S3, GCS, Azure).",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "HardDrive"
+}

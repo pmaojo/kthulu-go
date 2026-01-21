@@ -1,0 +1,9 @@
+{
+  "id": "events",
+  "name": "Events Module",
+  "type": "module",
+  "description": "Event-driven architecture with pub/sub pattern.",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "Radio"
+}

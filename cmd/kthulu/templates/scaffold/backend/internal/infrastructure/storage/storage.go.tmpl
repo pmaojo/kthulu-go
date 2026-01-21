@@ -1,0 +1,458 @@
+// @kthulu:infrastructure:storage
+package storage
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+)
+
+// Storage defines the interface for file storage operations
+type Storage interface {
+	// Basic operations
+	Put(ctx context.Context, path string, content io.Reader) error
+	PutBytes(ctx context.Context, path string, data []byte) error
+	Get(ctx context.Context, path string) (io.ReadCloser, error)
+	GetBytes(ctx context.Context, path string) ([]byte, error)
+	Delete(ctx context.Context, path string) error
+	Exists(ctx context.Context, path string) (bool, error)
+	
+	// Directory operations
+	List(ctx context.Context, prefix string) ([]FileInfo, error)
+	DeleteDirectory(ctx context.Context, path string) error
+	
+	// URL generation
+	URL(path string) string
+	TemporaryURL(ctx context.Context, path string, expiry time.Duration) (string, error)
+	
+	// Metadata
+	Size(ctx context.Context, path string) (int64, error)
+	LastModified(ctx context.Context, path string) (time.Time, error)
+	
+	// Copy/Move
+	Copy(ctx context.Context, from, to string) error
+	Move(ctx context.Context, from, to string) error
+}
+
+// FileInfo represents file metadata
+type FileInfo struct {
+	Path         string
+	Size         int64
+	LastModified time.Time
+	IsDirectory  bool
+}
+
+// Config holds storage configuration
+type Config struct {
+	Driver    string // local, s3, gcs, azure
+	Root      string // Base path for local storage
+	URL       string // Base URL for public files
+	
+	// S3/MinIO config
+	S3Endpoint  string
+	S3Region    string
+	S3Bucket    string
+	S3Key       string
+	S3Secret    string
+	S3UseSSL    bool
+	
+	// GCS config
+	GCSBucket     string
+	GCSProjectID  string
+	GCSCredFile   string
+	
+	// Azure config
+	AzureAccount   string
+	AzureKey       string
+	AzureContainer string
+}
+
+// NewStorage creates a new storage instance based on configuration
+func NewStorage() Storage {
+	config := loadConfig()
+	
+	switch strings.ToLower(config.Driver) {
+	case "s3":
+		return NewS3Storage(config)
+	case "gcs":
+		return NewGCSStorage(config)
+	case "azure":
+		return NewAzureStorage(config)
+	default:
+		return NewLocalStorage(config)
+	}
+}
+
+func loadConfig() *Config {
+	return &Config{
+		Driver:         getEnv("STORAGE_DRIVER", "local"),
+		Root:           getEnv("STORAGE_ROOT", "./storage"),
+		URL:            getEnv("STORAGE_URL", "/storage"),
+		S3Endpoint:     getEnv("S3_ENDPOINT", ""),
+		S3Region:       getEnv("AWS_REGION", "us-east-1"),
+		S3Bucket:       getEnv("S3_BUCKET", ""),
+		S3Key:          getEnv("AWS_ACCESS_KEY_ID", ""),
+		S3Secret:       getEnv("AWS_SECRET_ACCESS_KEY", ""),
+		S3UseSSL:       getEnv("S3_USE_SSL", "true") == "true",
+		GCSBucket:      getEnv("GCS_BUCKET", ""),
+		GCSProjectID:   getEnv("GCS_PROJECT_ID", ""),
+		GCSCredFile:    getEnv("GOOGLE_APPLICATION_CREDENTIALS", ""),
+		AzureAccount:   getEnv("AZURE_STORAGE_ACCOUNT", ""),
+		AzureKey:       getEnv("AZURE_STORAGE_KEY", ""),
+		AzureContainer: getEnv("AZURE_STORAGE_CONTAINER", ""),
+	}
+}
+
+func getEnv(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
+}
+
+// ===============================
+// Local Storage Implementation
+// ===============================
+
+type LocalStorage struct {
+	config *Config
+}
+
+func NewLocalStorage(config *Config) *LocalStorage {
+	// Ensure root directory exists
+	os.MkdirAll(config.Root, 0755)
+	return &LocalStorage{config: config}
+}
+
+func (s *LocalStorage) fullPath(path string) string {
+	return filepath.Join(s.config.Root, path)
+}
+
+func (s *LocalStorage) Put(ctx context.Context, path string, content io.Reader) error {
+	fullPath := s.fullPath(path)
+	
+	// Ensure directory exists
+	if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+	
+	file, err := os.Create(fullPath)
+	if err != nil {
+		return fmt.Errorf("failed to create file: %w", err)
+	}
+	defer file.Close()
+	
+	if _, err := io.Copy(file, content); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+	
+	return nil
+}
+
+func (s *LocalStorage) PutBytes(ctx context.Context, path string, data []byte) error {
+	fullPath := s.fullPath(path)
+	
+	if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+	
+	return os.WriteFile(fullPath, data, 0644)
+}
+
+func (s *LocalStorage) Get(ctx context.Context, path string) (io.ReadCloser, error) {
+	return os.Open(s.fullPath(path))
+}
+
+func (s *LocalStorage) GetBytes(ctx context.Context, path string) ([]byte, error) {
+	return os.ReadFile(s.fullPath(path))
+}
+
+func (s *LocalStorage) Delete(ctx context.Context, path string) error {
+	return os.Remove(s.fullPath(path))
+}
+
+func (s *LocalStorage) Exists(ctx context.Context, path string) (bool, error) {
+	_, err := os.Stat(s.fullPath(path))
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
+func (s *LocalStorage) List(ctx context.Context, prefix string) ([]FileInfo, error) {
+	var files []FileInfo
+	root := s.fullPath(prefix)
+	
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		
+		relPath, _ := filepath.Rel(s.config.Root, path)
+		files = append(files, FileInfo{
+			Path:         relPath,
+			Size:         info.Size(),
+			LastModified: info.ModTime(),
+			IsDirectory:  info.IsDir(),
+		})
+		return nil
+	})
+	
+	return files, err
+}
+
+func (s *LocalStorage) DeleteDirectory(ctx context.Context, path string) error {
+	return os.RemoveAll(s.fullPath(path))
+}
+
+func (s *LocalStorage) URL(path string) string {
+	return s.config.URL + "/" + path
+}
+
+func (s *LocalStorage) TemporaryURL(ctx context.Context, path string, expiry time.Duration) (string, error) {
+	// Local storage doesn't support signed URLs, return regular URL
+	return s.URL(path), nil
+}
+
+func (s *LocalStorage) Size(ctx context.Context, path string) (int64, error) {
+	info, err := os.Stat(s.fullPath(path))
+	if err != nil {
+		return 0, err
+	}
+	return info.Size(), nil
+}
+
+func (s *LocalStorage) LastModified(ctx context.Context, path string) (time.Time, error) {
+	info, err := os.Stat(s.fullPath(path))
+	if err != nil {
+		return time.Time{}, err
+	}
+	return info.ModTime(), nil
+}
+
+func (s *LocalStorage) Copy(ctx context.Context, from, to string) error {
+	src, err := s.Get(ctx, from)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+	
+	return s.Put(ctx, to, src)
+}
+
+func (s *LocalStorage) Move(ctx context.Context, from, to string) error {
+	if err := s.Copy(ctx, from, to); err != nil {
+		return err
+	}
+	return s.Delete(ctx, from)
+}
+
+// ===============================
+// S3 Storage Implementation
+// ===============================
+
+type S3Storage struct {
+	config *Config
+}
+
+func NewS3Storage(config *Config) *S3Storage {
+	return &S3Storage{config: config}
+}
+
+func (s *S3Storage) Put(ctx context.Context, path string, content io.Reader) error {
+	// TODO: Implement using github.com/aws/aws-sdk-go-v2/service/s3
+	return fmt.Errorf("S3 storage not yet implemented - add aws-sdk-go-v2 dependency")
+}
+
+func (s *S3Storage) PutBytes(ctx context.Context, path string, data []byte) error {
+	return fmt.Errorf("S3 storage not yet implemented")
+}
+
+func (s *S3Storage) Get(ctx context.Context, path string) (io.ReadCloser, error) {
+	return nil, fmt.Errorf("S3 storage not yet implemented")
+}
+
+func (s *S3Storage) GetBytes(ctx context.Context, path string) ([]byte, error) {
+	return nil, fmt.Errorf("S3 storage not yet implemented")
+}
+
+func (s *S3Storage) Delete(ctx context.Context, path string) error {
+	return fmt.Errorf("S3 storage not yet implemented")
+}
+
+func (s *S3Storage) Exists(ctx context.Context, path string) (bool, error) {
+	return false, fmt.Errorf("S3 storage not yet implemented")
+}
+
+func (s *S3Storage) List(ctx context.Context, prefix string) ([]FileInfo, error) {
+	return nil, fmt.Errorf("S3 storage not yet implemented")
+}
+
+func (s *S3Storage) DeleteDirectory(ctx context.Context, path string) error {
+	return fmt.Errorf("S3 storage not yet implemented")
+}
+
+func (s *S3Storage) URL(path string) string {
+	return fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", s.config.S3Bucket, s.config.S3Region, url.PathEscape(path))
+}
+
+func (s *S3Storage) TemporaryURL(ctx context.Context, path string, expiry time.Duration) (string, error) {
+	return "", fmt.Errorf("S3 signed URLs not yet implemented")
+}
+
+func (s *S3Storage) Size(ctx context.Context, path string) (int64, error) {
+	return 0, fmt.Errorf("S3 storage not yet implemented")
+}
+
+func (s *S3Storage) LastModified(ctx context.Context, path string) (time.Time, error) {
+	return time.Time{}, fmt.Errorf("S3 storage not yet implemented")
+}
+
+func (s *S3Storage) Copy(ctx context.Context, from, to string) error {
+	return fmt.Errorf("S3 storage not yet implemented")
+}
+
+func (s *S3Storage) Move(ctx context.Context, from, to string) error {
+	return fmt.Errorf("S3 storage not yet implemented")
+}
+
+// ===============================
+// GCS Storage Implementation
+// ===============================
+
+type GCSStorage struct {
+	config *Config
+}
+
+func NewGCSStorage(config *Config) *GCSStorage {
+	return &GCSStorage{config: config}
+}
+
+func (s *GCSStorage) Put(ctx context.Context, path string, content io.Reader) error {
+	return fmt.Errorf("GCS storage not yet implemented - add cloud.google.com/go/storage dependency")
+}
+
+func (s *GCSStorage) PutBytes(ctx context.Context, path string, data []byte) error {
+	return fmt.Errorf("GCS storage not yet implemented")
+}
+
+func (s *GCSStorage) Get(ctx context.Context, path string) (io.ReadCloser, error) {
+	return nil, fmt.Errorf("GCS storage not yet implemented")
+}
+
+func (s *GCSStorage) GetBytes(ctx context.Context, path string) ([]byte, error) {
+	return nil, fmt.Errorf("GCS storage not yet implemented")
+}
+
+func (s *GCSStorage) Delete(ctx context.Context, path string) error {
+	return fmt.Errorf("GCS storage not yet implemented")
+}
+
+func (s *GCSStorage) Exists(ctx context.Context, path string) (bool, error) {
+	return false, fmt.Errorf("GCS storage not yet implemented")
+}
+
+func (s *GCSStorage) List(ctx context.Context, prefix string) ([]FileInfo, error) {
+	return nil, fmt.Errorf("GCS storage not yet implemented")
+}
+
+func (s *GCSStorage) DeleteDirectory(ctx context.Context, path string) error {
+	return fmt.Errorf("GCS storage not yet implemented")
+}
+
+func (s *GCSStorage) URL(path string) string {
+	return fmt.Sprintf("https://storage.googleapis.com/%s/%s", s.config.GCSBucket, url.PathEscape(path))
+}
+
+func (s *GCSStorage) TemporaryURL(ctx context.Context, path string, expiry time.Duration) (string, error) {
+	return "", fmt.Errorf("GCS signed URLs not yet implemented")
+}
+
+func (s *GCSStorage) Size(ctx context.Context, path string) (int64, error) {
+	return 0, fmt.Errorf("GCS storage not yet implemented")
+}
+
+func (s *GCSStorage) LastModified(ctx context.Context, path string) (time.Time, error) {
+	return time.Time{}, fmt.Errorf("GCS storage not yet implemented")
+}
+
+func (s *GCSStorage) Copy(ctx context.Context, from, to string) error {
+	return fmt.Errorf("GCS storage not yet implemented")
+}
+
+func (s *GCSStorage) Move(ctx context.Context, from, to string) error {
+	return fmt.Errorf("GCS storage not yet implemented")
+}
+
+// ===============================
+// Azure Storage Implementation
+// ===============================
+
+type AzureStorage struct {
+	config *Config
+}
+
+func NewAzureStorage(config *Config) *AzureStorage {
+	return &AzureStorage{config: config}
+}
+
+func (s *AzureStorage) Put(ctx context.Context, path string, content io.Reader) error {
+	return fmt.Errorf("Azure storage not yet implemented - add github.com/Azure/azure-sdk-for-go dependency")
+}
+
+func (s *AzureStorage) PutBytes(ctx context.Context, path string, data []byte) error {
+	return fmt.Errorf("Azure storage not yet implemented")
+}
+
+func (s *AzureStorage) Get(ctx context.Context, path string) (io.ReadCloser, error) {
+	return nil, fmt.Errorf("Azure storage not yet implemented")
+}
+
+func (s *AzureStorage) GetBytes(ctx context.Context, path string) ([]byte, error) {
+	return nil, fmt.Errorf("Azure storage not yet implemented")
+}
+
+func (s *AzureStorage) Delete(ctx context.Context, path string) error {
+	return fmt.Errorf("Azure storage not yet implemented")
+}
+
+func (s *AzureStorage) Exists(ctx context.Context, path string) (bool, error) {
+	return false, fmt.Errorf("Azure storage not yet implemented")
+}
+
+func (s *AzureStorage) List(ctx context.Context, prefix string) ([]FileInfo, error) {
+	return nil, fmt.Errorf("Azure storage not yet implemented")
+}
+
+func (s *AzureStorage) DeleteDirectory(ctx context.Context, path string) error {
+	return fmt.Errorf("Azure storage not yet implemented")
+}
+
+func (s *AzureStorage) URL(path string) string {
+	return fmt.Sprintf("https://%s.blob.core.windows.net/%s/%s", s.config.AzureAccount, s.config.AzureContainer, url.PathEscape(path))
+}
+
+func (s *AzureStorage) TemporaryURL(ctx context.Context, path string, expiry time.Duration) (string, error) {
+	return "", fmt.Errorf("Azure SAS URLs not yet implemented")
+}
+
+func (s *AzureStorage) Size(ctx context.Context, path string) (int64, error) {
+	return 0, fmt.Errorf("Azure storage not yet implemented")
+}
+
+func (s *AzureStorage) LastModified(ctx context.Context, path string) (time.Time, error) {
+	return time.Time{}, fmt.Errorf("Azure storage not yet implemented")
+}
+
+func (s *AzureStorage) Copy(ctx context.Context, from, to string) error {
+	return fmt.Errorf("Azure storage not yet implemented")
+}
+
+func (s *AzureStorage) Move(ctx context.Context, from, to string) error {
+	return fmt.Errorf("Azure storage not yet implemented")
+}

@@ -1,0 +1,252 @@
+// @kthulu:infrastructure:rate
+package rate
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"strconv"
+	"sync"
+	"time"
+)
+
+// RateLimiter defines the rate limiting interface
+type RateLimiter interface {
+	Allow(key string) bool
+	AllowN(key string, n int) bool
+	Reset(key string)
+	Remaining(key string) int
+}
+
+// Config holds rate limiter configuration
+type Config struct {
+	Algorithm string        // token_bucket, sliding_window, fixed_window
+	Rate      int           // requests per window
+	Window    time.Duration // window duration
+	Burst     int           // max burst size (for token bucket)
+}
+
+// NewRateLimiter creates a new rate limiter
+func NewRateLimiter() RateLimiter {
+	return NewTokenBucketLimiter(&Config{
+		Algorithm: "token_bucket",
+		Rate:      60,              // 60 requests
+		Window:    time.Minute,     // per minute
+		Burst:     10,              // max 10 burst
+	})
+}
+
+// ===============================
+// Token Bucket Implementation
+// ===============================
+
+type tokenBucket struct {
+	tokens     float64
+	lastUpdate time.Time
+}
+
+type TokenBucketLimiter struct {
+	config  *Config
+	buckets map[string]*tokenBucket
+	mu      sync.RWMutex
+}
+
+func NewTokenBucketLimiter(config *Config) *TokenBucketLimiter {
+	return &TokenBucketLimiter{
+		config:  config,
+		buckets: make(map[string]*tokenBucket),
+	}
+}
+
+func (l *TokenBucketLimiter) Allow(key string) bool {
+	return l.AllowN(key, 1)
+}
+
+func (l *TokenBucketLimiter) AllowN(key string, n int) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	
+	bucket, exists := l.buckets[key]
+	now := time.Now()
+	
+	if !exists {
+		bucket = &tokenBucket{
+			tokens:     float64(l.config.Burst),
+			lastUpdate: now,
+		}
+		l.buckets[key] = bucket
+	}
+	
+	// Refill tokens based on elapsed time
+	elapsed := now.Sub(bucket.lastUpdate).Seconds()
+	refillRate := float64(l.config.Rate) / l.config.Window.Seconds()
+	bucket.tokens += elapsed * refillRate
+	
+	// Cap at burst size
+	if bucket.tokens > float64(l.config.Burst) {
+		bucket.tokens = float64(l.config.Burst)
+	}
+	
+	bucket.lastUpdate = now
+	
+	// Check if request can be allowed
+	if bucket.tokens >= float64(n) {
+		bucket.tokens -= float64(n)
+		return true
+	}
+	
+	return false
+}
+
+func (l *TokenBucketLimiter) Reset(key string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	delete(l.buckets, key)
+}
+
+func (l *TokenBucketLimiter) Remaining(key string) int {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	
+	if bucket, exists := l.buckets[key]; exists {
+		return int(bucket.tokens)
+	}
+	return l.config.Burst
+}
+
+// ===============================
+// Sliding Window Implementation
+// ===============================
+
+type SlidingWindowLimiter struct {
+	config   *Config
+	requests map[string][]time.Time
+	mu       sync.RWMutex
+}
+
+func NewSlidingWindowLimiter(config *Config) *SlidingWindowLimiter {
+	return &SlidingWindowLimiter{
+		config:   config,
+		requests: make(map[string][]time.Time),
+	}
+}
+
+func (l *SlidingWindowLimiter) Allow(key string) bool {
+	return l.AllowN(key, 1)
+}
+
+func (l *SlidingWindowLimiter) AllowN(key string, n int) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	
+	now := time.Now()
+	windowStart := now.Add(-l.config.Window)
+	
+	// Get existing requests
+	requests := l.requests[key]
+	
+	// Filter out expired requests
+	var validRequests []time.Time
+	for _, t := range requests {
+		if t.After(windowStart) {
+			validRequests = append(validRequests, t)
+		}
+	}
+	
+	// Check if we can allow the request
+	if len(validRequests)+n > l.config.Rate {
+		l.requests[key] = validRequests
+		return false
+	}
+	
+	// Add new requests
+	for i := 0; i < n; i++ {
+		validRequests = append(validRequests, now)
+	}
+	l.requests[key] = validRequests
+	
+	return true
+}
+
+func (l *SlidingWindowLimiter) Reset(key string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	delete(l.requests, key)
+}
+
+func (l *SlidingWindowLimiter) Remaining(key string) int {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	
+	now := time.Now()
+	windowStart := now.Add(-l.config.Window)
+	
+	count := 0
+	for _, t := range l.requests[key] {
+		if t.After(windowStart) {
+			count++
+		}
+	}
+	
+	remaining := l.config.Rate - count
+	if remaining < 0 {
+		return 0
+	}
+	return remaining
+}
+
+// ===============================
+// HTTP Middleware
+// ===============================
+
+// Throttle returns middleware that rate limits requests
+func Throttle(limiter RateLimiter, keyFunc func(r *http.Request) string) func(next http.Handler) http.Handler {
+	if keyFunc == nil {
+		keyFunc = func(r *http.Request) string {
+			return r.RemoteAddr
+		}
+	}
+	
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			key := keyFunc(r)
+			
+			if !limiter.Allow(key) {
+				w.Header().Set("X-RateLimit-Remaining", "0")
+				w.Header().Set("Retry-After", "60")
+				http.Error(w, "Too Many Requests", http.StatusTooManyRequests)
+				return
+			}
+			
+			w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(limiter.Remaining(key)))
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// ThrottleByIP rate limits by IP address
+func ThrottleByIP(limiter RateLimiter) func(next http.Handler) http.Handler {
+	return Throttle(limiter, func(r *http.Request) string {
+		return r.RemoteAddr
+	})
+}
+
+// ThrottleByUser rate limits by user ID (requires user in context)
+func ThrottleByUser(limiter RateLimiter) func(next http.Handler) http.Handler {
+	return Throttle(limiter, func(r *http.Request) string {
+		if userID, ok := r.Context().Value("user_id").(uint); ok {
+			return fmt.Sprintf("user:%d", userID)
+		}
+		return r.RemoteAddr
+	})
+}
+
+// PerRoute creates route-specific rate limiters
+func PerRoute(ratePerMinute int) func(next http.Handler) http.Handler {
+	limiter := NewTokenBucketLimiter(&Config{
+		Rate:   ratePerMinute,
+		Window: time.Minute,
+		Burst:  ratePerMinute / 6, // 10 seconds worth
+	})
+	return ThrottleByIP(limiter)
+}

@@ -1,0 +1,14 @@
+// @kthulu:module:rate
+package modules
+
+import (
+	"go.uber.org/fx"
+
+	"{{.ProjectModule}}/internal/infrastructure/rate"
+)
+
+// RateModule provides rate limiting functionality.
+// Supports token bucket, sliding window, and fixed window algorithms.
+var RateModule = fx.Options(
+	fx.Provide(rate.NewRateLimiter),
+)

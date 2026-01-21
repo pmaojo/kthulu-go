@@ -1,0 +1,402 @@
+// @kthulu:infrastructure:cache
+package cache
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+)
+
+// Cache defines the interface for caching operations
+type Cache interface {
+	Get(ctx context.Context, key string) ([]byte, error)
+	Set(ctx context.Context, key string, value []byte, ttl time.Duration) error
+	Delete(ctx context.Context, key string) error
+	Exists(ctx context.Context, key string) (bool, error)
+	Flush(ctx context.Context) error
+	
+	// Convenience methods
+	GetString(ctx context.Context, key string) (string, error)
+	SetString(ctx context.Context, key string, value string, ttl time.Duration) error
+	GetJSON(ctx context.Context, key string, dest interface{}) error
+	SetJSON(ctx context.Context, key string, value interface{}, ttl time.Duration) error
+	
+	// Advanced operations
+	Increment(ctx context.Context, key string) (int64, error)
+	Decrement(ctx context.Context, key string) (int64, error)
+	Lock(ctx context.Context, key string, ttl time.Duration) (bool, error)
+	Unlock(ctx context.Context, key string) error
+}
+
+// Config holds cache configuration
+type Config struct {
+	Driver   string // memory, redis, memcached
+	Host     string
+	Port     string
+	Password string
+	DB       int
+	Prefix   string
+	TTL      time.Duration // default TTL
+}
+
+// NewCache creates a new cache based on configuration
+func NewCache() Cache {
+	config := loadConfig()
+	
+	switch strings.ToLower(config.Driver) {
+	case "redis":
+		return NewRedisCache(config)
+	case "memcached":
+		return NewMemcachedCache(config)
+	default:
+		return NewMemoryCache(config)
+	}
+}
+
+func loadConfig() *Config {
+	ttlSeconds, _ := strconv.Atoi(getEnv("CACHE_TTL", "3600"))
+	db, _ := strconv.Atoi(getEnv("REDIS_DB", "0"))
+	
+	return &Config{
+		Driver:   getEnv("CACHE_DRIVER", "memory"),
+		Host:     getEnv("REDIS_HOST", "localhost"),
+		Port:     getEnv("REDIS_PORT", "6379"),
+		Password: getEnv("REDIS_PASSWORD", ""),
+		DB:       db,
+		Prefix:   getEnv("CACHE_PREFIX", "kthulu:"),
+		TTL:      time.Duration(ttlSeconds) * time.Second,
+	}
+}
+
+func getEnv(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
+}
+
+// ===============================
+// Memory Cache Implementation
+// ===============================
+
+type cacheItem struct {
+	value     []byte
+	expiresAt time.Time
+}
+
+type MemoryCache struct {
+	config *Config
+	data   map[string]cacheItem
+	locks  map[string]time.Time
+	mu     sync.RWMutex
+}
+
+func NewMemoryCache(config *Config) *MemoryCache {
+	c := &MemoryCache{
+		config: config,
+		data:   make(map[string]cacheItem),
+		locks:  make(map[string]time.Time),
+	}
+	go c.cleanup()
+	return c
+}
+
+func (c *MemoryCache) prefixKey(key string) string {
+	return c.config.Prefix + key
+}
+
+func (c *MemoryCache) Get(ctx context.Context, key string) ([]byte, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	
+	item, exists := c.data[c.prefixKey(key)]
+	if !exists {
+		return nil, fmt.Errorf("key not found: %s", key)
+	}
+	if time.Now().After(item.expiresAt) {
+		return nil, fmt.Errorf("key expired: %s", key)
+	}
+	return item.value, nil
+}
+
+func (c *MemoryCache) Set(ctx context.Context, key string, value []byte, ttl time.Duration) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	
+	if ttl == 0 {
+		ttl = c.config.TTL
+	}
+	
+	c.data[c.prefixKey(key)] = cacheItem{
+		value:     value,
+		expiresAt: time.Now().Add(ttl),
+	}
+	return nil
+}
+
+func (c *MemoryCache) Delete(ctx context.Context, key string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	delete(c.data, c.prefixKey(key))
+	return nil
+}
+
+func (c *MemoryCache) Exists(ctx context.Context, key string) (bool, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	
+	item, exists := c.data[c.prefixKey(key)]
+	if !exists {
+		return false, nil
+	}
+	return time.Now().Before(item.expiresAt), nil
+}
+
+func (c *MemoryCache) Flush(ctx context.Context) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.data = make(map[string]cacheItem)
+	return nil
+}
+
+func (c *MemoryCache) GetString(ctx context.Context, key string) (string, error) {
+	data, err := c.Get(ctx, key)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func (c *MemoryCache) SetString(ctx context.Context, key string, value string, ttl time.Duration) error {
+	return c.Set(ctx, key, []byte(value), ttl)
+}
+
+func (c *MemoryCache) GetJSON(ctx context.Context, key string, dest interface{}) error {
+	data, err := c.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(data, dest)
+}
+
+func (c *MemoryCache) SetJSON(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
+	data, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	return c.Set(ctx, key, data, ttl)
+}
+
+func (c *MemoryCache) Increment(ctx context.Context, key string) (int64, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	
+	pk := c.prefixKey(key)
+	item, exists := c.data[pk]
+	var val int64 = 0
+	
+	if exists && time.Now().Before(item.expiresAt) {
+		fmt.Sscanf(string(item.value), "%d", &val)
+	}
+	val++
+	
+	c.data[pk] = cacheItem{
+		value:     []byte(fmt.Sprintf("%d", val)),
+		expiresAt: time.Now().Add(c.config.TTL),
+	}
+	return val, nil
+}
+
+func (c *MemoryCache) Decrement(ctx context.Context, key string) (int64, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	
+	pk := c.prefixKey(key)
+	item, exists := c.data[pk]
+	var val int64 = 0
+	
+	if exists && time.Now().Before(item.expiresAt) {
+		fmt.Sscanf(string(item.value), "%d", &val)
+	}
+	val--
+	
+	c.data[pk] = cacheItem{
+		value:     []byte(fmt.Sprintf("%d", val)),
+		expiresAt: time.Now().Add(c.config.TTL),
+	}
+	return val, nil
+}
+
+func (c *MemoryCache) Lock(ctx context.Context, key string, ttl time.Duration) (bool, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	
+	pk := c.prefixKey("lock:" + key)
+	if expiry, exists := c.locks[pk]; exists && time.Now().Before(expiry) {
+		return false, nil // Lock already held
+	}
+	
+	c.locks[pk] = time.Now().Add(ttl)
+	return true, nil
+}
+
+func (c *MemoryCache) Unlock(ctx context.Context, key string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	delete(c.locks, c.prefixKey("lock:"+key))
+	return nil
+}
+
+func (c *MemoryCache) cleanup() {
+	ticker := time.NewTicker(time.Minute)
+	for range ticker.C {
+		c.mu.Lock()
+		now := time.Now()
+		for k, v := range c.data {
+			if now.After(v.expiresAt) {
+				delete(c.data, k)
+			}
+		}
+		for k, v := range c.locks {
+			if now.After(v) {
+				delete(c.locks, k)
+			}
+		}
+		c.mu.Unlock()
+	}
+}
+
+// ===============================
+// Redis Cache Implementation
+// ===============================
+
+type RedisCache struct {
+	config *Config
+}
+
+func NewRedisCache(config *Config) *RedisCache {
+	return &RedisCache{config: config}
+}
+
+func (c *RedisCache) Get(ctx context.Context, key string) ([]byte, error) {
+	// TODO: Implement using github.com/redis/go-redis/v9
+	return nil, fmt.Errorf("Redis cache not yet implemented - add go-redis dependency")
+}
+
+func (c *RedisCache) Set(ctx context.Context, key string, value []byte, ttl time.Duration) error {
+	return fmt.Errorf("Redis cache not yet implemented")
+}
+
+func (c *RedisCache) Delete(ctx context.Context, key string) error {
+	return fmt.Errorf("Redis cache not yet implemented")
+}
+
+func (c *RedisCache) Exists(ctx context.Context, key string) (bool, error) {
+	return false, fmt.Errorf("Redis cache not yet implemented")
+}
+
+func (c *RedisCache) Flush(ctx context.Context) error {
+	return fmt.Errorf("Redis cache not yet implemented")
+}
+
+func (c *RedisCache) GetString(ctx context.Context, key string) (string, error) {
+	return "", fmt.Errorf("Redis cache not yet implemented")
+}
+
+func (c *RedisCache) SetString(ctx context.Context, key string, value string, ttl time.Duration) error {
+	return fmt.Errorf("Redis cache not yet implemented")
+}
+
+func (c *RedisCache) GetJSON(ctx context.Context, key string, dest interface{}) error {
+	return fmt.Errorf("Redis cache not yet implemented")
+}
+
+func (c *RedisCache) SetJSON(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
+	return fmt.Errorf("Redis cache not yet implemented")
+}
+
+func (c *RedisCache) Increment(ctx context.Context, key string) (int64, error) {
+	return 0, fmt.Errorf("Redis cache not yet implemented")
+}
+
+func (c *RedisCache) Decrement(ctx context.Context, key string) (int64, error) {
+	return 0, fmt.Errorf("Redis cache not yet implemented")
+}
+
+func (c *RedisCache) Lock(ctx context.Context, key string, ttl time.Duration) (bool, error) {
+	return false, fmt.Errorf("Redis cache not yet implemented")
+}
+
+func (c *RedisCache) Unlock(ctx context.Context, key string) error {
+	return fmt.Errorf("Redis cache not yet implemented")
+}
+
+// ===============================
+// Memcached Cache Implementation
+// ===============================
+
+type MemcachedCache struct {
+	config *Config
+}
+
+func NewMemcachedCache(config *Config) *MemcachedCache {
+	return &MemcachedCache{config: config}
+}
+
+func (c *MemcachedCache) Get(ctx context.Context, key string) ([]byte, error) {
+	// TODO: Implement using github.com/bradfitz/gomemcache/memcache
+	return nil, fmt.Errorf("Memcached cache not yet implemented - add gomemcache dependency")
+}
+
+func (c *MemcachedCache) Set(ctx context.Context, key string, value []byte, ttl time.Duration) error {
+	return fmt.Errorf("Memcached cache not yet implemented")
+}
+
+func (c *MemcachedCache) Delete(ctx context.Context, key string) error {
+	return fmt.Errorf("Memcached cache not yet implemented")
+}
+
+func (c *MemcachedCache) Exists(ctx context.Context, key string) (bool, error) {
+	return false, fmt.Errorf("Memcached cache not yet implemented")
+}
+
+func (c *MemcachedCache) Flush(ctx context.Context) error {
+	return fmt.Errorf("Memcached cache not yet implemented")
+}
+
+func (c *MemcachedCache) GetString(ctx context.Context, key string) (string, error) {
+	return "", fmt.Errorf("Memcached cache not yet implemented")
+}
+
+func (c *MemcachedCache) SetString(ctx context.Context, key string, value string, ttl time.Duration) error {
+	return fmt.Errorf("Memcached cache not yet implemented")
+}
+
+func (c *MemcachedCache) GetJSON(ctx context.Context, key string, dest interface{}) error {
+	return fmt.Errorf("Memcached cache not yet implemented")
+}
+
+func (c *MemcachedCache) SetJSON(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
+	return fmt.Errorf("Memcached cache not yet implemented")
+}
+
+func (c *MemcachedCache) Increment(ctx context.Context, key string) (int64, error) {
+	return 0, fmt.Errorf("Memcached cache not yet implemented")
+}
+
+func (c *MemcachedCache) Decrement(ctx context.Context, key string) (int64, error) {
+	return 0, fmt.Errorf("Memcached cache not yet implemented")
+}
+
+func (c *MemcachedCache) Lock(ctx context.Context, key string, ttl time.Duration) (bool, error) {
+	return false, fmt.Errorf("Memcached cache not yet implemented")
+}
+
+func (c *MemcachedCache) Unlock(ctx context.Context, key string) error {
+	return fmt.Errorf("Memcached cache not yet implemented")
+}

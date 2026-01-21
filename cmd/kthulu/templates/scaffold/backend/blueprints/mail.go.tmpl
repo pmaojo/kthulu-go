@@ -1,0 +1,18 @@
+// @kthulu:module:mail
+package modules
+
+import (
+	"go.uber.org/fx"
+
+	"{{.ProjectModule}}/internal/infrastructure/mail"
+)
+
+// MailModule provides email sending functionality.
+// Supports multiple providers: SMTP, SES, SendGrid, Mailgun, Resend
+var MailModule = fx.Options(
+	// Mail provider (configured via MAIL_DRIVER env)
+	fx.Provide(mail.NewMailer),
+
+	// Optional: Queue integration for async sending
+	// fx.Invoke(mail.RegisterQueueWorker),
+)

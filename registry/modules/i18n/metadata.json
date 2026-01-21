@@ -1,0 +1,9 @@
+{
+  "id": "i18n",
+  "name": "I18n Module",
+  "type": "module",
+  "description": "Internationalization and localization.",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "Globe"
+}

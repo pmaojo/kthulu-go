@@ -1,0 +1,9 @@
+{
+  "id": "policy",
+  "name": "Policy Module",
+  "type": "module",
+  "description": "Resource-based authorization and gates.",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "ShieldCheck"
+}

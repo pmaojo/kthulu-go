@@ -1,0 +1,14 @@
+// @kthulu:module:cache
+package modules
+
+import (
+	"go.uber.org/fx"
+
+	"{{.ProjectModule}}/internal/infrastructure/cache"
+)
+
+// CacheModule provides caching functionality.
+// Supports multiple drivers: memory, redis, memcached
+var CacheModule = fx.Options(
+	fx.Provide(cache.NewCache),
+)

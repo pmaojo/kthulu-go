@@ -1,0 +1,280 @@
+// @kthulu:infrastructure:mail
+package mail
+
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"html/template"
+	"net/smtp"
+	"os"
+	"strings"
+)
+
+// Mailer defines the interface for sending emails
+type Mailer interface {
+	Send(ctx context.Context, msg *Message) error
+	SendAsync(ctx context.Context, msg *Message) error
+}
+
+// Message represents an email message
+type Message struct {
+	From        string
+	To          []string
+	CC          []string
+	BCC         []string
+	ReplyTo     string
+	Subject     string
+	Body        string      // Plain text body
+	HTML        string      // HTML body
+	Attachments []Attachment
+	Headers     map[string]string
+}
+
+// Attachment represents an email attachment
+type Attachment struct {
+	Filename    string
+	ContentType string
+	Data        []byte
+}
+
+// Config holds mail configuration
+type Config struct {
+	Driver      string // smtp, ses, sendgrid, mailgun, resend
+	Host        string
+	Port        string
+	Username    string
+	Password    string
+	FromAddress string
+	FromName    string
+	Encryption  string // tls, ssl, none
+	// Provider-specific
+	APIKey    string
+	Region    string // for SES
+	Domain    string // for Mailgun
+}
+
+// NewMailer creates a new mailer based on configuration
+func NewMailer() Mailer {
+	config := loadConfig()
+	
+	switch strings.ToLower(config.Driver) {
+	case "smtp":
+		return NewSMTPMailer(config)
+	case "ses":
+		return NewSESMailer(config)
+	case "sendgrid":
+		return NewSendGridMailer(config)
+	case "mailgun":
+		return NewMailgunMailer(config)
+	case "resend":
+		return NewResendMailer(config)
+	case "log":
+		return NewLogMailer()
+	default:
+		// Default to log mailer in development
+		return NewLogMailer()
+	}
+}
+
+func loadConfig() *Config {
+	return &Config{
+		Driver:      getEnv("MAIL_DRIVER", "log"),
+		Host:        getEnv("MAIL_HOST", "localhost"),
+		Port:        getEnv("MAIL_PORT", "587"),
+		Username:    getEnv("MAIL_USERNAME", ""),
+		Password:    getEnv("MAIL_PASSWORD", ""),
+		FromAddress: getEnv("MAIL_FROM_ADDRESS", "noreply@example.com"),
+		FromName:    getEnv("MAIL_FROM_NAME", "Kthulu App"),
+		Encryption:  getEnv("MAIL_ENCRYPTION", "tls"),
+		APIKey:      getEnv("MAIL_API_KEY", ""),
+		Region:      getEnv("AWS_REGION", "us-east-1"),
+		Domain:      getEnv("MAILGUN_DOMAIN", ""),
+	}
+}
+
+func getEnv(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
+}
+
+// SMTPMailer implements Mailer using SMTP
+type SMTPMailer struct {
+	config *Config
+}
+
+func NewSMTPMailer(config *Config) *SMTPMailer {
+	return &SMTPMailer{config: config}
+}
+
+func (m *SMTPMailer) Send(ctx context.Context, msg *Message) error {
+	auth := smtp.PlainAuth("", m.config.Username, m.config.Password, m.config.Host)
+	
+	// Build email
+	var body bytes.Buffer
+	body.WriteString(fmt.Sprintf("From: %s <%s>\r\n", m.config.FromName, m.config.FromAddress))
+	body.WriteString(fmt.Sprintf("To: %s\r\n", strings.Join(msg.To, ", ")))
+	if len(msg.CC) > 0 {
+		body.WriteString(fmt.Sprintf("Cc: %s\r\n", strings.Join(msg.CC, ", ")))
+	}
+	body.WriteString(fmt.Sprintf("Subject: %s\r\n", msg.Subject))
+	
+	if msg.HTML != "" {
+		body.WriteString("MIME-Version: 1.0\r\n")
+		body.WriteString("Content-Type: text/html; charset=\"utf-8\"\r\n")
+		body.WriteString("\r\n")
+		body.WriteString(msg.HTML)
+	} else {
+		body.WriteString("Content-Type: text/plain; charset=\"utf-8\"\r\n")
+		body.WriteString("\r\n")
+		body.WriteString(msg.Body)
+	}
+
+	addr := fmt.Sprintf("%s:%s", m.config.Host, m.config.Port)
+	return smtp.SendMail(addr, auth, m.config.FromAddress, msg.To, body.Bytes())
+}
+
+func (m *SMTPMailer) SendAsync(ctx context.Context, msg *Message) error {
+	// TODO: Integrate with queue system
+	go func() {
+		_ = m.Send(context.Background(), msg)
+	}()
+	return nil
+}
+
+// LogMailer logs emails instead of sending (for development)
+type LogMailer struct{}
+
+func NewLogMailer() *LogMailer {
+	return &LogMailer{}
+}
+
+func (m *LogMailer) Send(ctx context.Context, msg *Message) error {
+	fmt.Printf("📧 [MAIL LOG] To: %s | Subject: %s\n", strings.Join(msg.To, ", "), msg.Subject)
+	if msg.HTML != "" {
+		fmt.Printf("   Body (HTML): %s...\n", truncate(msg.HTML, 100))
+	} else {
+		fmt.Printf("   Body: %s...\n", truncate(msg.Body, 100))
+	}
+	return nil
+}
+
+func (m *LogMailer) SendAsync(ctx context.Context, msg *Message) error {
+	return m.Send(ctx, msg)
+}
+
+func truncate(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	return s[:max]
+}
+
+// SESMailer implements Mailer using AWS SES
+type SESMailer struct {
+	config *Config
+}
+
+func NewSESMailer(config *Config) *SESMailer {
+	return &SESMailer{config: config}
+}
+
+func (m *SESMailer) Send(ctx context.Context, msg *Message) error {
+	// TODO: Implement AWS SES integration
+	// Requires: github.com/aws/aws-sdk-go-v2/service/sesv2
+	return fmt.Errorf("SES mailer not yet implemented - add aws-sdk-go-v2 dependency")
+}
+
+func (m *SESMailer) SendAsync(ctx context.Context, msg *Message) error {
+	go func() { _ = m.Send(context.Background(), msg) }()
+	return nil
+}
+
+// SendGridMailer implements Mailer using SendGrid API
+type SendGridMailer struct {
+	config *Config
+}
+
+func NewSendGridMailer(config *Config) *SendGridMailer {
+	return &SendGridMailer{config: config}
+}
+
+func (m *SendGridMailer) Send(ctx context.Context, msg *Message) error {
+	// TODO: Implement SendGrid API integration
+	// Requires: github.com/sendgrid/sendgrid-go
+	return fmt.Errorf("SendGrid mailer not yet implemented - add sendgrid-go dependency")
+}
+
+func (m *SendGridMailer) SendAsync(ctx context.Context, msg *Message) error {
+	go func() { _ = m.Send(context.Background(), msg) }()
+	return nil
+}
+
+// MailgunMailer implements Mailer using Mailgun API
+type MailgunMailer struct {
+	config *Config
+}
+
+func NewMailgunMailer(config *Config) *MailgunMailer {
+	return &MailgunMailer{config: config}
+}
+
+func (m *MailgunMailer) Send(ctx context.Context, msg *Message) error {
+	// TODO: Implement Mailgun API integration
+	// Requires: github.com/mailgun/mailgun-go/v4
+	return fmt.Errorf("Mailgun mailer not yet implemented - add mailgun-go dependency")
+}
+
+func (m *MailgunMailer) SendAsync(ctx context.Context, msg *Message) error {
+	go func() { _ = m.Send(context.Background(), msg) }()
+	return nil
+}
+
+// ResendMailer implements Mailer using Resend API
+type ResendMailer struct {
+	config *Config
+}
+
+func NewResendMailer(config *Config) *ResendMailer {
+	return &ResendMailer{config: config}
+}
+
+func (m *ResendMailer) Send(ctx context.Context, msg *Message) error {
+	// TODO: Implement Resend API integration
+	// Requires: github.com/resendlabs/resend-go
+	return fmt.Errorf("Resend mailer not yet implemented - add resend-go dependency")
+}
+
+func (m *ResendMailer) SendAsync(ctx context.Context, msg *Message) error {
+	go func() { _ = m.Send(context.Background(), msg) }()
+	return nil
+}
+
+// TemplateMailer wraps a Mailer with template support
+type TemplateMailer struct {
+	mailer    Mailer
+	templates *template.Template
+}
+
+func NewTemplateMailer(mailer Mailer, templatesDir string) (*TemplateMailer, error) {
+	tmpl, err := template.ParseGlob(templatesDir + "/*.html")
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse mail templates: %w", err)
+	}
+	return &TemplateMailer{mailer: mailer, templates: tmpl}, nil
+}
+
+func (m *TemplateMailer) SendTemplate(ctx context.Context, to []string, subject, templateName string, data interface{}) error {
+	var buf bytes.Buffer
+	if err := m.templates.ExecuteTemplate(&buf, templateName, data); err != nil {
+		return fmt.Errorf("failed to execute template: %w", err)
+	}
+	
+	return m.mailer.Send(ctx, &Message{
+		To:      to,
+		Subject: subject,
+		HTML:    buf.String(),
+	})
+}

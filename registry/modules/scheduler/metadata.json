@@ -1,0 +1,9 @@
+{
+  "id": "scheduler",
+  "name": "Scheduler Module",
+  "type": "module",
+  "description": "Task scheduling with cron-like syntax.",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "Clock"
+}

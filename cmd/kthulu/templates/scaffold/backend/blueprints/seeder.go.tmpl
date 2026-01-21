@@ -1,0 +1,13 @@
+// @kthulu:module:seeder
+package modules
+
+import (
+	"go.uber.org/fx"
+
+	"{{.ProjectModule}}/internal/infrastructure/seeder"
+)
+
+// SeederModule provides database seeding functionality.
+var SeederModule = fx.Options(
+	fx.Provide(seeder.NewSeeder),
+)

@@ -1,0 +1,9 @@
+{
+  "id": "session",
+  "name": "Session Module",
+  "type": "module",
+  "description": "Session management (Cookie, Redis, DB).",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "Cookie"
+}

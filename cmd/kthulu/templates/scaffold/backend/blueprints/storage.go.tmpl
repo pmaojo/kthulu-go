@@ -1,0 +1,14 @@
+// @kthulu:module:storage
+package modules
+
+import (
+	"go.uber.org/fx"
+
+	"{{.ProjectModule}}/internal/infrastructure/storage"
+)
+
+// StorageModule provides file storage functionality.
+// Supports multiple drivers: local, s3, gcs, azure
+var StorageModule = fx.Options(
+	fx.Provide(storage.NewStorage),
+)

@@ -1,0 +1,208 @@
+// @kthulu:infrastructure:seeder
+package seeder
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"math/rand"
+	"time"
+
+	"gorm.io/gorm"
+)
+
+// Seeder manages database seeding
+type Seeder struct {
+	db      *gorm.DB
+	seeders map[string]SeederFunc
+	order   []string
+}
+
+// SeederFunc is a function that seeds data
+type SeederFunc func(ctx context.Context, db *gorm.DB) error
+
+// NewSeeder creates a new seeder
+func NewSeeder(db *gorm.DB) *Seeder {
+	return &Seeder{
+		db:      db,
+		seeders: make(map[string]SeederFunc),
+		order:   make([]string, 0),
+	}
+}
+
+// Register adds a new seeder
+func (s *Seeder) Register(name string, fn SeederFunc) *Seeder {
+	s.seeders[name] = fn
+	s.order = append(s.order, name)
+	return s
+}
+
+// Run executes all seeders in order
+func (s *Seeder) Run(ctx context.Context) error {
+	log.Println("🌱 Running database seeders...")
+	
+	for _, name := range s.order {
+		fn := s.seeders[name]
+		log.Printf("   ▶ Seeding: %s", name)
+		
+		if err := fn(ctx, s.db); err != nil {
+			return fmt.Errorf("seeder '%s' failed: %w", name, err)
+		}
+		
+		log.Printf("   ✅ %s seeded", name)
+	}
+	
+	log.Println("🌱 Seeding complete!")
+	return nil
+}
+
+// RunOnly runs specific seeders by name
+func (s *Seeder) RunOnly(ctx context.Context, names ...string) error {
+	for _, name := range names {
+		fn, exists := s.seeders[name]
+		if !exists {
+			return fmt.Errorf("seeder '%s' not found", name)
+		}
+		
+		log.Printf("🌱 Running seeder: %s", name)
+		if err := fn(ctx, s.db); err != nil {
+			return fmt.Errorf("seeder '%s' failed: %w", name, err)
+		}
+	}
+	return nil
+}
+
+// Fresh truncates all tables and re-seeds
+func (s *Seeder) Fresh(ctx context.Context) error {
+	log.Println("🔄 Fresh seeding - truncating tables...")
+	
+	// Get all tables
+	var tables []string
+	if err := s.db.Raw("SELECT tablename FROM pg_tables WHERE schemaname = 'public'").Scan(&tables).Error; err != nil {
+		// Fallback for SQLite
+		s.db.Raw("SELECT name FROM sqlite_master WHERE type='table'").Scan(&tables)
+	}
+	
+	// Truncate each table
+	for _, table := range tables {
+		if table == "schema_migrations" || table == "goose_db_version" {
+			continue // Skip migration tables
+		}
+		s.db.Exec(fmt.Sprintf("TRUNCATE TABLE %s CASCADE", table))
+	}
+	
+	return s.Run(ctx)
+}
+
+// List returns all registered seeder names
+func (s *Seeder) List() []string {
+	return s.order
+}
+
+// ===============================
+// Faker Helpers
+// ===============================
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
+// Fake provides fake data generation
+type Fake struct{}
+
+var F = Fake{}
+
+func (Fake) Name() string {
+	firstNames := []string{"John", "Jane", "Bob", "Alice", "Charlie", "Diana", "Eve", "Frank", "Grace", "Hugo"}
+	lastNames := []string{"Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Martinez", "Wilson"}
+	return firstNames[rand.Intn(len(firstNames))] + " " + lastNames[rand.Intn(len(lastNames))]
+}
+
+func (Fake) FirstName() string {
+	names := []string{"John", "Jane", "Bob", "Alice", "Charlie", "Diana", "Eve", "Frank", "Grace", "Hugo"}
+	return names[rand.Intn(len(names))]
+}
+
+func (Fake) LastName() string {
+	names := []string{"Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Martinez", "Wilson"}
+	return names[rand.Intn(len(names))]
+}
+
+func (Fake) Email() string {
+	domains := []string{"example.com", "test.com", "demo.org", "sample.net"}
+	return fmt.Sprintf("%s.%s@%s", 
+		randomString(5), 
+		randomString(5), 
+		domains[rand.Intn(len(domains))])
+}
+
+func (Fake) Phone() string {
+	return fmt.Sprintf("+1-%d-%d-%d", 
+		rand.Intn(900)+100, 
+		rand.Intn(900)+100, 
+		rand.Intn(9000)+1000)
+}
+
+func (Fake) Address() string {
+	streets := []string{"Main St", "Oak Ave", "Maple Blvd", "Park Rd", "Lake Dr"}
+	return fmt.Sprintf("%d %s", rand.Intn(9000)+100, streets[rand.Intn(len(streets))])
+}
+
+func (Fake) City() string {
+	cities := []string{"New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "San Francisco", "Seattle", "Boston", "Miami", "Austin"}
+	return cities[rand.Intn(len(cities))]
+}
+
+func (Fake) Company() string {
+	adjectives := []string{"Global", "Dynamic", "Smart", "Innovative", "Digital", "Creative"}
+	nouns := []string{"Solutions", "Systems", "Technologies", "Enterprises", "Industries", "Corp"}
+	return adjectives[rand.Intn(len(adjectives))] + " " + nouns[rand.Intn(len(nouns))]
+}
+
+func (Fake) UUID() string {
+	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
+		rand.Uint32(),
+		rand.Intn(0xffff),
+		rand.Intn(0x0fff)|0x4000,
+		rand.Intn(0x3fff)|0x8000,
+		rand.Int63n(0xffffffffffff))
+}
+
+func (Fake) Int(min, max int) int {
+	return rand.Intn(max-min+1) + min
+}
+
+func (Fake) Float(min, max float64) float64 {
+	return min + rand.Float64()*(max-min)
+}
+
+func (Fake) Bool() bool {
+	return rand.Intn(2) == 1
+}
+
+func (Fake) Date(start, end time.Time) time.Time {
+	delta := end.Unix() - start.Unix()
+	sec := rand.Int63n(delta) + start.Unix()
+	return time.Unix(sec, 0)
+}
+
+func (Fake) Lorem(words int) string {
+	lorem := []string{"lorem", "ipsum", "dolor", "sit", "amet", "consectetur", "adipiscing", "elit", "sed", "do", "eiusmod", "tempor"}
+	result := ""
+	for i := 0; i < words; i++ {
+		if i > 0 {
+			result += " "
+		}
+		result += lorem[rand.Intn(len(lorem))]
+	}
+	return result
+}
+
+func randomString(n int) string {
+	const letters = "abcdefghijklmnopqrstuvwxyz"
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
+}

@@ -1,0 +1,9 @@
+{
+  "id": "seeder",
+  "name": "Seeder Module",
+  "type": "module",
+  "description": "Database seeding with faker helpers.",
+  "author": "Kthulu Core",
+  "stars": 0,
+  "icon": "Sprout"
+}
