@@ -1,0 +1,296 @@
+---
+title: Quick Start Guide
+description: Build a production-ready Go application in under 5 minutes
+---
+
+# Quick Start Guide
+
+Build a production-ready Go application with authentication, database, and frontend in under 5 minutes.
+
+## Prerequisites
+
+```bash
+# Check your environment
+kthulu doctor
+```
+
+Required:
+
+- **Go** 1.21+
+- **Git**
+- **Node.js** (for frontend)
+
+## 1. Create Your Project
+
+```bash
+# Simple start
+kthulu new my-app
+
+# With specific features
+kthulu new my-shop --features user,auth,product,invoice
+
+# Full stack with all modules
+kthulu new saas-app \
+  --features user,auth,product,mail,cache,storage,scheduler,events \
+  --frontend templ \
+  --database postgres
+```
+
+### Available Templates
+
+| Template       | Description         | Best For          |
+| -------------- | ------------------- | ----------------- |
+| `microservice` | Lightweight API     | Small services    |
+| `monolith`     | Full-featured app   | Most projects     |
+| `saas`         | Multi-tenant SaaS   | SaaS platforms    |
+| `ecommerce`    | E-commerce platform | Online stores     |
+| `fintech`      | Financial services  | Banking, payments |
+| `cli`          | Command-line tool   | CLI apps          |
+| `mcp`          | MCP Server          | AI agents         |
+
+## 2. Run Migrations
+
+```bash
+cd my-app
+kthulu migrate up
+```
+
+Output:
+
+```
+✅ 20260121001226_create_user_table.sql
+✅ 20260121001227_create_auth_table.sql
+...
+goose: successfully migrated database to version: 20260121001233
+```
+
+## 3. Start Development
+
+```bash
+kthulu dev
+```
+
+This starts:
+
+- 🔧 Backend server with hot-reload
+- ⚡ Frontend with Templ/HTMX
+- 🤖 AI self-healing (auto-fixes errors)
+
+Visit [http://localhost:8080](http://localhost:8080)
+
+---
+
+## Available Modules (35+)
+
+### Core Infrastructure
+
+| Module      | Description               | Command                |
+| ----------- | ------------------------- | ---------------------- |
+| `auth`      | JWT authentication + RBAC | `--features auth`      |
+| `user`      | User management           | `--features user`      |
+| `mail`      | SMTP, SES, SendGrid       | `--features mail`      |
+| `cache`     | Redis, Memcached          | `--features cache`     |
+| `storage`   | S3, GCS, Azure            | `--features storage`   |
+| `scheduler` | Cron-like tasks           | `--features scheduler` |
+| `events`    | Pub/Sub events            | `--features events`    |
+| `policy`    | Authorization gates       | `--features policy`    |
+| `rate`      | Rate limiting             | `--features rate`      |
+
+### Business Modules
+
+| Module         | Description       |
+| -------------- | ----------------- |
+| `product`      | Product catalog   |
+| `invoice`      | Invoicing system  |
+| `inventory`    | Stock management  |
+| `organization` | Multi-tenant orgs |
+| `calendar`     | Scheduling        |
+| `notification` | Push/Email/SMS    |
+
+### Enterprise
+
+| Module      | Description            |
+| ----------- | ---------------------- |
+| `oauthsso`  | OAuth 2.0 / SSO        |
+| `audit`     | Audit logging          |
+| `verifactu` | Spanish tax compliance |
+| `realtime`  | WebSockets             |
+
+---
+
+## CLI Commands
+
+### Project Management
+
+```bash
+# Create new project
+kthulu new my-app --features user,auth
+
+# Add module to existing project
+kthulu add module orders name:string total:float user:belongs_to:users
+
+# Check project health
+kthulu doctor
+
+# Analyze architecture
+kthulu analyze
+```
+
+### Database
+
+```bash
+# Run migrations
+kthulu migrate up
+
+# Create new migration
+kthulu migrate create add_orders_table
+
+# Rollback last migration
+kthulu migrate down
+```
+
+### Development
+
+```bash
+# Start dev server with hot-reload
+kthulu dev
+
+# Generate OpenAPI docs
+kthulu doc
+
+# Seed database
+kthulu seed
+```
+
+### Deployment
+
+```bash
+# Deploy to Vercel
+vercel deploy
+
+# Deploy to AWS
+kthulu deploy --cloud=aws
+
+# Docker build
+docker build -t my-app .
+```
+
+### Marketplace
+
+```bash
+# List available modules
+kthulu marketplace list
+
+# Filter by type
+kthulu marketplace list --type module
+
+# Install a plugin
+kthulu marketplace install aws-deploy
+```
+
+---
+
+## Environment Variables
+
+### Mail Module
+
+```env
+MAIL_DRIVER=smtp      # smtp, ses, sendgrid, mailgun, resend
+MAIL_HOST=smtp.example.com
+MAIL_PORT=587
+MAIL_USERNAME=user
+MAIL_PASSWORD=secret
+```
+
+### Cache Module
+
+```env
+CACHE_DRIVER=memory   # memory, redis, memcached
+REDIS_HOST=localhost
+REDIS_PORT=6379
+```
+
+### Storage Module
+
+```env
+STORAGE_DRIVER=local  # local, s3, gcs, azure
+S3_BUCKET=my-bucket
+AWS_REGION=us-east-1
+```
+
+### Session Module
+
+```env
+SESSION_DRIVER=memory  # memory, redis, database
+SESSION_LIFETIME=2h
+```
+
+### i18n Module
+
+```env
+APP_LOCALE=en
+APP_FALLBACK_LOCALE=en
+TRANSLATIONS_DIR=./translations
+```
+
+---
+
+## Project Structure
+
+```
+my-app/
+├── cmd/server/
+│   └── main.go              # Entry point
+├── configs/
+│   └── app.yaml             # Configuration
+├── internal/
+│   ├── modules/
+│   │   ├── user/            # User module
+│   │   │   ├── api/         # HTTP handlers
+│   │   │   ├── core/        # Business logic
+│   │   │   └── store/       # Data access
+│   │   └── auth/            # Auth module
+│   ├── views/               # Templ templates
+│   └── infrastructure/      # Cross-cutting concerns
+├── migrations/              # SQL migrations
+├── pkg/bootstrap/           # App initialization
+└── api/                     # Vercel serverless
+    └── index.go
+```
+
+---
+
+## Next Steps
+
+1. **Add More Modules**
+
+   ```bash
+   kthulu add module reviews rating:int comment:string --protected
+   ```
+
+2. **Generate API Docs**
+
+   ```bash
+   kthulu doc
+   ```
+
+3. **Deploy to Production**
+
+   ```bash
+   vercel env add DATABASE_URL
+   vercel deploy --prod
+   ```
+
+4. **Explore the Marketplace**
+   ```bash
+   kthulu marketplace list
+   ```
+
+---
+
+## Resources
+
+- 📚 [Full Documentation](https://docs.kthulu.dev)
+- 💬 [Discord Community](https://discord.gg/kthulu)
+- 🐙 [GitHub Repository](https://github.com/pmaojo/kthulu-go)
+- 🏪 [Module Marketplace](/marketplace)

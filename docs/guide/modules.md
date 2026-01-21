@@ -1,86 +1,109 @@
 ---
 title: Modules
-description: Discover, create, and share Kthulu modules.
+description: Explore and use the 35+ modules in Kthulu.
 ---
 
+# Modules
 
-Modules are the building blocks of a Kthulu application. A module encapsulates a specific domain capability, such as Authentication, Billing, or Notifications.
+Modules are the building blocks of a Kthulu application. Each encapsulates a specific domain capability.
 
-## Anatomy of a Module
+## Available Modules (35+)
 
-A standard module structure:
+### Infrastructure
+
+| Module      | Description                                          |
+| ----------- | ---------------------------------------------------- |
+| `mail`      | Email service (SMTP, SES, SendGrid, Mailgun, Resend) |
+| `cache`     | Caching (Memory, Redis, Memcached)                   |
+| `storage`   | File storage (Local, S3, GCS, Azure)                 |
+| `scheduler` | Task scheduling (@hourly, @daily, @every)            |
+| `events`    | Pub/Sub event system                                 |
+| `policy`    | Authorization gates & policies                       |
+| `rate`      | Rate limiting (Token Bucket, Sliding Window)         |
+| `session`   | Session management                                   |
+| `i18n`      | Internationalization                                 |
+| `validate`  | Advanced validation rules                            |
+| `seeder`    | Database seeding + Faker                             |
+
+### Business
+
+| Module         | Description                |
+| -------------- | -------------------------- |
+| `user`         | User management & profiles |
+| `auth`         | JWT authentication + RBAC  |
+| `product`      | Product catalog            |
+| `invoice`      | Invoicing & billing        |
+| `inventory`    | Stock management           |
+| `organization` | Multi-tenant orgs          |
+| `contact`      | CRM integration            |
+| `calendar`     | Scheduling                 |
+| `notification` | Push/Email/SMS             |
+| `order`        | Order management           |
+| `payments`     | Payment processing         |
+
+### Enterprise
+
+| Module          | Description               |
+| --------------- | ------------------------- |
+| `oauthsso`      | OAuth 2.0 / SSO           |
+| `audit`         | Audit logging             |
+| `realtime`      | WebSockets                |
+| `observability` | Metrics, tracing, logging |
+| `verifactu`     | Spanish tax compliance    |
+| `flags`         | Feature flags             |
+| `health`        | Health checks             |
+
+---
+
+## Installing a Module
+
+```bash
+# During project creation
+kthulu new my-app --features mail,cache,storage
+
+# Add to existing project
+kthulu add module scheduler
+```
+
+---
+
+## Module Structure
 
 ```text
-internal/core/billing/
-├── domain.go      # Entities
-├── ports.go       # Interfaces
-└── service.go     # Business Logic
+internal/modules/mail/
+├── api/           # HTTP handlers
+│   └── handler.go
+├── core/          # Business logic
+│   ├── entity.go
+│   └── service.go
+└── store/         # Data access
+    └── repository.go
 ```
 
-## Marketplace
-
-The [Kthulu Marketplace](/marketplace) hosts a collection of verified modules.
-
-To install a module:
-
-```bash
-kthulu add module invoice
-```
-
-This commands downloads the module code into `internal/core/invoice` and `internal/adapters/...`, and wires it into your application.
-
-## Creating a Module
-
-You can create a custom module using the CLI:
-
-```bash
-kthulu add module my-feature
-```
-
-This scaffolds the basic directory structure.
-
-## Module Registry
-
-Modules are defined in the `registry/` directory. Each module includes a `metadata.json` describing its dependencies and configuration.
-
-### Metadata Format
-
-```json
-{
-  "id": "billing",
-  "name": "Billing Module",
-  "type": "module",
-  "dependencies": ["auth", "users"]
-}
-```
-
-## Documenting Modules
-
-To enrich the documentation page for a module (displayed in the Hub/Marketplace), you can create or edit the `index.md` file within the module's registry folder.
-
-Location: `registry/modules/<module-name>/index.md`
-
-### Frontmatter
-
-The documentation uses Frontmatter to define metadata used by the Hub UI.
-
-```yaml
 ---
-title: "Billing Module"
-description: "Handle subscriptions, invoices, and payments."
-type: "module"
-author: "Kthulu Team"
-stars: 50
-icon: "CreditCard"
----
+
+## Environment Variables
+
+Each infrastructure module uses environment variables:
+
+```env
+# Mail
+MAIL_DRIVER=smtp
+MAIL_HOST=smtp.example.com
+
+# Cache
+CACHE_DRIVER=redis
+REDIS_HOST=localhost
+
+# Storage
+STORAGE_DRIVER=s3
+S3_BUCKET=my-bucket
+
+# And more...
 ```
 
-### Content
+---
 
-The content after the frontmatter is rendered as Markdown. You should include:
+## Browse the Marketplace
 
-- **Features**: A bulleted list of what the module does.
-- **Installation**: Specific installation instructions if any.
-- **Configuration**: Environment variables or config structs.
-- **Usage**: Code examples for the Domain or Service layer.
-- **API Reference**: HTTP/gRPC endpoints exposed.
+Explore all modules at [/marketplace](/marketplace).

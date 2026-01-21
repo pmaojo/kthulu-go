@@ -1,107 +1,197 @@
 ---
 title: Quick Start Tour
-description: Build, run, and deploy a full-stack application in 5 minutes.
+description: Build, run, and deploy a full-stack application in 5 minutes with all Kthulu features.
 ---
 
+# Quick Start Tour
 
-Welcome to the Kthulu Tour. We will build a "Task Manager" application with a React frontend and a Go backend.
+Build a production-ready Go application with **35+ modules** in minutes.
 
-## 1. Plan Your App
-
-Kthulu uses a `kthulu-plan.yaml` to define your application architecture. Let's create a new plan.
-
-```bash
-mkdir my-task-app
-cd my-task-app
-kthulu plan
-```
-
-Follow the interactive prompts:
-- **Project Name**: `task-manager`
-- **Frontend**: `React`
-- **Database**: `PostgreSQL` (or SQLite for simplicity)
-- **Modules**: Select `Auth`, `Users`.
-
-## 2. Scaffold the Code
-
-Generate the project structure based on your plan.
+## Prerequisites
 
 ```bash
-kthulu create --from-plan
+kthulu doctor
 ```
 
-This will create a hexagonal architecture project:
-- `cmd/server`: The entry point.
-- `internal/core`: Domain logic.
-- `internal/adapters`: HTTP handlers and DB repositories.
-- `frontend/`: The React application.
+✅ Go 1.21+ ✅ Git ✅ Node.js
 
-## 3. Add a New Module
+---
 
-Let's add a `tasks` module using the CLI.
+## 1. Create Your Project
 
 ```bash
-kthulu add module tasks
+# Simple start
+kthulu new my-app
+
+# With specific modules
+kthulu new my-shop --features user,auth,product,invoice
+
+# Full-stack with infrastructure modules
+kthulu new saas-app \
+  --features user,auth,mail,cache,storage,scheduler,events \
+  --frontend templ \
+  --database postgres
 ```
 
-This registers a new module in `internal/core/tasks` and sets up the wiring.
+**Templates:** `microservice`, `monolith`, `saas`, `ecommerce`, `fintech`, `cli`, `mcp`
 
-## 4. Define Your Domain
+---
 
-Open `internal/core/tasks/domain.go` and define your Task entity.
-
-```go
-package tasks
-
-type Task struct {
-    ID          string `json:"id"`
-    Title       string `json:"title"`
-    IsCompleted bool   `json:"is_completed"`
-}
-```
-
-## 5. Generate Admin UI
-
-Kthulu can automatically generate an Admin UI for your entities.
+## 2. Run Migrations
 
 ```bash
-kthulu admin generate tasks
+cd my-app
+kthulu migrate up
 ```
 
-This inspects your Go struct and generates a React Admin resource in `frontend/src/modules/tasks`.
+Output:
 
-## 6. Run the Dev Server
+```
+✅ create_user_table.sql
+✅ create_auth_table.sql
+✅ create_product_table.sql
+...
+goose: successfully migrated to version: 20260121001233
+```
 
-Start the development server with self-healing capabilities.
+---
+
+## 3. Start Development
 
 ```bash
 kthulu dev
 ```
 
-Visit `http://localhost:3000` to see your app and `http://localhost:3000/admin` for the admin panel.
+Visit [http://localhost:8080](http://localhost:8080)
 
-## 7. CLI & MCP Projects
+- 🔧 Hot-reload backend
+- ⚡ Templ/HTMX frontend
+- 🤖 AI self-healing
 
-You can also create other types of projects:
+---
 
-**CLI Tool:**
+## Available Modules (35+)
+
+### Infrastructure
+
+| Module      | Description                  |
+| ----------- | ---------------------------- |
+| `mail`      | SMTP, SES, SendGrid, Mailgun |
+| `cache`     | Memory, Redis, Memcached     |
+| `storage`   | Local, S3, GCS, Azure        |
+| `scheduler` | Cron-like task scheduling    |
+| `events`    | Pub/Sub event system         |
+| `policy`    | Authorization gates          |
+| `rate`      | Rate limiting                |
+| `session`   | Session management           |
+| `i18n`      | Internationalization         |
+| `validate`  | Advanced validation          |
+| `seeder`    | Database seeding with Faker  |
+
+### Business
+
+| Module         | Description                |
+| -------------- | -------------------------- |
+| `user`         | User management            |
+| `auth`         | JWT + OAuth authentication |
+| `product`      | Product catalog            |
+| `invoice`      | Invoicing system           |
+| `inventory`    | Stock management           |
+| `calendar`     | Scheduling                 |
+| `notification` | Push/Email/SMS             |
+
+### Enterprise
+
+| Module      | Description            |
+| ----------- | ---------------------- |
+| `oauthsso`  | OAuth 2.0 / SSO        |
+| `audit`     | Audit logging          |
+| `realtime`  | WebSockets             |
+| `verifactu` | Spanish tax compliance |
+
+---
+
+## CLI Commands
+
 ```bash
-kthulu new my-cli --template=cli
+# Project
+kthulu new my-app --features user,auth
+kthulu add module orders name:string total:float
+kthulu doctor
+kthulu analyze
+
+# Database
+kthulu migrate up
+kthulu migrate create add_orders_table
+kthulu seed
+
+# Development
+kthulu dev
+kthulu doc
+
+# Marketplace
+kthulu marketplace list
+kthulu marketplace install aws-deploy
+
+# Deployment
+vercel deploy
+kthulu deploy --cloud=aws
 ```
 
-**MCP Server:**
-```bash
-kthulu new my-mcp-agent --template=mcp
+---
+
+## Environment Variables
+
+```env
+# Mail
+MAIL_DRIVER=smtp           # smtp, ses, sendgrid
+MAIL_HOST=smtp.example.com
+
+# Cache
+CACHE_DRIVER=memory        # memory, redis, memcached
+REDIS_HOST=localhost
+
+# Storage
+STORAGE_DRIVER=local       # local, s3, gcs, azure
+S3_BUCKET=my-bucket
+
+# Session
+SESSION_DRIVER=memory      # memory, redis, database
+SESSION_LIFETIME=2h
+
+# i18n
+APP_LOCALE=en
+TRANSLATIONS_DIR=./translations
 ```
 
-## 8. Deployment
+---
 
-Deploy your application to the cloud.
+## Project Structure
 
-```bash
-kthulu deploy
+```
+my-app/
+├── cmd/server/main.go
+├── configs/app.yaml
+├── internal/
+│   ├── modules/
+│   │   ├── user/
+│   │   │   ├── api/      # HTTP handlers
+│   │   │   ├── core/     # Business logic
+│   │   │   └── store/    # Data access
+│   │   └── auth/
+│   ├── views/            # Templ templates
+│   └── infrastructure/
+├── migrations/
+└── pkg/bootstrap/
 ```
 
-## Conclusion
+---
 
-You've just built a modular, full-stack Go application! Explore the [Project Structure](/docs/guide/project-structure) to understand how it works under the hood.
+## Next Steps
+
+1. **Add modules:** `kthulu add module reviews rating:int --protected`
+2. **Generate docs:** `kthulu doc`
+3. **Deploy:** `vercel deploy --prod`
+4. **Explore marketplace:** `kthulu marketplace list`
+
+→ [Project Structure](/docs/guide/project-structure) | [Modules](/docs/guide/modules) | [CLI Reference](/docs/guide/cli-reference)
