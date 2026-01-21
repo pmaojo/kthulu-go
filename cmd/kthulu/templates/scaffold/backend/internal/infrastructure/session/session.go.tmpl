@@ -1,0 +1,431 @@
+// @kthulu:infrastructure:session
+package session
+
+import (
+	"context"
+	"crypto/rand"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"os"
+	"strings"
+	"sync"
+	"time"
+)
+
+// Session represents a user session
+type Session struct {
+	ID        string
+	Data      map[string]interface{}
+	Flash     map[string]interface{}
+	CreatedAt time.Time
+	ExpiresAt time.Time
+	mu        sync.RWMutex
+}
+
+// Store defines the session store interface
+type Store interface {
+	Get(ctx context.Context, id string) (*Session, error)
+	Save(ctx context.Context, session *Session) error
+	Delete(ctx context.Context, id string) error
+	GarbageCollect(ctx context.Context) error
+}
+
+// Manager handles session lifecycle
+type Manager struct {
+	store      Store
+	cookieName string
+	lifetime   time.Duration
+	secure     bool
+	httpOnly   bool
+	sameSite   http.SameSite
+}
+
+// Config holds session configuration
+type Config struct {
+	Driver     string        // cookie, memory, redis, database
+	CookieName string
+	Lifetime   time.Duration
+	Secure     bool
+	HttpOnly   bool
+	SameSite   string // lax, strict, none
+	Secret     string // for cookie encryption
+}
+
+// NewSessionStore creates a new session store based on configuration
+func NewSessionStore() Store {
+	config := loadConfig()
+	
+	switch strings.ToLower(config.Driver) {
+	case "redis":
+		return NewRedisStore(config)
+	case "database":
+		return NewDatabaseStore(config)
+	default:
+		return NewMemoryStore(config)
+	}
+}
+
+// NewManager creates a new session manager
+func NewManager(store Store) *Manager {
+	config := loadConfig()
+	
+	sameSite := http.SameSiteLaxMode
+	switch strings.ToLower(config.SameSite) {
+	case "strict":
+		sameSite = http.SameSiteStrictMode
+	case "none":
+		sameSite = http.SameSiteNoneMode
+	}
+	
+	return &Manager{
+		store:      store,
+		cookieName: config.CookieName,
+		lifetime:   config.Lifetime,
+		secure:     config.Secure,
+		httpOnly:   config.HttpOnly,
+		sameSite:   sameSite,
+	}
+}
+
+func loadConfig() *Config {
+	lifetime, _ := time.ParseDuration(getEnv("SESSION_LIFETIME", "2h"))
+	
+	return &Config{
+		Driver:     getEnv("SESSION_DRIVER", "memory"),
+		CookieName: getEnv("SESSION_COOKIE", "kthulu_session"),
+		Lifetime:   lifetime,
+		Secure:     getEnv("SESSION_SECURE", "false") == "true",
+		HttpOnly:   getEnv("SESSION_HTTP_ONLY", "true") == "true",
+		SameSite:   getEnv("SESSION_SAME_SITE", "lax"),
+		Secret:     getEnv("SESSION_SECRET", ""),
+	}
+}
+
+func getEnv(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
+}
+
+// Start gets or creates a session from request
+func (m *Manager) Start(ctx context.Context, r *http.Request) (*Session, error) {
+	cookie, err := r.Cookie(m.cookieName)
+	if err == nil && cookie.Value != "" {
+		session, err := m.store.Get(ctx, cookie.Value)
+		if err == nil && session != nil && time.Now().Before(session.ExpiresAt) {
+			return session, nil
+		}
+	}
+	
+	// Create new session
+	return m.createSession()
+}
+
+// Save persists session and sets cookie
+func (m *Manager) Save(ctx context.Context, w http.ResponseWriter, session *Session) error {
+	if err := m.store.Save(ctx, session); err != nil {
+		return err
+	}
+	
+	http.SetCookie(w, &http.Cookie{
+		Name:     m.cookieName,
+		Value:    session.ID,
+		Path:     "/",
+		Expires:  session.ExpiresAt,
+		Secure:   m.secure,
+		HttpOnly: m.httpOnly,
+		SameSite: m.sameSite,
+	})
+	
+	return nil
+}
+
+// Destroy removes session and clears cookie
+func (m *Manager) Destroy(ctx context.Context, w http.ResponseWriter, session *Session) error {
+	if err := m.store.Delete(ctx, session.ID); err != nil {
+		return err
+	}
+	
+	http.SetCookie(w, &http.Cookie{
+		Name:     m.cookieName,
+		Value:    "",
+		Path:     "/",
+		Expires:  time.Unix(0, 0),
+		MaxAge:   -1,
+		Secure:   m.secure,
+		HttpOnly: m.httpOnly,
+	})
+	
+	return nil
+}
+
+func (m *Manager) createSession() (*Session, error) {
+	id, err := generateSessionID()
+	if err != nil {
+		return nil, err
+	}
+	
+	return &Session{
+		ID:        id,
+		Data:      make(map[string]interface{}),
+		Flash:     make(map[string]interface{}),
+		CreatedAt: time.Now(),
+		ExpiresAt: time.Now().Add(m.lifetime),
+	}, nil
+}
+
+func generateSessionID() (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return base64.URLEncoding.EncodeToString(b), nil
+}
+
+// Session methods
+func (s *Session) Get(key string) interface{} {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.Data[key]
+}
+
+func (s *Session) GetString(key string) string {
+	if val := s.Get(key); val != nil {
+		if str, ok := val.(string); ok {
+			return str
+		}
+	}
+	return ""
+}
+
+func (s *Session) GetInt(key string) int {
+	if val := s.Get(key); val != nil {
+		switch v := val.(type) {
+		case int:
+			return v
+		case float64:
+			return int(v)
+		}
+	}
+	return 0
+}
+
+func (s *Session) Set(key string, value interface{}) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Data[key] = value
+}
+
+func (s *Session) Delete(key string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.Data, key)
+}
+
+func (s *Session) Has(key string) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	_, exists := s.Data[key]
+	return exists
+}
+
+func (s *Session) Clear() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Data = make(map[string]interface{})
+}
+
+// Flash sets a flash message (available only for next request)
+func (s *Session) SetFlash(key string, value interface{}) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Flash[key] = value
+}
+
+// GetFlash gets and removes a flash message
+func (s *Session) GetFlash(key string) interface{} {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	val := s.Flash[key]
+	delete(s.Flash, key)
+	return val
+}
+
+// ===============================
+// Memory Store Implementation
+// ===============================
+
+type MemoryStore struct {
+	sessions map[string]*Session
+	mu       sync.RWMutex
+}
+
+func NewMemoryStore(config *Config) *MemoryStore {
+	store := &MemoryStore{
+		sessions: make(map[string]*Session),
+	}
+	go store.startGC()
+	return store
+}
+
+func (s *MemoryStore) Get(ctx context.Context, id string) (*Session, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	
+	session, exists := s.sessions[id]
+	if !exists {
+		return nil, fmt.Errorf("session not found")
+	}
+	return session, nil
+}
+
+func (s *MemoryStore) Save(ctx context.Context, session *Session) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.sessions[session.ID] = session
+	return nil
+}
+
+func (s *MemoryStore) Delete(ctx context.Context, id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.sessions, id)
+	return nil
+}
+
+func (s *MemoryStore) GarbageCollect(ctx context.Context) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	
+	now := time.Now()
+	for id, session := range s.sessions {
+		if now.After(session.ExpiresAt) {
+			delete(s.sessions, id)
+		}
+	}
+	return nil
+}
+
+func (s *MemoryStore) startGC() {
+	ticker := time.NewTicker(time.Minute * 5)
+	for range ticker.C {
+		s.GarbageCollect(context.Background())
+	}
+}
+
+// ===============================
+// Redis Store Implementation  
+// ===============================
+
+type RedisStore struct {
+	config *Config
+}
+
+func NewRedisStore(config *Config) *RedisStore {
+	return &RedisStore{config: config}
+}
+
+func (s *RedisStore) Get(ctx context.Context, id string) (*Session, error) {
+	return nil, fmt.Errorf("Redis session store not yet implemented")
+}
+
+func (s *RedisStore) Save(ctx context.Context, session *Session) error {
+	return fmt.Errorf("Redis session store not yet implemented")
+}
+
+func (s *RedisStore) Delete(ctx context.Context, id string) error {
+	return fmt.Errorf("Redis session store not yet implemented")
+}
+
+func (s *RedisStore) GarbageCollect(ctx context.Context) error {
+	return nil // Redis handles TTL automatically
+}
+
+// ===============================
+// Database Store Implementation
+// ===============================
+
+type DatabaseStore struct {
+	config *Config
+}
+
+func NewDatabaseStore(config *Config) *DatabaseStore {
+	return &DatabaseStore{config: config}
+}
+
+func (s *DatabaseStore) Get(ctx context.Context, id string) (*Session, error) {
+	return nil, fmt.Errorf("Database session store not yet implemented")
+}
+
+func (s *DatabaseStore) Save(ctx context.Context, session *Session) error {
+	return fmt.Errorf("Database session store not yet implemented")
+}
+
+func (s *DatabaseStore) Delete(ctx context.Context, id string) error {
+	return fmt.Errorf("Database session store not yet implemented")
+}
+
+func (s *DatabaseStore) GarbageCollect(ctx context.Context) error {
+	return fmt.Errorf("Database session store not yet implemented")
+}
+
+// ===============================
+// HTTP Middleware
+// ===============================
+
+type contextKey string
+
+const sessionKey contextKey = "session"
+
+// Middleware adds session to request context
+func Middleware(manager *Manager) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			session, err := manager.Start(r.Context(), r)
+			if err != nil {
+				http.Error(w, "Session error", http.StatusInternalServerError)
+				return
+			}
+			
+			// Add session to context
+			ctx := context.WithValue(r.Context(), sessionKey, session)
+			
+			// Wrap response writer to save session after handler
+			rw := &responseWriter{ResponseWriter: w, session: session, manager: manager, ctx: ctx}
+			
+			next.ServeHTTP(rw, r.WithContext(ctx))
+			
+			// Save session after request
+			if !rw.saved {
+				manager.Save(ctx, w, session)
+			}
+		})
+	}
+}
+
+// FromContext gets session from context
+func FromContext(ctx context.Context) *Session {
+	if session, ok := ctx.Value(sessionKey).(*Session); ok {
+		return session
+	}
+	return nil
+}
+
+type responseWriter struct {
+	http.ResponseWriter
+	session *Session
+	manager *Manager
+	ctx     context.Context
+	saved   bool
+}
+
+func (rw *responseWriter) WriteHeader(code int) {
+	if !rw.saved {
+		rw.manager.Save(rw.ctx, rw.ResponseWriter, rw.session)
+		rw.saved = true
+	}
+	rw.ResponseWriter.WriteHeader(code)
+}

@@ -1,0 +1,14 @@
+// @kthulu:module:session
+package modules
+
+import (
+	"go.uber.org/fx"
+
+	"{{.ProjectModule}}/internal/infrastructure/session"
+)
+
+// SessionModule provides session management functionality.
+// Supports cookie, redis, and database stores.
+var SessionModule = fx.Options(
+	fx.Provide(session.NewSessionStore),
+)
