@@ -1,4 +1,4 @@
-import { getMarketplaceItems } from '@/lib/cms';
+import { getMarketplaceItems, type DocContent } from '@/lib/cms';
 import Link from 'next/link';
 import { Zap, Shield, Cloud, Star, ArrowRight } from 'lucide-react';
 
@@ -68,8 +68,8 @@ export default async function MarketplacePage() {
   );
 }
 
-function MarketplaceCard({ item }: { item: any }) {
-  const iconMap: Record<string, any> = {
+function MarketplaceCard({ item }: { item: DocContent }) {
+  const iconMap: Record<string, React.ReactNode> = {
     Zap: <Zap size={22} />,
     Shield: <Shield size={22} />,
     Cloud: <Cloud size={22} />,

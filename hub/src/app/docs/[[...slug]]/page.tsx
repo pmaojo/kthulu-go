@@ -1,6 +1,5 @@
 import { getDocBySlug, REGISTRY_DIR } from '@/lib/cms';
 import { notFound } from 'next/navigation';
-import { Sidebar } from '@/components/Navigation';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Book, Clock, User, Terminal, Star, Zap, Shield, Cloud, ArrowLeft, ArrowRight } from 'lucide-react';
@@ -27,7 +26,7 @@ const TOUR_TITLES: Record<string, string> = {
 };
 
 export default async function DocPage({ params }: { params: { slug: string[] } }) {
-  const { slug } = await params;
+  const { slug = [] } = await params;
 
   const currentPath = `/docs/${slug.join('/')}`;
   const currentIndex = TOUR_ORDER.indexOf(currentPath);
@@ -38,7 +37,7 @@ export default async function DocPage({ params }: { params: { slug: string[] } }
   let isMarketplace = false;
 
   // Handle Marketplace routes: /docs/marketplace/starters/my-starter
-  if (slug[0] === 'marketplace' && slug.length > 2) {
+  if (slug.length > 0 && slug[0] === 'marketplace' && slug.length > 2) {
     isMarketplace = true;
     // Strip 'marketplace' and use the rest of the slug
     const marketplaceSlug = slug.slice(1);
@@ -57,7 +56,7 @@ export default async function DocPage({ params }: { params: { slug: string[] } }
   const content = doc.content || '';
   const isSparse = content.trim().split('\n').length < 10;
 
-  const iconMap: Record<string, any> = {
+  const iconMap: Record<string, React.ReactNode> = {
     Zap: <Zap size={20} />,
     Shield: <Shield size={20} />,
     Cloud: <Cloud size={20} />,
@@ -66,13 +65,10 @@ export default async function DocPage({ params }: { params: { slug: string[] } }
   const Icon = doc.frontmatter.icon ? iconMap[doc.frontmatter.icon] : null;
 
   return (
-    <div className="flex">
-      <Sidebar />
-      <div className="flex-1 md:ml-64 p-6 md:p-12 lg:p-24">
         <article className="max-w-3xl mx-auto">
           <header className="mb-12 border-b border-white/10 pb-12">
             <div className="flex items-center gap-2 text-primary font-mono text-xs uppercase tracking-widest mb-4">
-              <Book size={14} /> {isMarketplace ? 'Marketplace' : 'Documentation'} / {slug[isMarketplace ? 2 : 0]}
+              <Book size={14} /> {isMarketplace ? 'Marketplace' : 'Documentation'} / {slug.length > 0 ? slug[isMarketplace ? 2 : 0] : 'Index'}
             </div>
 
             <div className="flex items-start justify-between gap-4 mb-6">
@@ -119,7 +115,7 @@ export default async function DocPage({ params }: { params: { slug: string[] } }
                   <Terminal size={18} className="text-primary" /> Installation
                 </h3>
                 <div className="bg-black/50 rounded-lg p-4 font-mono text-sm text-muted-foreground border border-white/5 flex items-center justify-between group">
-                  <code>kthulu add module {doc.frontmatter.id || slug[slug.length-1]}</code>
+                  <code>kthulu add module {doc.frontmatter.id || (slug.length > 0 ? slug[slug.length-1] : '')}</code>
                 </div>
               </div>
 
@@ -170,7 +166,5 @@ export default async function DocPage({ params }: { params: { slug: string[] } }
              )}
           </div>
         </article>
-      </div>
-    </div>
   );
 }

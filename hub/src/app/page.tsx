@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Book, ShoppingBag, Terminal, Sparkles, Shield } from "lucide-react";
+import { ArrowRight, ShoppingBag, Terminal, Sparkles, Shield } from "lucide-react";
 
 export default function Home() {
   return (
@@ -49,7 +49,7 @@ export default function Home() {
   );
 }
 
-function FeatureCard({ icon, title, desc }: { icon: any, title: string, desc: string }) {
+function FeatureCard({ icon, title, desc }: { icon: React.ReactNode, title: string, desc: string }) {
   return (
     <div className="kthulu-card text-left">
       <div className="text-primary mb-4">{icon}</div>

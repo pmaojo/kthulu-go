@@ -10,9 +10,11 @@ export interface DocContent {
   title: string;
   description?: string;
   content?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   frontmatter: Record<string, any>;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function readFrontMatter(filePath: string): Promise<Record<string, any>> {
   const fd = await fs.promises.open(filePath, 'r');
   try {
@@ -41,6 +43,7 @@ export async function getDocBySlug(slug: string[], baseDir: string = DOCS_DIR, f
   const fullPath = knownPath || (path.join(baseDir, ...slug) + '.md');
   const indexPath = path.join(baseDir, ...slug, 'index.md');
   
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let data: Record<string, any> = {};
   let content = '';
   const needContent = fields.length === 0 || fields.includes('content');

@@ -5,3 +5,7 @@
 ## 2025-05-23 - [Redundant CMS File Lookups]
 **Learning:** The CMS logic in `getAllDocs` was performing redundant filesystem checks (guessing `.md` vs `/index.md`) for every file it found, even though it already knew the exact file path from `readdir`.
 **Action:** When iterating files to generate content lists, always pass the known full path to the reader function to bypass path resolution heuristics.
+
+## 2025-05-23 - [Persisting UI in Next.js App Router]
+**Learning:** In Next.js App Router, placing persistent UI elements (like a Sidebar) in `page.tsx` of a dynamic route (e.g., `[[...slug]]`) causes them to be part of the route's payload on every navigation. Moving them to `layout.tsx` ensures they persist, reducing the server response size and client-side reconciliation work.
+**Action:** Always verify if shared UI components in catch-all routes should be moved to a `layout.tsx` to optimize navigation performance.
