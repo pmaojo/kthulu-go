@@ -9,3 +9,7 @@
 ## 2025-05-23 - [Persisting UI in Next.js App Router]
 **Learning:** In Next.js App Router, placing persistent UI elements (like a Sidebar) in `page.tsx` of a dynamic route (e.g., `[[...slug]]`) causes them to be part of the route's payload on every navigation. Moving them to `layout.tsx` ensures they persist, reducing the server response size and client-side reconciliation work.
 **Action:** Always verify if shared UI components in catch-all routes should be moved to a `layout.tsx` to optimize navigation performance.
+
+## 2025-05-24 - [Buffer Allocation Overhead]
+**Learning:** `Buffer.alloc` zeroes out memory, which incurs measurable CPU overhead in high-throughput file reading scenarios (like SSG builds). For file reads where the buffer is immediately overwritten, `Buffer.allocUnsafe` provides a ~3x speedup in allocation.
+**Action:** Use `Buffer.allocUnsafe` when the buffer is immediately and completely filled or when `bytesRead` is used to strictly limit access to valid data.

@@ -18,7 +18,9 @@ export interface DocContent {
 async function readFrontMatter(filePath: string): Promise<Record<string, any>> {
   const fd = await fs.promises.open(filePath, 'r');
   try {
-    const buffer = Buffer.alloc(4096);
+    // Optimization: allocUnsafe is faster as it skips zero-filling.
+    // Safe because we immediately overwrite with fd.read and only use bytesRead.
+    const buffer = Buffer.allocUnsafe(4096);
     const { bytesRead } = await fd.read(buffer, 0, 4096, 0);
     const content = buffer.toString('utf8', 0, bytesRead);
 
