@@ -22,7 +22,7 @@ Kthulu provides robust Docker support out of the box.
 
 ### Single Container (Recommended)
 
-The project includes a multi-stage `Dockerfile.fullstack` that builds the frontend (using Bun) and the backend (using Go), producing a minimal scratch-based image.
+The project includes a multi-stage `Dockerfile.fullstack` that builds the frontend assets and the backend (using Go), producing a minimal scratch-based image.
 
 To build and run:
 
@@ -49,7 +49,6 @@ docker-compose up -d
 
 This spins up:
 - `api`: The Go backend.
-- `web`: The Vite dev server (for hot-reloading).
 - `db`: A PostgreSQL instance.
 
 ## Cloud Deployment (CLI)

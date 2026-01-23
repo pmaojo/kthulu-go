@@ -30,7 +30,7 @@ Kthulu provides the tools to build a frontend, but does not offer an instant, ze
     *   **Rapid Prototyping:** Drastically reduces time-to-market for internal tools.
 
 *   **Kthulu Current State:**
-    *   Provides high-quality frontend scaffolding (React/Shadcn), but the developer must still manually "assemble" the admin pages, define tables, and wire up forms.
+    *   Provides high-quality frontend scaffolding (Templ/HTMX), but the developer must still manually "assemble" the admin pages, define tables, and wire up forms.
 
 ### Why it matters
 An out-of-the-box admin panel is a massive productivity booster for early-stage startups and internal tools, removing the need to build "boring" CRUD interfaces from scratch.

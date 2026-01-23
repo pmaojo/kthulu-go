@@ -16,10 +16,6 @@ InventoryModule provides inventory management functionality
 - HTTP API
 - Domain Logic
 
-
-- **Frontend included**: React components and Admin UI integration.
-
-
 ## Configuration
 
 The module is configured via environment variables:
@@ -42,4 +38,3 @@ kthulu add module inventory
 This module provides the following components to the application:
 
 - **Backend**: Go module wired with Uber Fx.
-- **Frontend**: React components in `src/modules/inventory`.

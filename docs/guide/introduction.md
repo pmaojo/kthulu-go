@@ -5,7 +5,7 @@ description: Welcome to Kthulu - The high-performance AI-powered CLI framework.
 
 # Welcome to Kthulu
 
-Kthulu is a comprehensive toolkit for building high-performance, maintainable web applications with Go and React. It combines the speed of Go with the developer experience of modern frontend frameworks.
+Kthulu is a comprehensive toolkit for building high-performance, maintainable web applications with Go, Templ, and HTMX. It combines the speed of Go with the developer experience of modern hypermedia systems.
 
 ## Why Kthulu?
 
