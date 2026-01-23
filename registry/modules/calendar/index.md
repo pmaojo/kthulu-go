@@ -16,10 +16,6 @@ CalendarModule provides calendar and appointment scheduling functionality
 - HTTP API
 - Domain Logic
 
-
-- **Frontend included**: React components and Admin UI integration.
-
-
 ## Configuration
 
 The module is configured via environment variables:
@@ -42,4 +38,3 @@ kthulu add module calendar
 This module provides the following components to the application:
 
 - **Backend**: Go module wired with Uber Fx.
-- **Frontend**: React components in `src/modules/calendar`.
