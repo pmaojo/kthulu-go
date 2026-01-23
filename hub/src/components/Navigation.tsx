@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Home, Book, ShoppingBag, Github, Zap, Shield, Cloud } from 'lucide-react';
+import { Book, ShoppingBag, Github, Zap, Shield, Cloud } from 'lucide-react';
 import { MobileMenu } from './MobileMenu';
 
 export function Header() {
