@@ -167,12 +167,14 @@ func (p *EntityParser) isStructPointer(expr ast.Expr) bool {
 	return !isBasicType(typeName)
 }
 
+// basicTypes is a package-level map to avoid allocation overhead in isBasicType
+var basicTypes = map[string]bool{
+	"string": true, "int": true, "int64": true, "uint": true, "uint64": true,
+	"float64": true, "bool": true, "byte": true, "time.Time": true, // treating time as basic for this check
+}
+
 func isBasicType(t string) bool {
-	basics := map[string]bool{
-		"string": true, "int": true, "int64": true, "uint": true, "uint64": true,
-		"float64": true, "bool": true, "byte": true, "time.Time": true, // treating time as basic for this check
-	}
-	return basics[t]
+	return basicTypes[t]
 }
 
 func (p *EntityParser) parseValidation(tag string) []string {
