@@ -1381,6 +1381,26 @@ func (g *TemplateGenerator) ResultRegisterFrontendNavigation(title, name, rootPa
 }
 
 func (g *TemplateGenerator) generateCLIStructure(structure *ProjectStructure) error {
+	structure.Directories = append(structure.Directories,
+		fmt.Sprintf("cmd/%s", g.config.ProjectName),
+		"internal/cli",
+	)
+
+	structure.Files = append(structure.Files, GeneratedFile{
+		Path:    fmt.Sprintf("cmd/%s/main.go", g.config.ProjectName),
+		Content: g.generateCLIMain(),
+	})
+
+	structure.Files = append(structure.Files, GeneratedFile{
+		Path:    "internal/cli/root.go",
+		Content: g.generateCLIRoot(),
+	})
+
+	structure.Files = append(structure.Files, GeneratedFile{
+		Path:    FileGoMod,
+		Content: g.generateCLIGoMod(),
+	})
+
 	structure.Files = append(structure.Files, GeneratedFile{
 		Path:    FileReadme,
 		Content: g.generateReadme(),
@@ -1390,17 +1410,26 @@ func (g *TemplateGenerator) generateCLIStructure(structure *ProjectStructure) er
 }
 
 func (g *TemplateGenerator) generateMCPStructure(structure *ProjectStructure) error {
+	structure.Directories = append(structure.Directories,
+		fmt.Sprintf("cmd/%s", g.config.ProjectName),
+		"internal/tools",
+	)
+
 	structure.Files = append(structure.Files, GeneratedFile{
 		Path:    FileGoMod,
 		Content: g.generateMCPGoMod(),
 	})
 	structure.Files = append(structure.Files, GeneratedFile{
-		Path:    "main.go",
+		Path:    fmt.Sprintf("cmd/%s/main.go", g.config.ProjectName),
 		Content: g.generateMCPMain(),
 	})
 	structure.Files = append(structure.Files, GeneratedFile{
-		Path:    "tools.go",
+		Path:    "internal/tools/tools.go",
 		Content: g.generateMCPTools(),
+	})
+	structure.Files = append(structure.Files, GeneratedFile{
+		Path:    FileReadme,
+		Content: g.generateReadme(),
 	})
 	return nil
 }
