@@ -16,6 +16,8 @@ InventoryModule provides inventory management functionality
 - HTTP API
 - Domain Logic
 
+
+
 ## Configuration
 
 The module is configured via environment variables:
@@ -38,3 +40,4 @@ kthulu add module inventory
 This module provides the following components to the application:
 
 - **Backend**: Go module wired with Uber Fx.
+

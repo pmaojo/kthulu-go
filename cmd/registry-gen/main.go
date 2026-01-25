@@ -12,10 +12,8 @@ import (
 )
 
 const (
-	backendTemplatesPath  = "cmd/kthulu/templates/backend/internal"
-	usecasePath           = "cmd/kthulu/templates/backend/internal/usecase"
-	httpPath              = "cmd/kthulu/templates/backend/internal/adapters/http"
-	frontendTemplatesPath = "cmd/kthulu/templates/frontend/src/modules"
+	backendTemplatesPath  = "cmd/kthulu/templates/scaffold/backend/blueprints"
+	frontendTemplatesPath = "cmd/kthulu/templates/scaffold/frontend"
 	registryPath          = "registry/modules"
 )
 
@@ -113,18 +111,6 @@ func discoverModules() ([]ModuleData, error) {
 
 func readRelatedFiles(moduleID string) string {
 	var content strings.Builder
-
-	// Check Usecase
-	ucFile := filepath.Join(usecasePath, moduleID+".go.tmpl")
-	if b, err := os.ReadFile(ucFile); err == nil {
-		content.Write(b)
-	}
-
-	// Check HTTP Adapter
-	httpFile := filepath.Join(httpPath, moduleID+".go.tmpl")
-	if b, err := os.ReadFile(httpFile); err == nil {
-		content.Write(b)
-	}
 
 	// Check internal folder if exists (e.g. backend/internal/auth/*.go.tmpl)
 	internalDir := filepath.Join(backendTemplatesPath, moduleID)
