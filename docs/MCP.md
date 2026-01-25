@@ -19,11 +19,11 @@ When running as an MCP server, Kthulu exposes the following **Tools**:
 
 ### 1. Build the Binary
 
-Ensure you have the `kthulu-cli` binary built and accessible:
+Ensure you have the `kthulu` binary built and accessible:
 
 ```bash
-cd backend/backend
-go build -o ../../bin/kthulu-cli ./cmd/kthulu-cli
+# From the repository root
+go build -o kthulu ./cmd/kthulu/main.go
 ```
 
 ### 2. Configure Claude Desktop
@@ -39,7 +39,7 @@ Add the server configuration:
 {
   "mcpServers": {
     "kthulu": {
-      "command": "/absolute/path/to/kthulu-go/bin/kthulu-cli",
+      "command": "/absolute/path/to/kthulu-go/kthulu",
       "args": [
         "mcp",
         "--working-dir", "/absolute/path/to/your/target/project"
@@ -58,7 +58,7 @@ To debug the MCP communication:
 1. Use the **MCP Inspector**:
    ```bash
    npx @modelcontextprotocol/inspector \
-     /absolute/path/to/kthulu-go/bin/kthulu-cli \
+     /absolute/path/to/kthulu-go/kthulu \
      mcp --working-dir /path/to/test/project
    ```
 
