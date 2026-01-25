@@ -59,7 +59,13 @@ Controls:
 		}
 
 		configPath := filepath.Join(crushConfigDir, "config.json")
-		if err := ensureCrushConfig(configPath); err != nil {
+
+		execPath, err := os.Executable()
+		if err != nil {
+			return fmt.Errorf("failed to resolve kthulu binary: %w", err)
+		}
+
+		if err := ensureCrushConfig(configPath, execPath); err != nil {
 			return fmt.Errorf("failed to configure crush: %w", err)
 		}
 
@@ -89,19 +95,19 @@ Controls:
 	},
 }
 
-func ensureCrushConfig(path string) error {
+func ensureCrushConfig(path, execPath string) error {
 	// Default Kthulu config for Crush
 	config := map[string]any{
 		"$schema": "https://charm.land/crush.json",
 		"mcp": map[string]any{
 			"kthulu": map[string]any{
 				"type":    "stdio",
-				"command": "kthulu",
+				"command": execPath,
 				"args":    []string{"mcp"},
 			},
 		},
 		"options": map[string]any{
-			"instructions": "You are the Kthulu Coder agent. You have access to powerful tools like 'kthulu_add_module' and 'kthulu_create_project'. ALWAYS use these tools to scaffold or modify the project structure. DO NOT manually create files or directories for modules/components unless explicitly asked or if the tools fail. Kthulu tools handle dependency injection, routing, and boilerplate automatically.",
+			"instructions": "You are the Kthulu Coder agent. You have access to powerful tools like 'add_module' and 'create_project'. ALWAYS use these tools to scaffold or modify the project structure. DO NOT manually create files or directories for modules/components unless explicitly asked or if the tools fail. Kthulu tools handle dependency injection, routing, and boilerplate automatically.",
 		},
 	}
 
