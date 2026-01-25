@@ -1,8 +1,44 @@
 ---
-title: Rate Module
-description: High-performance rate module for Kthulu Go ecosystems.
+title: "Rate"
+description: "RateModule provides rate limiting functionality. Supports token bucket, sliding window, and fixed window algorithms."
+type: "module"
+author: "Kthulu Core"
+stars: 0
+icon: "Box"
 ---
 
-# Rate Module
+# Rate
 
-This module was automatically discovered or registered and is ready for use in Kthulu Go.
+RateModule provides rate limiting functionality. Supports token bucket, sliding window, and fixed window algorithms.
+
+## Features
+
+
+- Auto-configured Fx Module
+- Clean Architecture structure
+
+
+
+## Configuration
+
+The module is configured via environment variables:
+
+| Variable | Description |
+|----------|-------------|
+| - | No environment variables detected |
+
+
+## Installation
+
+Add this module to your project:
+
+```bash
+kthulu add module rate
+```
+
+## Components
+
+This module provides the following components to the application:
+
+- **Backend**: Go module wired with Uber Fx.
+

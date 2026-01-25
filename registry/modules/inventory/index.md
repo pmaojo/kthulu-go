@@ -16,6 +16,8 @@ InventoryModule provides inventory management functionality
 - HTTP API
 - Domain Logic
 
+
+
 ## Configuration
 
 The module is configured via environment variables:
