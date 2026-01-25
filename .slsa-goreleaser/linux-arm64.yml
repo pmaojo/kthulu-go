@@ -1,8 +1,8 @@
 version: 1
 git:
   depth: 1
-dir: backend
-main: ./cmd/kthulu-cli
+dir: ./
+main: ./cmd/kthulu
 binary: kthulu-cli-linux-arm64
 goos: linux
 goarch: arm64
@@ -11,5 +11,5 @@ env:
   - GOWORK=off
 ldflags:
   - -s -w
-  - -X github.com/pmaojo/kthulu-go/cmd/kthulu/cmd.version={{.Version}}
-  - -X github.com/pmaojo/kthulu-go/cmd/kthulu/cmd.build={{.CommitDate}}
+  - -X github.com/pmaojo/kthulu-go/cmd/kthulu/commands.version={{.Version}}
+  - -X github.com/pmaojo/kthulu-go/cmd/kthulu/commands.build={{.CommitDate}}
