@@ -9,7 +9,7 @@ import (
 
 // Version information
 var (
-	version = "v1.0.0"
+	version = "v1.3.5"
 	build   = "unknown"
 )
 
