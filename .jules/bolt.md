@@ -9,3 +9,7 @@
 ## 2025-05-23 - [Persisting UI in Next.js App Router]
 **Learning:** In Next.js App Router, placing persistent UI elements (like a Sidebar) in `page.tsx` of a dynamic route (e.g., `[[...slug]]`) causes them to be part of the route's payload on every navigation. Moving them to `layout.tsx` ensures they persist, reducing the server response size and client-side reconciliation work.
 **Action:** Always verify if shared UI components in catch-all routes should be moved to a `layout.tsx` to optimize navigation performance.
+
+## 2025-05-24 - [EntityParser Map Allocation]
+**Learning:** EntityParser was allocating a lookup map in `isBasicType` on every call, causing unnecessary GC pressure during parsing.
+**Action:** Always hoist static lookup maps to package-level variables or `var` blocks outside the hot path to ensure zero-allocation lookups.
