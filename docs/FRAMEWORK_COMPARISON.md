@@ -5,7 +5,7 @@ This document outlines a comparative analysis between **Kthulu Go** and establis
 ## 1. Microservices Native Support (gRPC & Messaging)
 
 ### The Gap
-While Kthulu excels at HTTP/REST APIs, it lacks native, abstraction-layer support for non-HTTP transports.
+While Kthulu excels at HTTP/REST APIs, it takes a more explicit approach to non-HTTP transports compared to the "abstraction-heavy" competitors.
 
 *   **Competitors (NestJS / Spring Boot):**
     *   **Transport Agnostic:** Switching a service from REST to **gRPC** or consuming events from **Kafka/RabbitMQ** is often a matter of changing a configuration flag or decorator. The framework abstracts the underlying protocol.
@@ -13,34 +13,36 @@ While Kthulu excels at HTTP/REST APIs, it lacks native, abstraction-layer suppor
 
 *   **Kthulu Current State:**
     *   Primarily **HTTP/REST centric**.
-    *   Background jobs are handled via `asynq` (Redis), but integrating event buses (Kafka, NATS) or RPC protocols (gRPC) requires manual implementation and boilerplate code.
+    *   **gRPC Support:** Available via `grpc-gateway` to expose services as both gRPC and REST, but requires defining `.proto` files explicitly.
+    *   **Background Jobs:** First-class support for Redis-based jobs via `asynq`, but lacking a unified event bus abstraction for Kafka/NATS.
 
 ### Why it matters
-For large-scale distributed systems, HTTP overhead is often too high. Native gRPC support is crucial for low-latency inter-service communication, and event buses are essential for decoupled, event-driven architectures.
+For large-scale distributed systems, HTTP overhead is often too high. Kthulu prioritizes the **Modular Monolith** pattern, where internal function calls replace network RPCs, deferring the need for complex microservice transports until absolutely necessary.
 
 ---
 
 ## 2. Automated Admin Interface (The "Admin Panel")
 
 ### The Gap
-Kthulu provides the tools to build a frontend, but does not offer an instant, zero-code administrative interface for database management.
+Kthulu provides tools to scaffold admin interfaces but does not offer a runtime-dynamic admin panel like Django.
 
 *   **Competitors (Django / Laravel Nova / Buffalo):**
-    *   **Zero-Config Admin:** Frameworks like Django automatically generate a full CRUD UI (`/admin`) based on database models. This allows non-technical staff to manage users, content, and configurations immediately after deployment.
+    *   **Zero-Config Admin:** Frameworks like Django automatically generate a full CRUD UI (`/admin`) based on database models at runtime.
     *   **Rapid Prototyping:** Drastically reduces time-to-market for internal tools.
 
 *   **Kthulu Current State:**
-    *   Provides high-quality frontend scaffolding (Templ/HTMX), but the developer must still manually "assemble" the admin pages, define tables, and wire up forms.
+    *   **Scaffolded Admin:** The `kthulu add admin` command generates a full **Templ + HTMX** admin dashboard source code into your project.
+    *   **Difference:** Unlike Django's runtime inspection, Kthulu generates the *code* for the admin panel, giving you full control to customize it, but requiring a build step.
 
 ### Why it matters
-An out-of-the-box admin panel is a massive productivity booster for early-stage startups and internal tools, removing the need to build "boring" CRUD interfaces from scratch.
+An out-of-the-box admin panel is a massive productivity booster. Kthulu's code-generation approach balances convenience with the type-safety and performance of compiled Go code.
 
 ---
 
 ## 3. "Smart" Migrations & ORM DX
 
 ### The Gap
-Kthulu uses industry-standard tools (GORM, Goose), but lacks the "conversational" developer experience (DX) of dynamic languages.
+Kthulu uses industry-standard tools (GORM, Goose), but adheres to Go's explicit nature rather than "magic" automations.
 
 *   **Competitors (Rails / Laravel / Buffalo):**
     *   **Intelligent Generators:** CLI commands like `rails g migration AddStatusToOrders status:string` automatically generate the correct SQL/DSL timestamped files.
@@ -51,7 +53,7 @@ Kthulu uses industry-standard tools (GORM, Goose), but lacks the "conversational
     *   **Manual Work:** Developers often need to write the specific migration logic manually, although scaffolding helps.
 
 ### Why it matters
-Smoother migration workflows reduce friction during rapid iteration cycles, especially for teams strictly adhering to CI/CD pipelines where DB schema changes are frequent.
+Smoother migration workflows reduce friction during rapid iteration cycles. Kthulu encourages understanding the underlying SQL, preventing "ORM magic" performance pitfalls later.
 
 ---
 
@@ -68,7 +70,7 @@ Real-time capabilities in Kthulu are functional but "bare-metal" compared to the
     *   Support exists via libraries (e.g., `nhooyr.io/websocket`), but logic for managing connections, rooms, and clustering must be implemented by the developer.
 
 ### Why it matters
-For apps requiring chat, live notifications, or collaborative editing, high-level abstractions save weeks of development time and prevent common concurrency pitfalls.
+For apps requiring chat, live notifications, or collaborative editing, high-level abstractions save weeks of development time. This is a planned area of improvement for Kthulu.
 
 ---
 
@@ -85,7 +87,7 @@ This is an architectural choice rather than a strict "missing feature," but it i
 *   **Kthulu Current State (Uber/fx):**
     *   **Explicit & Compile-Time:** Uses `fx.Provide` and `fx.Invoke`. The dependency graph is constructed explicitly in Go code.
     *   **Pros:** Type-safe, high performance, easy to trace (Jump to Definition works).
-    *   **Cons:** Requires maintaining `module.go` files and manually registering providers (though Kthulu's CLI automates much of this).
+    *   **Cons:** Requires maintaining `module.go` files and manually registering providers (Kthulu's CLI automates this wiring during generation).
 
 ### Why it matters
 Kthulu prioritizes **performance and explicitness** (The Go Way) over "magic," which aligns with the ecosystem but requires a shift in mindset for developers coming from Java/TS.

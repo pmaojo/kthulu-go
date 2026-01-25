@@ -1,106 +1,42 @@
-# Kthulu Go — AI-Powered Software Foundry
+# Kthulu Go — The AI-Native Software Foundry
 
-**Kthulu Go** is an intelligent software foundry powered by **Go**, **MCP (Model Context Protocol)**, and **AI**. It is not just a framework, but a Generation Engine designed to autonomously plan, scaffold, and evolve modular software architectures.
+**Kthulu Go** is not just a framework—it's an **Intelligent Software Foundry**. It combines a robust Modular Monolith architecture with a powerful **Generation Engine** driven by AI and the Model Context Protocol (MCP).
 
-The platform prioritizes:
+Designed for platform engineering teams and AI-native developers, Kthulu automates the heavy lifting of software design, allowing you to focus on business logic.
 
-1.  **The Generation Engine**: A powerful CLI that uses AI to translate natural language into robust, type-safe Go code.
-2.  **Modular Monolith Architecture**: Enforcing "Vertical Slice" architecture for high cohesion and scalability.
-3.  **MCP Native**: Exposing all CLI capabilities as MCP tools, allowing AI agents (like Claude or Gemini) to act as autonomous engineers.
+![Kthulu Architecture](https://kthulu.dev/assets/architecture-diagram.png)
 
-## Who Is Kthulu For?
+## 🚀 Core Pillars
 
-- **Platform Engineers** building internal developer platforms (IDPs) with strict architectural standards.
-- **AI-Native Teams** who want to leverage agents to drastically reduce boilerplate and maintenance overhead.
-- **Go Developers** seeking a modern, opinionated framework that balances simplicity with enterprise readiness.
+### 1. The Generation Engine (DSL)
+Infrastructure as Code is standard. Kthulu brings you **Architecture as Code**.
+Define your system's blueprint using `kthulu plan`, and let the engine scaffold a production-ready Modular Monolith.
 
-## Intelligent Coding (TUI)
+[👉 Learn more about Project Blueprints](./docs/DSL.md)
 
-Kthulu replaces complex internal AI implementations with **high-leverage integrations**.
+### 2. AI-Native Workflow
+Kthulu embeds AI into the developer loop. It doesn't just autocomplete code; it understands your project context, audits your security, and writes your tests.
 
-```sh
-# Autoconfigures & Launches "Crush" with Kthulu tools
-kthulu coder
-```
+- **Kthulu Coder**: An autonomous TUI agent that lives in your terminal.
+- **Generative Commands**: `kthulu ai gen-feature`, `kthulu ai review`, `kthulu ai optimize`.
 
-When you run `kthulu coder`, it:
+[👉 Deep dive into AI Flows](./docs/AI_FLOWS.md)
 
-1. Detects your installation of [Crush](https://github.com/charmbracelet/crush).
-2. Generates a project-specific configuration that **injects Kthulu as an MCP Server**.
-3. Launches the agent, giving it full access to scaffold, analyze, and evolve your code.
+### 3. Modular Monolith Architecture
+We enforce a "Vertical Slice" architecture (GTH Stack: Go + Templ + HTMX). Code is organized by **Feature**, not technical layer, ensuring high cohesion and scalability.
 
-## Model Context Protocol (MCP)
+### 4. MCP Native
+Kthulu exposes its entire CLI as a **Model Context Protocol (MCP)** server. This means any MCP-compliant agent (Claude Desktop, Cursor, etc.) can "drive" Kthulu to build software for you.
 
-Kthulu Go is built first and foremost as an **MCP Server**. This means it is designed to be driven by AI.
+[👉 Integrating with MCP](./docs/MCP.md)
 
-To use Kthulu with other agents, you can use our bridge commands:
+---
 
-```sh
-# Configure & Launch Claude CLI
-kthulu claude
-
-# Configure Gemini Code Assist
-kthulu gemini
-```
-
-Or manually register the server in your favorite client:
-
-```json
-{
-  "mcpServers": {
-    "kthulu": {
-      "command": "/absolute/path/to/kthulu",
-      "args": ["mcp"]
-    }
-  }
-}
-```
-
-## Extensions & Ecosystem
-
-Kthulu is designed to be extensible. We support two primary ways to extend capabilities:
-
-### 1. Kthulu Modules (Vertical Slices)
-
-Native Go plugins that live inside your `internal/modules` directory. They add business logic and API endpoints to your application.
-
-### 2. Agent Skills (MCP)
-
-You can extend the AI's capabilities by registering additional MCP servers (Extensions).
-
-- **Database Skills**: Grants the agent SQL access to your database.
-- **Git Skills**: Allows the agent to open PRs and manage branches.
-- **Browser Skills**: Lets the agent research documentation online.
-
-When using `kthulu coder` (Crush), you can manage these extensions in `.kthulu/crush.json`.
-
-## Key Features
-
-- **Vertical Slice Architecture**: Code is organized by feature, not technical layer.
-- **Dependency Injection**: First-class support for `uber/fx`.
-- **Zero-Boilerplate**: The CLI handles wiring, config, and scaffolding.
-- **Database Agnostic**: Built-in support for SQLite, PostgreSQL, and MySQL via GORM.
-
-## Project Structure
-
-This repository is a **Monorepo** containing the seed of the foundry:
-
-```
-kthulu-go/
-├── cmd/
-│   └── kthulu/          # The Kthulu CLI & Generation Engine
-├── pkg/                 # Shared libraries and public APIs
-├── internal/            # Private framework internals
-└── verify-v*/           # Generated verification apps (ephemeral)
-```
-
-## Getting Started
+## ⚡ Quick Start
 
 ### Installation
 
-You can install the `kthulu` binary directly:
-
-```sh
+```bash
 # Build from source
 go build -o kthulu ./cmd/kthulu/main.go
 
@@ -108,85 +44,95 @@ go build -o kthulu ./cmd/kthulu/main.go
 export PATH="$(pwd):$PATH"
 ```
 
-### Creating a New Project
+### 1. Plan Your Architecture
+Don't start with an empty folder. Start with a plan.
 
-The core value of Kthulu is its ability to generate production-ready code.
-
-```sh
-# Create a new Modular Monolith project
-kthulu create my-app
+```bash
+# Generate a blueprint for an e-commerce app
+kthulu plan my-shop --template=ecommerce --features=payment,cart
 ```
 
-This generates a project structure optimized for vertical slicing with **GTH frontend** (Go + Templ + HTMX):
+### 2. Scaffold the Project
+Turn the blueprint into code.
+
+```bash
+# Create the project (blueprint integration coming soon, use flags for now)
+kthulu create my-shop --features=payment,cart
+```
+
+### 3. Launch the AI Agent
+Need to add a feature? Let the agent handle the boilerplate.
+
+```bash
+cd my-shop
+kthulu coder
+```
+
+---
+
+## 🛠 Feature Highlights
+
+### 🧠 Intelligent Coding
+Forget copy-pasting from ChatGPT. Kthulu's AI is context-aware.
+
+```bash
+# Add a Stripe webhook handler, context-aware
+kthulu ai "Add a Stripe payment webhook handler" --apply
+
+# Generate BDD tests
+kthulu ai gen-feature "User checkout flow" --apply
+```
+
+### 🥒 Behavior Driven Development (BDD)
+First-class support for Cucumber/Gherkin. Define *behavior* first.
+
+```bash
+# Run all feature tests
+kthulu bdd run
+```
+
+### 🛡️ Enterprise Compliance & Security
+Built-in auditing tools for security and compliance (SOX, GDPR, PCI).
+
+```bash
+# Run a security and compliance audit
+kthulu audit --security --compliance=gdpr
+```
+
+### ☁️ Zero-Config Deployment
+Deploy to any cloud provider (AWS, GCP, Azure, K8s) without writing Terraform.
+
+```bash
+kthulu deploy --cloud=aws --scale=auto
+```
+
+---
+
+## 📚 Documentation
+
+- **[AI Flows & Capabilities](./docs/AI_FLOWS.md)**: Master the `coder` and `ai` commands.
+- **[Project Blueprints (DSL)](./docs/DSL.md)**: Learn how to define Architecture as Code.
+- **[Model Context Protocol (MCP)](./docs/MCP.md)**: Connect Kthulu to Claude and other agents.
+- **[Framework Comparison](./docs/FRAMEWORK_COMPARISON.md)**: Why Kthulu vs. NestJS or Spring Boot?
+
+## 📦 Project Structure
 
 ```
 my-app/
+├── kthulu-plan.yaml     # Architecture Blueprint
 ├── cmd/server/          # Entrypoint
+├── features/            # BDD Feature Files (.feature)
 ├── internal/
-│   ├── modules/         # Vertical Slices (Feature Modules)
-│   │   ├── user/        # 'User' Feature
-│   │   │   ├── api/     # HTTP Handlers / Transport
-│   │   │   ├── core/    # Domain Logic & Services
-│   │   │   ├── store/   # Data Persistence
-│   │   │   └── module.go # FX Dependency Injection
-│   │   └── ...
+│   ├── modules/         # Vertical Slices (User, Billing, etc.)
 │   ├── views/           # GTH Frontend (Templ + HTMX)
-│   │   ├── layouts/     # Base and admin layouts
-│   │   ├── components/  # Reusable table, form, modal
-│   │   ├── pages/       # Full page templates
-│   │   └── partials/    # HTMX partial responses
-│   └── infrastructure/  # Shared tech (Loggers, Middleware)
+│   └── infrastructure/  # Shared Kernels
 └── ...
 ```
 
-## GTH Frontend (Go + Templ + HTMX)
+## 🤝 Contributing
 
-Kthulu uses **GTH** - a hypermedia-driven frontend stack that keeps everything in Go:
+We love contributions! Please read our [CONTRIBUTING.md](./CONTRIBUTING.md) to get started.
 
-| Component | Purpose                                   |
-| --------- | ----------------------------------------- |
-| **Go**    | Server-side rendering, business logic     |
-| **Templ** | Type-safe HTML templates (compiles to Go) |
-| **HTMX**  | Dynamic UI without JavaScript frameworks  |
-
-### Why GTH over React/Vue/etc?
-
-- **Single language** - No JS/TS build toolchain
-- **Server-rendered** - State lives on server, no client sync issues
-- **Hypermedia** - Returns HTML fragments, not JSON to transform
-- **14KB** - HTMX is tiny compared to React bundles
-- **Type-safe** - Templ compiles to Go, catches errors at build time
-
-### Frontend Options
-
-```sh
-# Default: GTH frontend (recommended)
-kthulu new my-app --features product
-
-# API-only (no frontend views)
-kthulu new my-app --features product --frontend none
-```
-
-## CLI Command Reference
-
-| Command                       | Description                                              |
-| ----------------------------- | -------------------------------------------------------- |
-| `kthulu create <name>`        | Scaffolds a new project with Modular Monolith structure. |
-| `kthulu coder`                | Launches the AI Coding Assistant (Crush).                |
-| `kthulu claude`               | Configures and launches Claude CLI.                      |
-| `kthulu gemini`               | Configures Gemini Code Assist.                           |
-| `kthulu dev`                  | Starts the development server with **AI Self-Healing**.  |
-| `kthulu add module <name>`    | Adds a new feature module (Vertical Slice).              |
-| `kthulu add component <type>` | Adds a component (handler, service, store) to a module.  |
-| `kthulu doc`                  | Generates OpenAPI/Swagger documentation.                 |
-| `kthulu secure`               | Audits dependencies for vulnerabilities.                 |
-| `kthulu audit`                | Runs enterprise compliance checks.                       |
-| `kthulu analyze`              | Analyzes project structure and dependencies.             |
-
-## Contributing
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
-
-## License
+## 📄 License
 
 MIT — see [LICENSE](./LICENSE)
