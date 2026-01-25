@@ -286,10 +286,12 @@ func scaffoldModule(base, name string) error {
 	}
 
 	data := map[string]any{
-		"ModuleName":   name,
-		"ModuleExport": generator.Capitalize(name),
+		"Name":          name,
+		"Title":         generator.Capitalize(name),
+		"ProjectModule": "example.com/project",
+		"ModuleRelPath": "internal/modules",
 	}
 
 	dst := filepath.Join(base, "backend", "internal", "modules", name+".go")
-	return writeTemplate("module.go.tmpl", dst, data, false)
+	return writeTemplate("scaffold/backend/module.go.tmpl", dst, data, false)
 }

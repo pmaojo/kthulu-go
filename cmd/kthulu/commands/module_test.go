@@ -17,7 +17,7 @@ func TestScaffoldModule(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading module: %v", err)
 	}
-	if !strings.Contains(string(data), "FooModule") {
-		t.Fatalf("module file missing name: %s", string(data))
+	if !strings.Contains(string(data), "NewFooRepository") {
+		t.Fatalf("module file missing repository provider: %s", string(data))
 	}
 }
