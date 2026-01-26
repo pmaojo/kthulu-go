@@ -28,6 +28,12 @@ async function readFrontMatter(filePath: string): Promise<Record<string, any>> {
         return matter(content).data;
       }
     }
+
+    // Optimization: If we read less than buffer size, we have the full file.
+    if (bytesRead < 4096) {
+      return matter(content).data;
+    }
+
     // Fallback: read full file if frontmatter is huge or not found in first 4KB
     const fullContent = await fs.promises.readFile(filePath, 'utf8');
     return matter(fullContent).data;

@@ -13,3 +13,7 @@
 ## 2025-05-24 - [EntityParser Map Allocation]
 **Learning:** EntityParser was allocating a lookup map in `isBasicType` on every call, causing unnecessary GC pressure during parsing.
 **Action:** Always hoist static lookup maps to package-level variables or `var` blocks outside the hot path to ensure zero-allocation lookups.
+
+## 2025-05-25 - [Redundant CMS File Reads]
+**Learning:** The CMS `readFrontMatter` function was performing a double read for small files (<4KB) that didn't match the simple frontmatter check (e.g., no frontmatter or malformed). The initial buffer read already contained the full file content.
+**Action:** When implementing partial file reads with a fallback, always check if the initial read reached EOF (`bytesRead < bufferSize`). If so, use the buffer content directly to avoid a redundant `readFile` call.
