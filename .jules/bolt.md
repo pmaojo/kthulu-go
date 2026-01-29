@@ -13,3 +13,7 @@
 ## 2025-05-24 - [EntityParser Map Allocation]
 **Learning:** EntityParser was allocating a lookup map in `isBasicType` on every call, causing unnecessary GC pressure during parsing.
 **Action:** Always hoist static lookup maps to package-level variables or `var` blocks outside the hot path to ensure zero-allocation lookups.
+
+## 2026-01-29 - [DependencyResolver Map Allocation]
+**Learning:** Initializing static maps inside methods causes repeated heap allocations and GC pressure, especially in frequently called logic like dependency resolution or module info retrieval.
+**Action:** Hoist static configuration maps to package-level variables using a `var` block to ensure they are allocated only once at startup.
