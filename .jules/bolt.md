@@ -13,3 +13,7 @@
 ## 2025-05-24 - [EntityParser Map Allocation]
 **Learning:** EntityParser was allocating a lookup map in `isBasicType` on every call, causing unnecessary GC pressure during parsing.
 **Action:** Always hoist static lookup maps to package-level variables or `var` blocks outside the hot path to ensure zero-allocation lookups.
+
+## 2025-05-24 - [Hoisting Static Maps in Resolver]
+**Learning:** The DependencyResolver was allocating static maps (descriptions, categories, conflicts) on every method call. Moving these to package-level variables reduced allocations from ~28/op to ~4/op in hot paths.
+**Action:** When working with static lookup data in Go, always hoist it to package-level variables or `init()` blocks to avoid redundant allocations.
