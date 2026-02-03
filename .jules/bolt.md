@@ -13,3 +13,7 @@
 ## 2025-05-24 - [EntityParser Map Allocation]
 **Learning:** EntityParser was allocating a lookup map in `isBasicType` on every call, causing unnecessary GC pressure during parsing.
 **Action:** Always hoist static lookup maps to package-level variables or `var` blocks outside the hot path to ensure zero-allocation lookups.
+
+## 2025-05-24 - [Node.js FileHandle Cursor Behavior]
+**Learning:** Node.js `FileHandle.read(buffer, 0, len, 0)` reads from position 0 *without* advancing the file cursor. This allows a subsequent `FileHandle.readFile()` to read the entire file from the beginning without an explicit seek/reset, enabling efficient fallbacks.
+**Action:** When implementing read fallbacks using `FileHandle`, verify if previous reads modified the cursor. If explicit position was used, the cursor remains unchanged, allowing full file reads without reopening the file.

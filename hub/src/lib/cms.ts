@@ -29,7 +29,8 @@ async function readFrontMatter(filePath: string): Promise<Record<string, any>> {
       }
     }
     // Fallback: read full file if frontmatter is huge or not found in first 4KB
-    const fullContent = await fs.promises.readFile(filePath, 'utf8');
+    // Note: fd.read with position 0 does not advance the cursor, so fd.readFile reads the whole file.
+    const fullContent = await fd.readFile('utf8');
     return matter(fullContent).data;
   } finally {
     await fd.close();
