@@ -13,3 +13,7 @@
 ## 2025-05-24 - [EntityParser Map Allocation]
 **Learning:** EntityParser was allocating a lookup map in `isBasicType` on every call, causing unnecessary GC pressure during parsing.
 **Action:** Always hoist static lookup maps to package-level variables or `var` blocks outside the hot path to ensure zero-allocation lookups.
+
+## 2025-05-24 - [Reuse File Descriptors in CMS]
+**Learning:** The CMS `readFrontMatter` function opened the file to read the header, but if it fell back to reading the full content, it opened the file again using `fs.readFile(path)`.
+**Action:** Reuse the existing open `FileHandle` (`fd.readFile`) to avoid redundant `open` syscalls when falling back to full file reads.
