@@ -10,6 +10,58 @@ import (
 	"github.com/pmaojo/kthulu-go/internal/adapters/cli/parser"
 )
 
+// Static data to avoid repeated allocations
+var (
+	moduleDescriptions = map[string]string{
+		"user":         "User management and authentication core",
+		"auth":         "Authentication and authorization system",
+		"organization": "Multi-tenant organization management",
+		"contact":      "Customer and vendor contact management",
+		"product":      "Product catalog and management",
+		"invoice":      "Invoice generation and management",
+		"payment":      "Payment processing and gateway integration",
+		"inventory":    "Inventory and warehouse management",
+		"calendar":     "Scheduling and calendar management",
+		"verifactu":    "Spanish fiscal compliance (VeriFACTU)",
+		"oauthsso":     "OAuth and SSO integration",
+		"realtime":     "Real-time communication and WebSocket support",
+		"audit":        "Audit logging and compliance tracking",
+		"notification": "Multi-channel notification system",
+	}
+
+	moduleCategories = map[string]string{
+		"user":         "Core",
+		"auth":         "Core",
+		"organization": "Core",
+		"contact":      "Business",
+		"product":      "Business",
+		"invoice":      "Business",
+		"payment":      "Integration",
+		"inventory":    "Business",
+		"calendar":     "Business",
+		"verifactu":    "Compliance",
+		"oauthsso":     "Integration",
+		"realtime":     "Infrastructure",
+		"audit":        "Compliance",
+		"notification": "Infrastructure",
+	}
+
+	incompatiblePairs = map[string][]string{
+		"sqlite":     {"mysql", "postgresql"},
+		"mysql":      {"postgresql"},
+		"local_auth": {"oauthsso"},
+		// Add more incompatible combinations
+	}
+
+	optionalSuggestions = map[string][]string{
+		"user":         {"notification", "audit"},
+		"organization": {"contact", "calendar"},
+		"product":      {"inventory", "pricing"},
+		"invoice":      {"payment", "verifactu"},
+		"contact":      {"calendar", "communication"},
+	}
+)
+
 // DependencyResolver resolves module dependencies intelligently
 type DependencyResolver struct {
 	modules      map[string]*parser.Module
@@ -217,13 +269,6 @@ func (r *DependencyResolver) detectConflicts(plan *ResolutionPlan) {
 
 // checkIncompatibleModules checks for known incompatible module combinations
 func (r *DependencyResolver) checkIncompatibleModules(plan *ResolutionPlan) {
-	incompatiblePairs := map[string][]string{
-		"sqlite":     {"mysql", "postgresql"},
-		"mysql":      {"postgresql"},
-		"local_auth": {"oauthsso"},
-		// Add more incompatible combinations
-	}
-
 	moduleSet := make(map[string]bool)
 	for _, module := range plan.RequiredModules {
 		moduleSet[module] = true
@@ -341,16 +386,8 @@ func (r *DependencyResolver) generateRecommendations(requestedModules []string, 
 
 // suggestOptionalModules suggests optional modules that might be useful
 func (r *DependencyResolver) suggestOptionalModules(plan *ResolutionPlan) {
-	suggestions := map[string][]string{
-		"user":         {"notification", "audit"},
-		"organization": {"contact", "calendar"},
-		"product":      {"inventory", "pricing"},
-		"invoice":      {"payment", "verifactu"},
-		"contact":      {"calendar", "communication"},
-	}
-
 	for _, module := range plan.RequiredModules {
-		if optionals, exists := suggestions[module]; exists {
+		if optionals, exists := optionalSuggestions[module]; exists {
 			for _, optional := range optionals {
 				if !contains(plan.RequiredModules, optional) && !contains(plan.OptionalModules, optional) {
 					plan.OptionalModules = append(plan.OptionalModules, optional)
@@ -398,48 +435,14 @@ type ModuleInfo struct {
 
 // Helper functions
 func (r *DependencyResolver) getModuleDescription(module string) string {
-	descriptions := map[string]string{
-		"user":         "User management and authentication core",
-		"auth":         "Authentication and authorization system",
-		"organization": "Multi-tenant organization management",
-		"contact":      "Customer and vendor contact management",
-		"product":      "Product catalog and management",
-		"invoice":      "Invoice generation and management",
-		"payment":      "Payment processing and gateway integration",
-		"inventory":    "Inventory and warehouse management",
-		"calendar":     "Scheduling and calendar management",
-		"verifactu":    "Spanish fiscal compliance (VeriFACTU)",
-		"oauthsso":     "OAuth and SSO integration",
-		"realtime":     "Real-time communication and WebSocket support",
-		"audit":        "Audit logging and compliance tracking",
-		"notification": "Multi-channel notification system",
-	}
-
-	if desc, exists := descriptions[module]; exists {
+	if desc, exists := moduleDescriptions[module]; exists {
 		return desc
 	}
 	return "Custom module"
 }
 
 func (r *DependencyResolver) getModuleCategory(module string) string {
-	categories := map[string]string{
-		"user":         "Core",
-		"auth":         "Core",
-		"organization": "Core",
-		"contact":      "Business",
-		"product":      "Business",
-		"invoice":      "Business",
-		"payment":      "Integration",
-		"inventory":    "Business",
-		"calendar":     "Business",
-		"verifactu":    "Compliance",
-		"oauthsso":     "Integration",
-		"realtime":     "Infrastructure",
-		"audit":        "Compliance",
-		"notification": "Infrastructure",
-	}
-
-	if cat, exists := categories[module]; exists {
+	if cat, exists := moduleCategories[module]; exists {
 		return cat
 	}
 	return "Custom"
