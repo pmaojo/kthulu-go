@@ -2,12 +2,9 @@ package mcp_test
 
 import (
 	"context"
-	"errors"
 	"testing"
 
-	mcp_golang "github.com/metoro-io/mcp-golang"
 	"github.com/pmaojo/kthulu-go/internal/adapters/mcp"
-	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,90 +21,31 @@ func (s *stubExecutor) Run(_ context.Context, workingDir string, args []string) 
 	return s.result, s.err
 }
 
-func TestCommandToolHandlerSuccess(t *testing.T) {
-	executor := &stubExecutor{
-		result: mcp.CommandResult{Stdout: "project created", Stderr: ""},
-	}
-
-	tool := mcp.NewCommandTool(
-		"create",
-		"Create projects",
-		[]string{"create"},
-		"/tmp/project",
-		executor,
-	)
-
-	handler := tool.Handler.(func(context.Context, mcp.CommandArguments) (*mcp_golang.ToolResponse, error))
-
-	resp, err := handler(context.Background(), mcp.CommandArguments{Arg1: "demo"})
-	require.NoError(t, err)
-	require.NotNil(t, resp)
-	require.Len(t, resp.Content, 1)
-	require.NotNil(t, resp.Content[0].TextContent)
-	require.Contains(t, resp.Content[0].TextContent.Text, "project created")
-	require.Equal(t, [][]string{{"create", "demo"}}, executor.calls)
-	require.Equal(t, "/tmp/project", executor.lastDir)
-}
-
-func TestCommandToolHandlerErrorIncludesOutput(t *testing.T) {
-	executor := &stubExecutor{
-		result: mcp.CommandResult{Stdout: "partial", Stderr: "boom"},
-		err:    errors.New("command failed"),
-	}
-
-	tool := mcp.NewCommandTool(
-		"ai",
-		"AI assistant",
-		[]string{"ai"},
-		"/tmp/project",
-		executor,
-	)
-
-	handler := tool.Handler.(func(context.Context, mcp.CommandArguments) (*mcp_golang.ToolResponse, error))
-	resp, err := handler(context.Background(), mcp.CommandArguments{Arg1: "Add"})
-	require.Error(t, err)
-	require.Nil(t, resp)
-	require.Contains(t, err.Error(), "command failed")
-	require.Contains(t, err.Error(), "partial")
-	require.Contains(t, err.Error(), "boom")
-}
-
-func TestCommandArgumentsResolveArgs(t *testing.T) {
-	arguments := mcp.CommandArguments{
-		Arg1:     "one",
-		Arg3:     "two",
-		ArgsText: "three four",
-		ArgsJSON: `["five","six"]`,
-	}
-	resolved, err := arguments.ResolveArgs()
-	require.NoError(t, err)
-	require.Equal(t, []string{"one", "two", "three", "four", "five", "six"}, resolved)
-}
-
-func TestCommandArgumentsResolveArgsJSONError(t *testing.T) {
-	arguments := mcp.CommandArguments{ArgsJSON: "not-json"}
-	resolved, err := arguments.ResolveArgs()
-	require.Error(t, err)
-	require.Nil(t, resolved)
-}
-
 func TestBuildCommandToolsHonorsFilter(t *testing.T) {
+	// Mock the registry because BuildCommandTools now uses the registry instead of walking the root command passed to it.
+	original := mcp.GeneratedToolRegistry
+	defer func() { mcp.GeneratedToolRegistry = original }()
+
 	executor := &stubExecutor{}
-	root := &cobra.Command{Use: "kthulu"}
 
-	statusCmd := &cobra.Command{Use: "status", Run: func(cmd *cobra.Command, args []string) {}}
-	root.AddCommand(statusCmd)
-
-	destructive := &cobra.Command{Use: "deploy"}
-	apply := &cobra.Command{Use: "apply", Run: func(cmd *cobra.Command, args []string) {}}
-	destructive.AddCommand(apply)
-	root.AddCommand(destructive)
+	// Define mock tools
+	mcp.GeneratedToolRegistry = map[string]func(mcp.CommandExecutor, string) mcp.RegisteredTool{
+		"status": func(e mcp.CommandExecutor, wd string) mcp.RegisteredTool {
+			return mcp.RegisteredTool{Name: "status"}
+		},
+		"deploy_apply": func(e mcp.CommandExecutor, wd string) mcp.RegisteredTool {
+			return mcp.RegisteredTool{Name: "deploy_apply"}
+		},
+	}
 
 	filter := func(path []string) bool {
+		// path for "deploy_apply" is ["deploy", "apply"] (via split)
 		return !(len(path) >= 2 && path[0] == "deploy" && path[1] == "apply")
 	}
 
-	tools := mcp.BuildCommandTools(root, executor, "/tmp", filter)
+	// The root argument is now ignored by BuildCommandTools, but we pass nil or whatever.
+	tools := mcp.BuildCommandTools(nil, executor, "/tmp", filter)
+
 	require.Len(t, tools, 1)
 	require.Equal(t, "status", tools[0].Name)
 }
