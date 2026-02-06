@@ -19,12 +19,15 @@ func NewBDDService() *BDDService {
 	return &BDDService{}
 }
 
+// ListFeaturesArgs defines arguments for listing features (none required).
+type ListFeaturesArgs struct{}
+
 // ListFeaturesTool returns a tool that lists all .feature files in the project.
 func (s *BDDService) ListFeaturesTool(workingDir string) RegisteredTool {
 	return RegisteredTool{
 		Name:        "list_features",
 		Description: "List all Gherkin .feature files in the project",
-		Handler: func(ctx context.Context, args CommandArguments) (*mcp_golang.ToolResponse, error) {
+		Handler: func(ctx context.Context, args ListFeaturesArgs) (*mcp_golang.ToolResponse, error) {
 			var features []string
 
 			// Default search paths
@@ -64,13 +67,18 @@ func (s *BDDService) ListFeaturesTool(workingDir string) RegisteredTool {
 	}
 }
 
+// ReadFeatureArgs defines arguments for reading a feature file.
+type ReadFeatureArgs struct {
+	Path string `json:"path" jsonschema:"description=Path to the .feature file"`
+}
+
 // ReadFeatureTool returns a tool that reads the content of a specific .feature file.
 func (s *BDDService) ReadFeatureTool(workingDir string) RegisteredTool {
 	return RegisteredTool{
 		Name:        "read_feature",
 		Description: "Read the content of a Gherkin .feature file",
-		Handler: func(ctx context.Context, args CommandArguments) (*mcp_golang.ToolResponse, error) {
-			path := args.Arg1
+		Handler: func(ctx context.Context, args ReadFeatureArgs) (*mcp_golang.ToolResponse, error) {
+			path := args.Path
 			if path == "" {
 				return nil, fmt.Errorf("argument 'path' is required")
 			}
@@ -86,20 +94,21 @@ func (s *BDDService) ReadFeatureTool(workingDir string) RegisteredTool {
 	}
 }
 
+// RunScenarioArgs defines arguments for running scenarios.
+type RunScenarioArgs struct {
+	Filter string `json:"filter,omitempty" jsonschema:"description=Regex filter for scenarios or feature name"`
+}
+
 // RunScenarioTool returns a tool that executes a specific BDD scenario or all scenarios.
 func (s *BDDService) RunScenarioTool(workingDir string) RegisteredTool {
 	return RegisteredTool{
 		Name:        "run_scenario",
 		Description: "Run BDD scenarios using godog (via go test)",
-		Handler: func(ctx context.Context, args CommandArguments) (*mcp_golang.ToolResponse, error) {
+		Handler: func(ctx context.Context, args RunScenarioArgs) (*mcp_golang.ToolResponse, error) {
 			// Arg1 can be a regex or name filter
-			filter := args.Arg1
+			filter := args.Filter
 
 			// Determine where the tests are.
-			// We assume standard Kthulu structure: backend/features or similar
-			// Typically we run `go test ./...` or `go test ./backend/features/...`
-			// But for godog, typically there is a main_test.go in the features folder.
-
 			testPath := "./..."
 			if _, err := os.Stat(filepath.Join(workingDir, "backend/features")); err == nil {
 				testPath = "./backend/features/..."
@@ -109,17 +118,7 @@ func (s *BDDService) RunScenarioTool(workingDir string) RegisteredTool {
 
 			cmdArgs := []string{"test", "-v", testPath}
 
-			// If filter is provided, pass it to -run (though godog might need env var or args)
-			// Godog usually uses GODOG_OPTS or args passed to the test binary if implemented.
-			// Standard `go test -run` regex matches Test function names, not scenarios.
-			// However, if the test uses `godog.TestSuite`, it might not expose scenario filtering via `-run`.
-			// Assuming Kthulu uses standard godog setup where we can pass flags.
-			// Many setups use `go test -v --godog.tags="@wip"` etc.
-
 			if filter != "" {
-				// This assumes the test runner passes unknown flags to godog or uses a specific flag
-				// Alternatively, we can use the `TEST_RUN` env var if the test harness supports it.
-				// For now, let's try appending it as an argument to the test binary.
 				cmdArgs = append(cmdArgs, "-args", filter)
 			}
 

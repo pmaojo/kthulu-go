@@ -18,7 +18,26 @@ func (noopExecutor) Run(_ context.Context, _ string, _ []string) (mcp.CommandRes
 	return mcp.CommandResult{}, nil
 }
 
+// Named struct for testing to avoid jsonschema issues with anonymous structs
+type StatusArgs struct {
+	Force bool `json:"force"`
+}
+
 func TestServerBuilderBuildServer(t *testing.T) {
+	// Mock registry
+	original := mcp.GeneratedToolRegistry
+	defer func() { mcp.GeneratedToolRegistry = original }()
+	mcp.GeneratedToolRegistry = map[string]func(mcp.CommandExecutor, string) mcp.RegisteredTool{
+		"status": func(e mcp.CommandExecutor, wd string) mcp.RegisteredTool {
+			return mcp.RegisteredTool{
+				Name: "status",
+				Handler: func(ctx context.Context, args StatusArgs) (*mcp_golang.ToolResponse, error) {
+					return nil, nil
+				},
+			}
+		},
+	}
+
 	root := &cobra.Command{Use: "kthulu"}
 	root.AddCommand(&cobra.Command{Use: "status", Short: "Check status", Run: func(cmd *cobra.Command, args []string) {}})
 
@@ -37,16 +56,6 @@ func TestServerBuilderBuildServer(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, instance.Server)
 	require.Equal(t, "stdio", instance.Endpoint)
-	// Tools:
-	// 1. status (CLI)
-	// 2. guide (factory.go)
-	// 3. overview (insights)
-	// 4. modules (insights)
-	// 5. tags (insights)
-	// 6. dependencies (insights)
-	// 7. list_features (bdd)
-	// 8. read_feature (bdd)
-	// 9. run_scenario (bdd)
 	require.Equal(t, 13, len(instance.Tools))
 }
 
@@ -59,8 +68,20 @@ func TestBuildTransportHTTP(t *testing.T) {
 }
 
 func TestRegisteredToolsHaveValidSchemas(t *testing.T) {
+	original := mcp.GeneratedToolRegistry
+	defer func() { mcp.GeneratedToolRegistry = original }()
+	mcp.GeneratedToolRegistry = map[string]func(mcp.CommandExecutor, string) mcp.RegisteredTool{
+		"status": func(e mcp.CommandExecutor, wd string) mcp.RegisteredTool {
+			return mcp.RegisteredTool{
+				Name: "status",
+				Handler: func(ctx context.Context, args StatusArgs) (*mcp_golang.ToolResponse, error) {
+					return nil, nil
+				},
+			}
+		},
+	}
+
 	root := &cobra.Command{Use: "kthulu"}
-	root.AddCommand(&cobra.Command{Use: "status", Run: func(cmd *cobra.Command, args []string) {}})
 	factory := mcp.NewToolFactory(root, noopExecutor{}, parser.NewTagParser(nil))
 	tools := factory.BuildTools("/tmp", mcp.NewAllowDenyFilter(nil, nil))
 	for _, tool := range tools {
