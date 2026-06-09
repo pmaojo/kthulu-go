@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
-	
+	"time"
+
 	"github.com/gorilla/mux"
 	"{{.CoreImport}}"
 	{{if .Protected}}"{{.ProjectModule}}/internal/infrastructure/middleware"{{end}}
@@ -24,11 +25,79 @@ func (h *{{.Title}}Handler) RegisterRoutes(router *mux.Router) {
 	{{if .RoutePrefix}}sub := router.PathPrefix("/{{.RoutePrefix}}").Subrouter(){{else}}sub := router{{end}}
 	{{if .Protected}}sub.Use(middleware.AuthMiddleware){{end}}
 
+	sub.HandleFunc("", h.List).Methods("GET")
 	sub.HandleFunc("/", h.List).Methods("GET")
+	sub.HandleFunc("", h.Create).Methods("POST")
 	sub.HandleFunc("/", h.Create).Methods("POST")
 	sub.HandleFunc("/{id}", h.GetByID).Methods("GET")
 	sub.HandleFunc("/{id}", h.Update).Methods("PUT")
 	sub.HandleFunc("/{id}", h.Delete).Methods("DELETE")
+}
+
+// decode{{.Title}} decodes a JSON request body into the entity. Numeric and
+// boolean values submitted as strings (e.g. HTML forms via htmx json-enc)
+// are coerced to their typed equivalents before unmarshalling.
+func decode{{.Title}}(r *http.Request) (core.{{.Title}}, error) {
+	var entity core.{{.Title}}
+	var raw map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
+		return entity, err
+	}
+	for key := range raw {
+		switch key {
+{{- range .Fields}}
+{{- if or (eq .Type "int") (eq .Type "uint") (eq .Type "float64")}}
+		case "{{.JSONTag}}":
+			raw[key] = coerceNumber(raw[key])
+{{- else if eq .Type "bool"}}
+		case "{{.JSONTag}}":
+			raw[key] = coerceBool(raw[key])
+{{- else if eq .Type "time.Time"}}
+		case "{{.JSONTag}}":
+			raw[key] = coerceTime(raw[key])
+{{- end}}
+{{- end}}
+		}
+	}
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return entity, err
+	}
+	if err := json.Unmarshal(data, &entity); err != nil {
+		return entity, err
+	}
+	return entity, nil
+}
+
+func coerceNumber(v interface{}) interface{} {
+	if s, ok := v.(string); ok {
+		if n, err := strconv.ParseFloat(s, 64); err == nil {
+			return n
+		}
+	}
+	return v
+}
+
+func coerceBool(v interface{}) interface{} {
+	if s, ok := v.(string); ok {
+		if b, err := strconv.ParseBool(s); err == nil {
+			return b
+		}
+	}
+	return v
+}
+
+func coerceTime(v interface{}) interface{} {
+	s, ok := v.(string)
+	if !ok {
+		return v
+	}
+	for _, layout := range []string{time.RFC3339, "2006-01-02T15:04", "2006-01-02"} {
+		if t, err := time.Parse(layout, s); err == nil {
+			return t.Format(time.RFC3339)
+		}
+	}
+	return v
 }
 
 // Create handles the creation of a new {{.Name}}
@@ -43,12 +112,12 @@ func (h *{{.Title}}Handler) RegisterRoutes(router *mux.Router) {
 // @Failure      500  {object}  map[string]string "Internal server error"
 // @Router       /{{.RoutePrefix}} [post]
 func (h *{{.Title}}Handler) Create(w http.ResponseWriter, r *http.Request) {
-	var entity core.{{.Title}}
-	if err := json.NewDecoder(r.Body).Decode(&entity); err != nil {
+	entity, err := decode{{.Title}}(r)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	
+
 	if err := h.service.Create{{.Title}}(&entity); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -96,12 +165,12 @@ func (h *{{.Title}}Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	var entity core.{{.Title}}
-	if err := json.NewDecoder(r.Body).Decode(&entity); err != nil {
+	entity, err := decode{{.Title}}(r)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	
+
 	entity.ID = uint(id)
 	if err := h.service.Update{{.Title}}(&entity); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

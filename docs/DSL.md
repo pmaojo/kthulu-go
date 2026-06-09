@@ -55,13 +55,23 @@ features:
   - payment
 
 # Module Configuration (Fine-grained control)
+# Fields use the `name:type` syntax. Available types:
+#   string, int, float, bool, time
+# Relations use `name:belongs_to:module` and generate the foreign key,
+# the typed relation field, and the GORM association automatically.
 modules:
   product:
     fields:
-      - name
-      - price
-      - sku
-      - description
+      - name:string
+      - price:int
+      - sku:string
+      - description:string
+  invoice:
+    fields:
+      - amount:float
+      - status:string
+      - issued_at:time
+      - customer:belongs_to:contact
 
 # Project Requirements
 requirements:
@@ -71,6 +81,18 @@ requirements:
     status: Pending
     created: "2023-10-27T10:00:00Z"
 ```
+
+## From Blueprint to Code
+
+Once the blueprint is ready, scaffold the entire project from it:
+
+```bash
+kthulu create my-shop --from-plan=kthulu-plan.yaml
+```
+
+Every feature, module field and relation declared in the plan is generated:
+backend modules (entity, repository, service, HTTP handler), database
+auto-migration, and the GTH admin UI (tables, forms, HTMX live search).
 
 ## Why use Blueprints?
 

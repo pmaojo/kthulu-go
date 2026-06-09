@@ -266,17 +266,18 @@ func runNewProjectIntelligent(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	// Step 8: Run go mod tidy
-	if err := runGoModTidy(structure.RootPath); err != nil {
-		fmt.Printf("❌ Error running go mod tidy: %v\n", err)
-		os.Exit(1)
-	}
-
-	// Step 8b: Run templ generate if needed
+	// Step 8: Run templ generate first so view packages contain Go files
+	// before go mod tidy resolves imports.
 	if config.Frontend == "templ" {
 		if err := runTemplGenerate(structure.RootPath); err != nil {
 			fmt.Printf("⚠️  Warning: Failed to run templ generate: %v\n", err)
 		}
+	}
+
+	// Step 8b: Run go mod tidy
+	if err := runGoModTidy(structure.RootPath); err != nil {
+		fmt.Printf("❌ Error running go mod tidy: %v\n", err)
+		os.Exit(1)
 	}
 
 	// Step 9: Execute tests with coverage requirements
@@ -375,8 +376,15 @@ func buildProjectConfig(projectName string) (*generator.GeneratorConfig, error) 
 		newFeatures = bp.Features // Start with base features list
 		parsedModuleFields := make(map[string][]string)
 
+		seenFeatures := make(map[string]bool, len(newFeatures))
+		for _, f := range newFeatures {
+			seenFeatures[f] = true
+		}
 		for name, config := range bp.Modules {
-			newFeatures = append(newFeatures, name)
+			if !seenFeatures[name] {
+				newFeatures = append(newFeatures, name)
+				seenFeatures[name] = true
+			}
 			newFrontendModules = append(newFrontendModules, name) // Modules get frontend
 			if len(config.Fields) > 0 {
 				parsedModuleFields[name] = config.Fields

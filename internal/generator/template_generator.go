@@ -199,6 +199,8 @@ func (g *TemplateGenerator) executeTemplate(name, path string, data interface{})
 			"capitalize":  Capitalize,
 			"Pluralize":   Pluralize,
 			"pluralize":   Pluralize,
+			"Singularize": Singularize,
+			"singularize": Singularize,
 			"ToSnakeCase": ToSnakeCase,
 			"ToKebabCase": ToKebabCase,
 			"lower":       strings.ToLower,
@@ -633,7 +635,7 @@ func (g *TemplateGenerator) generateCoreProviders() string {
 	for _, module := range plan.RequiredModules {
 		coreImport := g.moduleImportPath(relPath, module, "core")
 		domainImports = append(domainImports, fmt.Sprintf("\t%sCore \"%s\"", module, coreImport))
-		autoMigrateModels = append(autoMigrateModels, fmt.Sprintf("&%sCore.%s{}", module, Capitalize(module)))
+		autoMigrateModels = append(autoMigrateModels, fmt.Sprintf("&%sCore.%s{}", module, Capitalize(Singularize(module))))
 	}
 
 	autoMigrateCall := ""
@@ -697,7 +699,7 @@ func (g *TemplateGenerator) generateModuleRoutes() string {
 	plan, _ := g.resolver.ResolveDependencies(g.config.Features)
 	for _, module := range plan.RequiredModules {
 		routes = append(routes, fmt.Sprintf(`	// %s routes`, module))
-		routes = append(routes, fmt.Sprintf(`	%sHandler := %sAPI.New%sHandler(%sService)`, module, module, Capitalize(module), module))
+		routes = append(routes, fmt.Sprintf(`	%sHandler := %sAPI.New%sHandler(%sService)`, module, module, Capitalize(Singularize(module)), module))
 		routes = append(routes, fmt.Sprintf(`	%sHandler.RegisterRoutes(apiRouter)`, module))
 	}
 	return strings.Join(routes, "\n")
@@ -707,7 +709,7 @@ func (g *TemplateGenerator) generateInvokeParams() string {
 	var params []string
 	plan, _ := g.resolver.ResolveDependencies(g.config.Features)
 	for _, module := range plan.RequiredModules {
-		params = append(params, fmt.Sprintf(`%sService %sCore.%sService`, module, module, Capitalize(module)))
+		params = append(params, fmt.Sprintf(`%sService %sCore.%sService`, module, module, Capitalize(Singularize(module))))
 	}
 	return strings.Join(params, ", ")
 }
@@ -848,7 +850,8 @@ func (g *TemplateGenerator) GenerateBackendModule(moduleName string, fields []st
 	for _, f := range backendFields {
 		if f.Relation != "" && f.RelModule != "" {
 			alias := ToSnakeCase(f.RelModule) + "Domain"
-			impPath := fmt.Sprintf("%s/%s/%s/domain", g.modulePath(), moduleRelPath, f.RelModule)
+			// Related entities live in the module's core package.
+			impPath := fmt.Sprintf("%s/%s/%s/core", g.modulePath(), moduleRelPath, f.RelModule)
 			imp := fmt.Sprintf(`%s "%s"`, alias, impPath)
 
 			if !seenImports[imp] {
@@ -920,6 +923,7 @@ func (g *TemplateGenerator) generateGTHFrontend(structure *ProjectStructure) err
 		"ProjectName":   g.config.ProjectName,
 		"ProjectModule": g.modulePath(),
 		"Features":      g.config.Features,
+		"ModulesPath":   g.getModuleRelPath(),
 	}
 
 	// Base layout
@@ -1018,8 +1022,8 @@ func (g *TemplateGenerator) GenerateGTHModule(moduleName string, fields []string
 
 	data := map[string]interface{}{
 		"Name":          moduleName,
-		"Title":         Capitalize(moduleName),
-		"PluralTitle":   Pluralize(Capitalize(moduleName)),
+		"Title":         Capitalize(Singularize(moduleName)),
+		"PluralTitle":   Pluralize(Capitalize(Singularize(moduleName))),
 		"Fields":        backendFields,
 		"ProjectModule": g.modulePath(),
 		"RoutePrefix":   ToKebabCase(moduleName),

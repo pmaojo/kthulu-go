@@ -28,9 +28,13 @@ type realHTTPServer struct {
 }
 
 func newHTTPServer(handler http.Handler) httpServer {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
 	return &realHTTPServer{
 		server: &http.Server{
-			Addr:    ":8080",
+			Addr:    ":" + port,
 			Handler: handler,
 		},
 	}

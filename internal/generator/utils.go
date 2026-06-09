@@ -47,6 +47,19 @@ func ToSnakeCase(s string) string {
 	return string(result)
 }
 
+// ToPascalCase converts snake_case, kebab-case or lowercase identifiers to
+// PascalCase Go names (e.g. "issued_at" -> "IssuedAt").
+func ToPascalCase(s string) string {
+	parts := strings.FieldsFunc(s, func(r rune) bool {
+		return r == '_' || r == '-' || r == ' '
+	})
+	var b strings.Builder
+	for _, p := range parts {
+		b.WriteString(Capitalize(p))
+	}
+	return b.String()
+}
+
 func ToKebabCase(s string) string {
 	var result []rune
 	for i, r := range s {
@@ -132,7 +145,7 @@ func ParseBackendFields(rawFields []string) []BackendField {
 			fmt.Printf("⚠️  Warning: skipping malformed field string '%s' (expected name:type)\n", f)
 			continue
 		}
-		name := Capitalize(parts[0])
+		name := ToPascalCase(parts[0])
 		typ := parts[1]
 		sqlType := "TEXT"
 		goType := "string"
@@ -148,7 +161,7 @@ func ParseBackendFields(rawFields []string) []BackendField {
 				Name:    name + "ID",
 				Type:    "uint",
 				JSONTag: ToSnakeCase(name) + "_id",
-				GormTag: ToSnakeCase(name) + "_id",
+				GormTag: "column:" + ToSnakeCase(name) + "_id",
 				SQLType: "INTEGER",
 			})
 
@@ -192,7 +205,7 @@ func ParseBackendFields(rawFields []string) []BackendField {
 			Name:    name,
 			Type:    goType,
 			JSONTag: ToSnakeCase(name),
-			GormTag: ToSnakeCase(name),
+			GormTag: "column:" + ToSnakeCase(name),
 			SQLType: sqlType,
 		})
 	}
