@@ -28,4 +28,16 @@ func TestToolFactoryBuildsCommandAndAnalysisTools(t *testing.T) {
 	require.Contains(t, names, "status")
 	require.Contains(t, names, "guide_tagging")
 	require.Contains(t, names, "project_overview")
+
+	// Native skills: filesystem, search, AST, database, Go toolchain, watching.
+	for _, name := range []string{
+		"fs_read", "fs_write", "fs_edit", "fs_list", "fs_move", "fs_delete",
+		"code_search", "file_glob",
+		"go_outline", "go_find_symbol", "go_symbol_source",
+		"db_schema", "db_query",
+		"go_test", "go_build", "go_vet",
+		"watch_start", "watch_events", "watch_stop", "watch_list",
+	} {
+		require.Contains(t, names, name)
+	}
 }

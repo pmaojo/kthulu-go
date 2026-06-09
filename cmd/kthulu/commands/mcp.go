@@ -56,7 +56,7 @@ func runMCPServer(cmd *cobra.Command, _ []string) error {
 		Executor:  executor,
 		TagParser: tagParser,
 	})
-	instructions := "Expose kthulu CLI commands safely. Always respect the working directory and never run destructive shell commands outside of the provided tools."
+	instructions := "Expose kthulu CLI commands plus native development tools: file editing (fs_*), code search (code_search, file_glob), Go AST analysis (go_outline, go_find_symbol, go_symbol_source), database introspection (db_schema, db_query), the Go toolchain (go_test, go_build, go_vet), and file watching (watch_*). Always respect the working directory and never run destructive shell commands outside of the provided tools."
 	instance, err := builder.BuildServer(mcp.ServerOptions{
 		WorkingDir: workingDir,
 		AllowList:  mcpAllowList,
