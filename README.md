@@ -56,7 +56,10 @@ kthulu plan my-shop --template=ecommerce --features=payment,cart
 Turn the blueprint into code.
 
 ```bash
-# Create the project (blueprint integration coming soon, use flags for now)
+# Create the project straight from the blueprint
+kthulu create my-shop --from-plan=kthulu-plan.yaml
+
+# Or use flags directly
 kthulu create my-shop --features=payment,cart
 ```
 

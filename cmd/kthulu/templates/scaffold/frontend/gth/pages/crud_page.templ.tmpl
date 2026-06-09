@@ -5,7 +5,7 @@ package pages
 import (
 	"{{.ProjectModule}}/internal/views/layouts"
 	"{{.ProjectModule}}/internal/views/components"
-	"{{.ProjectModule}}/internal/modules/{{.Name}}/core"
+	"{{.CoreImport}}"
 )
 
 templ {{.PluralTitle}}Page(items []core.{{.Title}}) {
@@ -31,7 +31,9 @@ templ {{.PluralTitle}}Page(items []core.{{.Title}}) {
 		
 		@components.{{.Title}}Table(items, []components.TableColumn{
 			{{range .Fields}}
+			{{if not .Relation}}
 			{Key: "{{.JSONTag}}", Label: "{{.Name}}", Sortable: true},
+			{{end}}
 			{{end}}
 		})
 	}

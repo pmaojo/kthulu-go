@@ -38,8 +38,8 @@ func runGoModTidy(projectPath string) error {
 func runTemplGenerate(projectPath string) error {
 	fmt.Println("\n✨ Generating GTH (Templ) components...")
 	// We use 'go run' so we don't require the user to have the templ binary installed globally.
-	// We use @v0.2.793 to match our internal version and ensure compatibility.
-	cmd := exec.Command("go", "run", "github.com/a-h/templ/cmd/templ@v0.2.793", "generate", "./...")
+	// The version must match the templ runtime pinned in generated go.mod files.
+	cmd := exec.Command("go", "run", "github.com/a-h/templ/cmd/templ@v0.3.977", "generate", "./...")
 	cmd.Dir = projectPath
 	cmd.Env = append(os.Environ(), "GOWORK=off")
 	cmd.Stdout = os.Stdout

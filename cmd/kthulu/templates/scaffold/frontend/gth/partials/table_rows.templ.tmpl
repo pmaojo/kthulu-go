@@ -4,13 +4,14 @@ package partials
 
 import (
 	"strconv"
-	"{{.ProjectModule}}/internal/modules/{{.Name}}/core"
+	"{{.CoreImport}}"
 )
 
 templ {{.Title}}TableRows(items []core.{{.Title}}) {
 	for _, item := range items {
 		<tr>
 			{{range .Fields}}
+			{{if not .Relation}}
 			<td>
 				{{if eq .Type "bool"}}
 				if item.{{.Name}} {
@@ -20,10 +21,13 @@ templ {{.Title}}TableRows(items []core.{{.Title}}) {
 				}
 				{{else if eq .Type "int"}}
 				{ strconv.Itoa(item.{{.Name}}) }
+				{{else if eq .Type "time.Time"}}
+				{ item.{{.Name}}.Format("2006-01-02 15:04") }
 				{{else}}
 				{ item.{{.Name}} }
 				{{end}}
 			</td>
+			{{end}}
 			{{end}}
 			<td style="text-align: right;">
 				<div style="display: flex; gap: 0.25rem; justify-content: flex-end;">

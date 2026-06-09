@@ -21,7 +21,7 @@ type {{.Title}} struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	
-{{range .Fields}}	{{.Name}} {{.Type}} `json:"{{.JSONTag}}{{if eq .Type "int"}},string{{end}}" gorm:"{{.GormTag}}"`
+{{range .Fields}}	{{.Name}} {{.Type}} `json:"{{.JSONTag}}" gorm:"{{.GormTag}}"`
 {{end}}}
 
 // TableName overrides the table name used by {{.Title}} to `{{.PluralTitle}}`

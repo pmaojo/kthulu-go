@@ -15,19 +15,19 @@ import (
 	// Module Core Imports
 	{{range .Features}}
 	{{if and (ne . "auth") (ne . "user") (ne . "organization")}}
-	{{.}}core "{{$.ProjectModule}}/internal/modules/{{.}}/core"
+	{{.}}core "{{$.ProjectModule}}/{{$.ModulesPath}}/{{.}}/core"
 	{{end}}
 	{{end}}
 	{{range .Features}}
 	{{if or (eq . "user") (eq . "organization")}}
-	{{.}}core "{{$.ProjectModule}}/internal/modules/{{.}}/core"
+	{{.}}core "{{$.ProjectModule}}/{{$.ModulesPath}}/{{.}}/core"
 	{{end}}
 	{{end}}
 )
 
 // RegisterRoutes registers the GTH (HTML) web routes
 func RegisterRoutes(router *mux.Router, 
-	{{range .Features}}{{if ne . "auth"}}{{.}}Service {{. | lower}}core.{{. | Capitalize}}Service,
+	{{range .Features}}{{if ne . "auth"}}{{.}}Service {{. | lower}}core.{{. | Singularize | Capitalize}}Service,
 {{end}}{{end}}) {
 	// Public Landing Page
 	router.HandleFunc("/", handleLandingPage).Methods("GET")
@@ -68,37 +68,37 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 
 {{range .Features}}
 {{if ne . "auth"}}
-func handle{{. | Capitalize}}Page(w http.ResponseWriter, r *http.Request, service {{. | lower}}core.{{. | Capitalize}}Service) {
+func handle{{. | Capitalize}}Page(w http.ResponseWriter, r *http.Request, service {{. | lower}}core.{{. | Singularize | Capitalize}}Service) {
 	// Fetch real items
 	filter := {{. | lower}}core.SearchFilter{
 		Limit: 100,
 	}
-	itemsPtr, err := service.List{{. | Capitalize | Pluralize}}(filter)
+	itemsPtr, err := service.List{{. | Singularize | Capitalize | Pluralize}}(filter)
 	if err != nil {
 		http.Error(w, "Failed to fetch items", http.StatusInternalServerError)
 		return
 	}
 	
 	// Convert pointers to values for template
-	items := make([]{{. | lower}}core.{{. | Capitalize}}, len(itemsPtr))
+	items := make([]{{. | lower}}core.{{. | Singularize | Capitalize}}, len(itemsPtr))
 	for i, item := range itemsPtr {
 		items[i] = *item
 	}
 	
 	if r.Header.Get("HX-Target") == "table-body" {
-		renderTempl(w, r, partials.{{. | Capitalize}}TableRows(items))
+		renderTempl(w, r, partials.{{. | Singularize | Capitalize}}TableRows(items))
 		return
 	}
 
-	renderTempl(w, r, pages.{{. | Capitalize | Pluralize}}Page(items))
+	renderTempl(w, r, pages.{{. | Singularize | Capitalize | Pluralize}}Page(items))
 }
 
 func handle{{. | Capitalize}}New(w http.ResponseWriter, r *http.Request) {
-	item := {{. | lower}}core.{{. | Capitalize}}{}
-	renderTempl(w, r, components.{{. | Capitalize}}FormModal(&item, false))
+	item := {{. | lower}}core.{{. | Singularize | Capitalize}}{}
+	renderTempl(w, r, components.{{. | Singularize | Capitalize}}FormModal(&item, false))
 }
 
-func handle{{. | Capitalize}}Edit(w http.ResponseWriter, r *http.Request, service {{. | lower}}core.{{. | Capitalize}}Service) {
+func handle{{. | Capitalize}}Edit(w http.ResponseWriter, r *http.Request, service {{. | lower}}core.{{. | Singularize | Capitalize}}Service) {
 	vars := mux.Vars(r)
 	id, err := strconv.ParseUint(vars["id"], 10, 32)
 	if err != nil {
@@ -106,16 +106,16 @@ func handle{{. | Capitalize}}Edit(w http.ResponseWriter, r *http.Request, servic
 		return
 	}
 
-	item, err := service.Get{{. | Capitalize}}ByID(uint(id))
+	item, err := service.Get{{. | Singularize | Capitalize}}ByID(uint(id))
 	if err != nil {
 		http.Error(w, "Item not found", http.StatusNotFound)
 		return
 	}
 
-	renderTempl(w, r, components.{{. | Capitalize}}FormModal(item, true))
+	renderTempl(w, r, components.{{. | Singularize | Capitalize}}FormModal(item, true))
 }
 
-func handle{{. | Capitalize}}Delete(w http.ResponseWriter, r *http.Request, service {{. | lower}}core.{{. | Capitalize}}Service) {
+func handle{{. | Capitalize}}Delete(w http.ResponseWriter, r *http.Request, service {{. | lower}}core.{{. | Singularize | Capitalize}}Service) {
 	vars := mux.Vars(r)
 	// We just need the ID for the confirmation modal, validating existence is optional but good practice
 	id, err := strconv.ParseUint(vars["id"], 10, 32)
@@ -124,16 +124,16 @@ func handle{{. | Capitalize}}Delete(w http.ResponseWriter, r *http.Request, serv
 		return
 	}
 
-	_, err = service.Get{{. | Capitalize}}ByID(uint(id))
+	_, err = service.Get{{. | Singularize | Capitalize}}ByID(uint(id))
 	if err != nil {
 		http.Error(w, "Item not found", http.StatusNotFound)
 		return
 	}
 
-	renderTempl(w, r, components.ConfirmDelete("{{. | Capitalize}}", uint(id), "/api/v1/{{. | ToKebabCase}}/" + vars["id"]))
+	renderTempl(w, r, components.ConfirmDelete("{{. | Singularize | Capitalize}}", uint(id), "/api/v1/{{. | ToKebabCase}}/" + vars["id"]))
 }
 
-func handle{{. | Capitalize}}Search(w http.ResponseWriter, r *http.Request, service {{. | lower}}core.{{. | Capitalize}}Service) {
+func handle{{. | Capitalize}}Search(w http.ResponseWriter, r *http.Request, service {{. | lower}}core.{{. | Singularize | Capitalize}}Service) {
 	query := r.URL.Query().Get("sort") // Using sort param for now as per previous search implementation
 	if q := r.URL.Query().Get("q"); q != "" {
 		query = q
@@ -143,17 +143,17 @@ func handle{{. | Capitalize}}Search(w http.ResponseWriter, r *http.Request, serv
 		Query: query,
 		Limit: 100,
 	}
-	itemsPtr, err := service.List{{. | Capitalize | Pluralize}}(filter)
+	itemsPtr, err := service.List{{. | Singularize | Capitalize | Pluralize}}(filter)
 	if err != nil {
 		http.Error(w, "Failed to search items", http.StatusInternalServerError)
 		return
 	}
 
-	items := make([]{{. | lower}}core.{{. | Capitalize}}, len(itemsPtr))
+	items := make([]{{. | lower}}core.{{. | Singularize | Capitalize}}, len(itemsPtr))
 	for i, item := range itemsPtr {
 		items[i] = *item
 	}
-	renderTempl(w, r, partials.{{. | Capitalize}}TableRows(items))
+	renderTempl(w, r, partials.{{. | Singularize | Capitalize}}TableRows(items))
 }
 {{end}}
 {{end}}
