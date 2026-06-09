@@ -46,5 +46,23 @@ func (f *ToolFactory) BuildTools(workingDir string, filter CommandFilter) []Regi
 	git := NewGitService()
 	tools = append(tools, git.GetTools(workingDir)...)
 
+	fs := NewFileSystemService()
+	tools = append(tools, fs.GetTools(workingDir)...)
+
+	search := NewSearchService()
+	tools = append(tools, search.GetTools(workingDir)...)
+
+	goAST := NewGoASTService()
+	tools = append(tools, goAST.GetTools(workingDir)...)
+
+	database := NewDatabaseService()
+	tools = append(tools, database.GetTools(workingDir)...)
+
+	goTest := NewGoTestService()
+	tools = append(tools, goTest.GetTools(workingDir)...)
+
+	watch := NewFileWatchService()
+	tools = append(tools, watch.GetTools(workingDir)...)
+
 	return tools
 }

@@ -102,6 +102,12 @@ This is a Kthulu Framework project. It follows a Modular Monolith architecture.
 You have access to a powerful set of tools via the Kthulu MCP server:
 - **Shell**: ` + "`host_shell_execute`" + `
 - **Git**: ` + "`git_status`" + `, ` + "`git_diff`" + `, ` + "`git_log`" + `
+- **Files**: ` + "`fs_read`" + `, ` + "`fs_write`" + `, ` + "`fs_edit`" + ` (exact string replacement), ` + "`fs_list`" + `, ` + "`fs_move`" + `, ` + "`fs_delete`" + `
+- **Search**: ` + "`code_search`" + ` (regex with context lines), ` + "`file_glob`" + ` (supports ` + "`**`" + `)
+- **Go AST**: ` + "`go_outline`" + `, ` + "`go_find_symbol`" + `, ` + "`go_symbol_source`" + `
+- **Database**: ` + "`db_schema`" + `, ` + "`db_query`" + ` (SQLite and PostgreSQL)
+- **Go Toolchain**: ` + "`go_test`" + `, ` + "`go_build`" + `, ` + "`go_vet`" + `
+- **File Watching**: ` + "`watch_start`" + `, ` + "`watch_events`" + `, ` + "`watch_stop`" + `, ` + "`watch_list`" + `
 - **Architecture**: Create modules, components, and manage the graph.
 
 Use these tools to verify the state of the project and perform tasks.
