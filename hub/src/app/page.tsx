@@ -36,7 +36,7 @@ export default function Home() {
           <FeatureCard 
             icon={<Shield size={24} />} 
             title="Self-Healing" 
-            desc="Auto-diagnose and fix panics in real-time."
+            desc="Detect panics in real-time and get AI-powered diagnostic suggestions."
           />
           <FeatureCard 
             icon={<ShoppingBag size={24} />} 
