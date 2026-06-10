@@ -1,0 +1,72 @@
+name: "E2E: Generated App Verification"
+
+on:
+  push:
+    branches:
+      - main
+      - "claude/*"
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  e2e:
+    name: "E2E (${{ matrix.template }}${{ matrix.features && format(' features={0}', matrix.features) || '' }})"
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - template: microservice
+            features: "auth,user"
+            database: sqlite
+          - template: microservice
+            features: "cache,mail"
+            database: sqlite
+          - template: mcp
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Build kthulu CLI
+        run: go build -o kthulu-bin ./cmd/kthulu
+
+      - name: Create project (microservice)
+        if: matrix.template != 'mcp'
+        run: >-
+          ./kthulu-bin create e2e-app
+          --template=${{ matrix.template }}
+          --features="${{ matrix.features }}"
+          --database=${{ matrix.database }}
+          --skip-postgen
+
+      - name: Create project (mcp)
+        if: matrix.template == 'mcp'
+        run: ./kthulu-bin create e2e-mcp --template=mcp
+
+      - name: Build and test (microservice)
+        if: matrix.template != 'mcp'
+        working-directory: e2e-app
+        env:
+          GOWORK: "off"
+        run: |
+          go mod tidy
+          go build ./...
+          go test ./...
+          go vet ./...
+
+      - name: Test (mcp)
+        if: matrix.template == 'mcp'
+        working-directory: e2e-mcp
+        env:
+          GOWORK: "off"
+        run: |
+          go mod tidy
+          go test ./...

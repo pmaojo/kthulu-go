@@ -1,0 +1,15 @@
+name: "Payments Stack"
+id: "payments"
+description: "Stripe-style payments stack: plans, subscriptions, payments, and invoicing."
+modules:
+  - name: "plan"
+    fields: ["name:string:required", "slug:string:required", "price_cents:int:min=0", "currency:string:required", "interval:string:oneof=month|year|one_time", "active:bool"]
+    integrations: ["stripe"]
+  - name: "subscription"
+    fields: ["status:string:oneof=active|canceled|past_due|trialing", "current_period_start:time", "current_period_end:time", "stripe_id:string", "user:belongs_to:user", "plan:belongs_to:plan"]
+    integrations: ["stripe"]
+  - name: "payment"
+    fields: ["amount_cents:int:min=0", "currency:string", "status:string:oneof=pending|succeeded|failed|refunded", "provider_id:string", "paid_at:time", "user:belongs_to:user"]
+    integrations: ["stripe"]
+  - name: "invoice"
+    fields: ["number:string:required", "total_cents:int:min=0", "status:string:oneof=draft|open|paid|void", "due_date:time", "paid_at:time", "user:belongs_to:user"]

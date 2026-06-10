@@ -1,0 +1,10 @@
+name: "Auth Stack"
+id: "auth"
+description: "Complete authentication stack: JWT auth, user management, and role-based access control."
+modules:
+  - name: "user"
+    fields: ["email:string:required,email", "password_hash:string", "name:string:required,min=2", "role:string:oneof=admin|user|moderator", "active:bool", "last_login_at:time"]
+  - name: "session"
+    fields: ["token:string:required", "expires_at:time:required", "ip_address:string", "user_agent:string", "user:belongs_to:user"]
+  - name: "api_key"
+    fields: ["key:string:required", "name:string:required", "last_used_at:time", "expires_at:time", "user:belongs_to:user"]

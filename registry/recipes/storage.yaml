@@ -1,0 +1,8 @@
+name: "Storage Stack"
+id: "storage"
+description: "S3-compatible file storage stack: uploads with folder organization and user ownership."
+modules:
+  - name: "upload"
+    fields: ["filename:string:required", "original_name:string:required", "mime_type:string:required", "size_bytes:int:min=0", "bucket:string", "key:string:required", "url:string", "user:belongs_to:user"]
+  - name: "folder"
+    fields: ["name:string:required,min=1", "path:string:required", "parent:belongs_to:folder", "user:belongs_to:user"]

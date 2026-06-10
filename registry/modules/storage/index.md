@@ -64,6 +64,16 @@ url := store.URL("avatars/42.png")
 
 The cloud drivers (S3, GCS, Azure) are generated as typed stubs with clear errors pointing at the SDK dependency to add.
 
+## Recipe
+
+To scaffold a complete file storage stack (uploads and folder organization) in one command:
+
+```bash
+kthulu add recipe storage
+```
+
+Use with: `kthulu add recipe storage`
+
 
 
 

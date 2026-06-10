@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,6 +12,7 @@ import (
 	"github.com/pmaojo/kthulu-go/internal/adapters/cli/compliance"
 	"github.com/pmaojo/kthulu-go/internal/deployment"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 var auditCmd = &cobra.Command{
@@ -46,14 +49,16 @@ var deployCmd = &cobra.Command{
 Supported Platforms:
   • AWS (EKS, Fargate, Lambda)
   • Google Cloud (GKE, Cloud Run)
-  • Azure (AKS, Container Instances) 
+  • Azure (AKS, Container Instances)
   • Kubernetes (any cluster)
   • Docker Swarm
+  • Fly.io (fly.toml + fly deploy)
 
 Examples:
   kthulu deploy --cloud=aws --scale=auto
   kthulu deploy --cloud=gcp --region=us-central1
-  kthulu deploy --kubernetes --namespace=production`,
+  kthulu deploy --kubernetes --namespace=production
+  kthulu deploy --cloud=fly --region=iad`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cloud, _ := cmd.Flags().GetString("cloud")
 		scale, _ := cmd.Flags().GetString("scale")
@@ -297,6 +302,16 @@ func runDeployCommand(cloud, scale, region, namespace string) error {
 		cloud = "kubernetes" // Default to generic k8s
 	}
 
+	// Fly.io deploy path
+	if cloud == "fly" || cloud == "flyio" {
+		deployer := deployment.NewFlyioDeployer(region)
+		if err := deployer.Deploy(); err != nil {
+			return fmt.Errorf("fly.io deployment failed: %w", err)
+		}
+		fmt.Println("\n✨ Deployment complete!")
+		return nil
+	}
+
 	manager, err := deployment.NewManager(cloud, region, namespace, scale)
 	if err != nil {
 		return fmt.Errorf("failed to initialize deployment manager: %w", err)
@@ -338,36 +353,167 @@ func runDeployCommand(cloud, scale, region, namespace string) error {
 
 func runStatusCommand(detailed, modules bool) error {
 	fmt.Println("📊 Kthulu Project Status")
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	fmt.Println()
 
-	// Project info
-	fmt.Println("📁 Project: my-awesome-app")
-	fmt.Println("🏗️  Framework: Kthulu v1.0.0")
-	fmt.Println("📦 Modules: 8 active, 3 available")
+	cwd, err := os.Getwd()
+	if err != nil {
+		cwd = "."
+	}
+
+	// --- Read go.mod for project name and Go version ---
+	projectName := "(unknown)"
+	goVersion := "(unknown)"
+	goModPath := filepath.Join(cwd, "go.mod")
+	if data, err := os.ReadFile(goModPath); err == nil {
+		scanner := bufio.NewScanner(bytes.NewReader(data))
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if strings.HasPrefix(line, "module ") {
+				projectName = strings.TrimSpace(strings.TrimPrefix(line, "module "))
+				// Use just the last path component as a friendly name
+				parts := strings.Split(projectName, "/")
+				projectName = parts[len(parts)-1]
+			}
+			if strings.HasPrefix(line, "go ") {
+				goVersion = strings.TrimSpace(strings.TrimPrefix(line, "go "))
+			}
+		}
+	}
+
+	// --- Count active modules: subdirs in internal/ that contain .go files ---
+	activeModules := 0
+	var activeModuleNames []string
+	internalDir := filepath.Join(cwd, "internal")
+	if entries, err := os.ReadDir(internalDir); err == nil {
+		for _, e := range entries {
+			if !e.IsDir() {
+				continue
+			}
+			// Check if any .go file exists directly or transitively in this subdir
+			subdir := filepath.Join(internalDir, e.Name())
+			hasGo := false
+			_ = filepath.WalkDir(subdir, func(path string, d os.DirEntry, err error) error {
+				if err != nil {
+					return nil
+				}
+				if !d.IsDir() && strings.HasSuffix(d.Name(), ".go") {
+					hasGo = true
+					return filepath.SkipAll
+				}
+				return nil
+			})
+			if hasGo {
+				activeModules++
+				activeModuleNames = append(activeModuleNames, e.Name())
+			}
+		}
+	}
+
+	// --- Count migrations: .sql files in migrations/ or db/migrations/ ---
+	migrationCount := 0
+	for _, migDir := range []string{
+		filepath.Join(cwd, "migrations"),
+		filepath.Join(cwd, "db", "migrations"),
+	} {
+		if entries, err := os.ReadDir(migDir); err == nil {
+			for _, e := range entries {
+				if !e.IsDir() && strings.HasSuffix(e.Name(), ".sql") {
+					migrationCount++
+				}
+			}
+		}
+	}
+
+	// --- Detect features ---
+	type featureCheck struct {
+		name string
+		path string
+	}
+	featureChecks := []featureCheck{
+		{"auth", filepath.Join(cwd, "internal", "auth")},
+		{"user", filepath.Join(cwd, "internal", "user")},
+		{"queues", filepath.Join(cwd, "internal", "queues")},
+		{"configs/app.yaml", filepath.Join(cwd, "configs", "app.yaml")},
+	}
+	var detectedFeatures []string
+	for _, fc := range featureChecks {
+		if _, err := os.Stat(fc.path); err == nil {
+			detectedFeatures = append(detectedFeatures, fc.name)
+		}
+	}
+
+	// --- Build status ---
+	buildStatus := "✅ pass"
+	buildCmd := exec.Command("go", "build", "./...")
+	buildCmd.Dir = cwd
+	var buildOut bytes.Buffer
+	buildCmd.Stderr = &buildOut
+	if err := buildCmd.Run(); err != nil {
+		buildStatus = "❌ fail"
+		if buildOut.Len() > 0 {
+			buildStatus += ": " + strings.TrimSpace(buildOut.String())
+		}
+	}
+
+	// --- kthulu-plan.yaml ---
+	planName := ""
+	planDesc := ""
+	planPath := filepath.Join(cwd, "kthulu-plan.yaml")
+	if data, err := os.ReadFile(planPath); err == nil {
+		var planDoc struct {
+			Name        string `yaml:"name"`
+			Description string `yaml:"description"`
+		}
+		if err := yaml.Unmarshal(data, &planDoc); err == nil {
+			planName = planDoc.Name
+			planDesc = planDoc.Description
+		}
+	}
+
+	// --- Print output ---
+	fmt.Printf("📁 Project:      %s\n", projectName)
+	fmt.Printf("🏗️  Go version:   %s\n", goVersion)
+	fmt.Printf("📦 Modules:      %d active (in internal/)\n", activeModules)
+	if migrationCount > 0 {
+		fmt.Printf("🗄️  Migrations:   %d SQL file(s)\n", migrationCount)
+	} else {
+		fmt.Printf("🗄️  Migrations:   none found\n")
+	}
 	fmt.Println()
 
-	// Health indicators
-	fmt.Println("🟢 Security: No vulnerabilities")
-	fmt.Println("🟡 Performance: 2 optimizations available")
-	fmt.Println("🟢 Dependencies: Up to date")
-	fmt.Println("🟢 Compliance: SOX validated")
+	// Build status line
+	fmt.Printf("🔨 Build:        %s\n", buildStatus)
+
+	// Features
+	if len(detectedFeatures) > 0 {
+		fmt.Printf("✨ Features:     %s\n", strings.Join(detectedFeatures, ", "))
+	} else {
+		fmt.Println("✨ Features:     (none of auth/user/queues/configs detected)")
+	}
+
+	// kthulu-plan.yaml
+	if planName != "" {
+		fmt.Printf("📋 Plan:         %s", planName)
+		if planDesc != "" {
+			fmt.Printf(" — %s", planDesc)
+		}
+		fmt.Println()
+	}
+
 	fmt.Println()
 
-	if modules {
-		fmt.Println("📦 Active Modules:")
-		fmt.Println("  ✅ auth       - Authentication system")
-		fmt.Println("  ✅ user       - User management")
-		fmt.Println("  ✅ payment    - Payment processing")
-		fmt.Println("  ⚠️  inventory  - Needs optimization")
+	if modules && len(activeModuleNames) > 0 {
+		fmt.Println("📦 Active Modules (internal/):")
+		for _, name := range activeModuleNames {
+			fmt.Printf("  ✅ %s\n", name)
+		}
 		fmt.Println()
 	}
 
 	if detailed {
-		fmt.Println("📈 Performance Metrics:")
-		fmt.Println("  • API Response Time: 45ms avg")
-		fmt.Println("  • Memory Usage: 125MB")
-		fmt.Println("  • CPU Usage: 12%")
-		fmt.Println("  • Test Coverage: 87%")
+		fmt.Println("ℹ️  Detailed mode: run 'kthulu secure' for vulnerability details,")
+		fmt.Println("   'kthulu audit --compliance=sox' for compliance checks.")
 	}
 
 	return nil
