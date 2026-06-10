@@ -90,6 +90,10 @@ func TestToolsListLinksUIResource(t *testing.T) {
 	if ui["resourceUri"] != "ui://test-server/view" {
 		t.Fatalf("wrong ui resourceUri: %v", ui)
 	}
+	vis, ok := ui["visibility"].([]interface{})
+	if !ok || len(vis) == 0 {
+		t.Fatalf("missing or empty visibility: %v", ui)
+	}
 }
 
 func TestResourcesReadReturnsAppHTML(t *testing.T) {

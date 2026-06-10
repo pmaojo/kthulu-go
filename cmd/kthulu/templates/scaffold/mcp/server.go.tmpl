@@ -93,6 +93,9 @@ type Tool struct {
 	// UIResource optionally links the tool to a ui:// resource so hosts
 	// supporting MCP Apps render its results interactively.
 	UIResource string
+	// Visibility controls who can call this tool: "model" (the AI agent),
+	// "app" (the linked UI view), or both (default). Nil means ["model","app"].
+	Visibility []string
 	Handler    ToolHandler
 }
 
@@ -273,8 +276,15 @@ func (s *Server) toolsList() map[string]interface{} {
 			"inputSchema": t.InputSchema,
 		}
 		if t.UIResource != "" {
+			vis := t.Visibility
+			if len(vis) == 0 {
+				vis = []string{"model", "app"}
+			}
 			entry["_meta"] = map[string]interface{}{
-				"ui": map[string]interface{}{"resourceUri": t.UIResource},
+				"ui": map[string]interface{}{
+					"resourceUri": t.UIResource,
+					"visibility":  vis,
+				},
 			}
 		}
 		tools = append(tools, entry)
