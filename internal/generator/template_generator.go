@@ -193,6 +193,23 @@ var infraCatalog = map[string]infraWiring{
 	},
 }
 
+// IsInfraFeature reports whether a feature name (or alias) is generated as
+// shared infrastructure rather than a CRUD module.
+func IsInfraFeature(name string) bool {
+	_, ok := infraAliases[strings.ToLower(strings.TrimSpace(name))]
+	return ok
+}
+
+// HasCuratedDefaultFields reports whether a module gets meaningful default
+// fields when none are declared (instead of the single-name fallback).
+func HasCuratedDefaultFields(name string) bool {
+	switch name {
+	case "auth", "user", "organization", "product", "contact", "calendar", "inventory", "invoice", "verifactu":
+		return true
+	}
+	return false
+}
+
 // extractInfraFeatures removes infrastructure feature aliases from the list
 // and reports which runtimes should be generated.
 func extractInfraFeatures(features []string) ([]string, InfraFeatures) {

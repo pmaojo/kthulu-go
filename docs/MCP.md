@@ -90,8 +90,24 @@ single `name` column:
 ```
 
 Modules without fields are rejected with an explanatory error, so agents are
-forced to model the domain. The raw `create` and `add_module` tools remain
-available; `add_module` accepts the same `name:type[:rules]` field syntax.
+forced to model the domain. After scaffolding, the session working directory
+is switched to the new project automatically.
+
+Three more layers keep weak agents on the golden path:
+
+- **Server instructions**: the MCP initialize response describes the
+  model-first workflow, so agents read it before choosing tools.
+- **`review_domain_model`**: a deterministic reviewer that critiques a
+  proposed model (missing relations, enum fields without `oneof`,
+  timestamps not typed `time`, emails without validation, plural names,
+  no required fields). It also runs automatically inside
+  `scaffold_project` and appends suggestions to the result.
+- **`create` guardrail**: under MCP, the raw `create` command refuses to
+  generate skeleton modules that would fall back to a single default
+  `name` field, and redirects the agent to `scaffold_project`.
+
+The raw `create` and `add_module` tools remain available; `add_module`
+accepts the same `name:type[:rules]` field syntax.
 
 ### Fast Project Creation (No Timeouts)
 

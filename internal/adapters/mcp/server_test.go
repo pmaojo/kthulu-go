@@ -58,8 +58,8 @@ func TestServerBuilderBuildServer(t *testing.T) {
 	require.Equal(t, "stdio", instance.Endpoint)
 	// 1 mocked command tool + 12 original native tools + 20 dev-capability tools
 	// (filesystem, search, AST, database, Go toolchain, watch) + 2 workdir
-	// tools + scaffold_project.
-	require.Equal(t, 36, len(instance.Tools))
+	// tools + scaffold_project + review_domain_model.
+	require.Equal(t, 37, len(instance.Tools))
 }
 
 func TestBuildTransportHTTP(t *testing.T) {

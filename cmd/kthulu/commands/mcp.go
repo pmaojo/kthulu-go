@@ -56,7 +56,29 @@ func runMCPServer(cmd *cobra.Command, _ []string) error {
 		Executor:  executor,
 		TagParser: tagParser,
 	})
-	instructions := "Expose kthulu CLI commands plus native development tools: file editing (fs_*), code search (code_search, file_glob), Go AST analysis (go_outline, go_find_symbol, go_symbol_source), database introspection (db_schema, db_query), the Go toolchain (go_test, go_build, go_vet), and file watching (watch_*). Always respect the working directory and never run destructive shell commands outside of the provided tools."
+	instructions := `Kthulu generates production-ready Go applications. Follow this workflow:
+
+CREATING AN APPLICATION (the golden path):
+1. Model the domain first: list every entity with its REAL fields, validation
+   rules and relations (name:type[:rules]; belongs_to for associations).
+   Optionally check the model with review_domain_model.
+2. Call scaffold_project with that model. NEVER create an app whose entities
+   only have a name field - that means the domain was not modeled.
+3. scaffold_project switches the session working directory to the new project
+   automatically. Finish setup via shell_execute:
+   go run github.com/a-h/templ/cmd/templ@v0.3.977 generate ./... && go mod tidy
+4. Verify with go_build, then go_test.
+
+EVOLVING AN APPLICATION:
+- add_module <name> <field:type:rules...> for new entities (always pass fields)
+- migrate diff after changing entity structs to generate the SQL migration
+- workdir_get / workdir_set to orient yourself or switch projects
+
+Also available: file editing (fs_*), code search (code_search, file_glob),
+Go AST analysis (go_outline, go_find_symbol, go_symbol_source), database
+introspection (db_schema, db_query), the Go toolchain (go_test, go_build,
+go_vet) and file watching (watch_*). Always respect the working directory and
+never run destructive shell commands outside of the provided tools.`
 	instance, err := builder.BuildServer(mcp.ServerOptions{
 		WorkingDir: workingDir,
 		AllowList:  mcpAllowList,
