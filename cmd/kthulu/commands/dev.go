@@ -20,6 +20,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var devTestWatch bool
+
 var devCmd = &cobra.Command{
 	Use:   "dev",
 	Short: "Start the self-healing development server",
@@ -31,11 +33,13 @@ var devCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(devCmd)
+	devCmd.Flags().BoolVar(&devTestWatch, "test", false, "Run tests in watch mode alongside the dev server")
 }
 
 func runDev() error {
 	fmt.Println("🔮 Starting Kthulu Self-Healing Dev Server...")
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	fmt.Println("   --test    Run gotestsum watch mode")
 
 	currentDir, err := os.Getwd()
 	if err != nil {
@@ -122,6 +126,54 @@ func runDev() error {
 		}()
 	}
 
+	// Start test watcher if requested
+	var testCmd *exec.Cmd
+	if devTestWatch {
+		// Ensure gotestsum is installed
+		gotestsumBin := "gotestsum"
+		if _, err := exec.LookPath("gotestsum"); err != nil {
+			fmt.Println("⚠️  gotestsum not found. Installing via go install...")
+			installCmd := exec.Command("go", "install", "gotest.tools/gotestsum@latest")
+			installCmd.Stdout = os.Stdout
+			installCmd.Stderr = os.Stderr
+			if err := installCmd.Run(); err != nil {
+				fmt.Printf("❌ Failed to install gotestsum: %v\n", err)
+			} else {
+				// resolve full path after install
+				if path, err := exec.LookPath("gotestsum"); err == nil {
+					gotestsumBin = path
+				}
+			}
+		}
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			cmd := exec.Command(gotestsumBin, "--watch", "--format=short", "./...")
+			cmd.Dir = currentDir
+
+			mu.Lock()
+			testCmd = cmd
+			mu.Unlock()
+
+			stdout, _ := cmd.StdoutPipe()
+			stderr, _ := cmd.StderrPipe()
+
+			if err := cmd.Start(); err != nil {
+				fmt.Printf("❌ Test watcher failed to start: %v\n", err)
+				return
+			}
+
+			go monitorOutput(stdout, "TESTS", false, errChan)
+			go monitorOutput(stderr, "TESTS", true, errChan)
+
+			if err := cmd.Wait(); err != nil {
+				// Expected on kill
+			}
+		}()
+		fmt.Println("🧪 Test watcher running (gotestsum --watch)")
+	}
+
 	// AI Diagnosis Loop
 	go func() {
 		for errMsg := range errChan {
@@ -139,6 +191,9 @@ func runDev() error {
 	}
 	if frontendCmd != nil && frontendCmd.Process != nil {
 		frontendCmd.Process.Signal(syscall.SIGTERM)
+	}
+	if testCmd != nil && testCmd.Process != nil {
+		testCmd.Process.Signal(syscall.SIGTERM)
 	}
 	mu.Unlock()
 
