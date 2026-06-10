@@ -128,6 +128,12 @@ How to use:
 
 The tool will automatically resolve dependencies, create the folder structure,
 and prepare your development environment.
+
+IMPORTANT — entity fields: features without declared fields default to a
+single 'name' column. For real applications declare every entity's fields
+through a plan file (modules.<name>.fields with name:type[:rules] syntax)
+and pass --from-plan, or use the MCP scaffold_project tool which takes the
+domain model as structured data.
 `,
 	Args: cobra.ExactArgs(1),
 	Run:  runNewProjectIntelligent,

@@ -26,6 +26,10 @@ func (f *ToolFactory) BuildTools(workingDir string, filter CommandFilter) []Regi
 	// at a project they just scaffolded.
 	tools = append(tools, WorkdirTools(workingDir)...)
 
+	// Structured project scaffolding (preferred over the raw create command
+	// for agents: takes the domain model with fields as structured data).
+	tools = append(tools, ScaffoldProjectTool(f.executor, workingDir))
+
 	tools = append(tools, guide.Tool(workingDir))
 
 	insights := NewProjectInsightsService(f.parser)

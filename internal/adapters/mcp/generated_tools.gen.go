@@ -92,7 +92,7 @@ func NewAddComponentArgsTool(executor CommandExecutor, workingDir string) Regist
 // AddModuleArgs defines arguments for the add_module command.
 type AddModuleArgs struct {
 	Name       string   `json:"name,omitempty" jsonschema:"description=Positional argument: name" kthulu:"pos,index=0"`
-	FieldType  []string `json:"field_type,omitempty" jsonschema:"description=Positional argument: field_type" kthulu:"pos,index=1,variadic"`
+	FieldType  []string `json:"field_type,omitempty" jsonschema:"description=Field definitions using name:type[:rules] syntax. Types: string, int, float, bool, time. Validation rules (comma-separated): required, min=N, max=N, email, oneof=a|b|c. Relations: name:belongs_to:module. Example: ["title:string:required,min=2", "score:int:min=0", "played_at:time", "winner:belongs_to:team"]. ALWAYS declare the real fields of the entity — without them the module defaults to a single 'name' field." kthulu:"pos,index=1,variadic"`
 	Admin      bool     `json:"admin,omitempty" jsonschema:"description=Generate Admin CRUD pages" kthulu:"flag,name=admin"`
 	Compliance string   `json:"compliance,omitempty" jsonschema:"description=Compliance requirements (pci, sox, gdpr)" kthulu:"flag,name=compliance"`
 	Force      bool     `json:"force,omitempty" jsonschema:"description=Force add even if conflicts exist" kthulu:"flag,name=force"`

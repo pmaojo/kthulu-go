@@ -117,12 +117,28 @@ func parseCommandArgs(cmd *cobra.Command) []ArgDef {
 		clean = strings.ReplaceAll(clean, ":", "_")
 
 		arg.Name = clean
-		arg.Description = fmt.Sprintf("Positional argument: %s", clean)
+		arg.Description = positionalDescription(cmd.Name(), clean)
 		arg.PascalName = toPascalCase(clean)
 
 		args = append(args, arg)
 	}
 	return args
+}
+
+// positionalOverrides documents positional arguments whose generic name is
+// not enough for an agent to use the tool well.
+var positionalOverrides = map[string]string{
+	"module/field_type": "Field definitions using name:type[:rules] syntax. Types: string, int, float, bool, time. " +
+		"Validation rules (comma-separated): required, min=N, max=N, email, oneof=a|b|c. " +
+		"Relations: name:belongs_to:module. Example: [\"title:string:required,min=2\", \"score:int:min=0\", \"played_at:time\", \"winner:belongs_to:team\"]. " +
+		"ALWAYS declare the real fields of the entity — without them the module defaults to a single 'name' field.",
+}
+
+func positionalDescription(commandName, argName string) string {
+	if desc, ok := positionalOverrides[commandName+"/"+argName]; ok {
+		return desc
+	}
+	return fmt.Sprintf("Positional argument: %s", argName)
 }
 
 func parseCommandFlags(cmd *cobra.Command) []FlagDef {

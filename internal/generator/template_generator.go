@@ -401,6 +401,8 @@ func (g *TemplateGenerator) GenerateProject(config *GeneratorConfig) (*ProjectSt
 			case "verifactu":
 				config.ModuleFields[feature] = []string{"invoice_id:int", "status:string", "fiscal_data:text"}
 			default:
+				fmt.Printf("⚠️  Module '%s' has no fields declared — defaulting to a single 'name' field.\n", feature)
+				fmt.Printf("   Declare real fields via the blueprint (modules.%s.fields) or 'kthulu add module %s <name:type...>'.\n", feature, feature)
 				config.ModuleFields[feature] = []string{FieldNameString}
 			}
 		}

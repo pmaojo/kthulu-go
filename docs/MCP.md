@@ -69,6 +69,30 @@ A typical agent flow:
 2. `workdir_set` to that path
 3. `add module`, `migrate diff`, `go_test`, `fs_*`, ... all now run inside it
 
+### Generating Complex Apps: scaffold_project
+
+The `scaffold_project` tool is the **preferred** way for agents to create
+applications. It takes the domain model as structured data, so entities get
+their real fields, validation rules and relations instead of the default
+single `name` column:
+
+```json
+{
+  "name": "tournaments",
+  "features": ["auth", "user", "queues"],
+  "modules": [
+    {"name": "tournament", "fields": ["title:string:required,min=3", "starts_at:time", "status:string:oneof=draft|open|running|finished"]},
+    {"name": "team",       "fields": ["name:string:required", "city:string", "wins:int"]},
+    {"name": "player",     "fields": ["name:string:required", "email:string:email", "squad:belongs_to:team"]},
+    {"name": "match",      "fields": ["played_at:time", "home:belongs_to:team", "away:belongs_to:team"]}
+  ]
+}
+```
+
+Modules without fields are rejected with an explanatory error, so agents are
+forced to model the domain. The raw `create` and `add_module` tools remain
+available; `add_module` accepts the same `name:type[:rules]` field syntax.
+
 ### Fast Project Creation (No Timeouts)
 
 When driven through MCP, `create` automatically skips the slow
