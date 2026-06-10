@@ -25,7 +25,7 @@ const DashboardURI = "ui://{{ .ProjectName }}/dashboard"
 
 var startedAt = time.Now()
 
-// Register wires every tool and UI resource into the server.
+// Register wires every tool, UI resource, and prompt into the server.
 func Register(server *mcp.Server) {
 	server.RegisterUIResource(&mcp.UIResource{
 		URI:         DashboardURI,
@@ -60,6 +60,15 @@ func Register(server *mcp.Server) {
 		},
 		Handler: handleHello,
 	})
+
+	server.RegisterPrompt(&mcp.Prompt{
+		Name:        "status_report",
+		Description: "Ask {{ .ProjectName }} to produce a status report.",
+		Arguments: []mcp.PromptArgument{
+			{Name: "format", Description: "Output style: short or detailed (default: short)", Required: false},
+		},
+		Handler: handleStatusReportPrompt,
+	})
 }
 
 func handleGetStatus(ctx context.Context, _ json.RawMessage) (*mcp.CallToolResult, error) {
@@ -86,4 +95,26 @@ func handleHello(ctx context.Context, arguments json.RawMessage) (*mcp.CallToolR
 		args.Name = "world"
 	}
 	return mcp.TextResult(fmt.Sprintf("Hello, %s!", args.Name)), nil
+}
+
+func handleStatusReportPrompt(_ context.Context, arguments map[string]string) (*mcp.GetPromptResult, error) {
+	format := arguments["format"]
+	if format == "" {
+		format = "short"
+	}
+	var body string
+	if format == "detailed" {
+		body = fmt.Sprintf(
+			"Please call get_status on the {{ .ProjectName }} server and produce a detailed report covering: uptime, Go version, goroutine count, and any anomalies you observe. Started at: %s.",
+			startedAt.UTC().Format(time.RFC3339),
+		)
+	} else {
+		body = "Please call get_status on the {{ .ProjectName }} server and give me a one-sentence summary of its current health."
+	}
+	return &mcp.GetPromptResult{
+		Description: "Status report prompt for {{ .ProjectName }}",
+		Messages: []mcp.PromptMessage{
+			{Role: "user", Content: body},
+		},
+	}, nil
 }

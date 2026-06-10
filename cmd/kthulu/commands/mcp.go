@@ -56,9 +56,9 @@ func runMCPServer(cmd *cobra.Command, _ []string) error {
 		Executor:  executor,
 		TagParser: tagParser,
 	})
-	instructions := `Kthulu generates production-ready Go applications. Follow this workflow:
+	instructions := `Kthulu generates production-ready Go applications and MCP servers. Two golden paths:
 
-CREATING AN APPLICATION (the golden path):
+CREATING A WEB / API APPLICATION:
 1. Model the domain first: list every entity with its REAL fields, validation
    rules and relations (name:type[:rules]; belongs_to for associations).
    Optionally check the model with review_domain_model.
@@ -68,6 +68,14 @@ CREATING AN APPLICATION (the golden path):
    automatically. Finish setup via shell_execute:
    go run github.com/a-h/templ/cmd/templ@v0.3.977 generate ./... && go mod tidy
 4. Verify with go_build, then go_test.
+
+CREATING AN MCP SERVER (expose tools to AI agents):
+1. Call create_mcp_server with a project name (and optional module_path).
+2. The generated server is dependency-free, passes tests, and ships an
+   interactive MCP Apps dashboard out of the box.
+3. Extend it: add tools and prompts in internal/tools/tools.go,
+   add HTML views in internal/tools/ui/.
+4. Connect the binary to Claude Desktop or any MCP-compatible host.
 
 EVOLVING AN APPLICATION:
 - add_module <name> <field:type:rules...> for new entities (always pass fields)

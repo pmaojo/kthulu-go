@@ -29,6 +29,21 @@ func newTestServer() *Server {
 			return StructuredResult("echo: "+args.Message, map[string]string{"message": args.Message}), nil
 		},
 	})
+	s.RegisterPrompt(&Prompt{
+		Name:        "greet",
+		Description: "Produce a greeting prompt",
+		Arguments: []PromptArgument{
+			{Name: "name", Description: "Who to greet", Required: true},
+		},
+		Handler: func(_ context.Context, arguments map[string]string) (*GetPromptResult, error) {
+			return &GetPromptResult{
+				Description: "A greeting",
+				Messages: []PromptMessage{
+					{Role: "user", Content: "Say hello to " + arguments["name"]},
+				},
+			}, nil
+		},
+	})
 	return s
 }
 
@@ -108,5 +123,40 @@ func TestUnknownMethodAndNotificationHandling(t *testing.T) {
 	}
 	if resps[0]["error"] == nil {
 		t.Fatalf("expected error for unknown method, got %v", resps[0])
+	}
+}
+
+func TestPromptsListAndGet(t *testing.T) {
+	listResps := roundTrip(t, `{"jsonrpc":"2.0","id":1,"method":"prompts/list"}`)
+	prompts := listResps[0]["result"].(map[string]interface{})["prompts"].([]interface{})
+	if len(prompts) == 0 {
+		t.Fatal("expected at least one prompt")
+	}
+	first := prompts[0].(map[string]interface{})
+	if first["name"] != "greet" {
+		t.Fatalf("unexpected prompt name: %v", first["name"])
+	}
+
+	getResps := roundTrip(t, `{"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{"name":"greet","arguments":{"name":"Alice"}}}`)
+	result := getResps[0]["result"].(map[string]interface{})
+	messages := result["messages"].([]interface{})
+	if len(messages) == 0 {
+		t.Fatal("expected messages")
+	}
+	msg := messages[0].(map[string]interface{})
+	if msg["role"] != "user" {
+		t.Fatalf("expected user role, got %v", msg["role"])
+	}
+	content := msg["content"].(map[string]interface{})
+	if content["text"] == "" {
+		t.Fatal("expected non-empty content text")
+	}
+}
+
+func TestInitializeDeclaresPromptCapability(t *testing.T) {
+	resps := roundTrip(t, `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18"}}`)
+	caps := resps[0]["result"].(map[string]interface{})["capabilities"].(map[string]interface{})
+	if _, ok := caps["prompts"]; !ok {
+		t.Fatalf("missing prompts capability: %v", caps)
 	}
 }
