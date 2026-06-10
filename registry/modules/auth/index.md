@@ -117,6 +117,16 @@ Authenticates a user and returns a token pair.
 - **Token Invalid**: Ensure the `JWT_SECRET` matches between the issuer and the verifier.
 - **CORS Errors**: Check your CORS configuration in `internal/infrastructure/config/config.go`.
 
+## Recipe
+
+To scaffold a complete auth stack (users, sessions, and API keys) in one command:
+
+```bash
+kthulu add recipe auth
+```
+
+Use with: `kthulu add recipe auth`
+
 
 
 
