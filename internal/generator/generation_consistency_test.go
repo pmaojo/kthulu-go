@@ -135,3 +135,97 @@ func TestGenerateProject_RelationsAndEnterprisePaths(t *testing.T) {
 	assert.Contains(t, handler, "coerceNumber", "numeric form values must be coerced")
 	assert.Contains(t, handler, "coerceTime", "time form values must be coerced")
 }
+
+// TestGenerateProject_ValidationRules guards the validation rule DSL
+// (name:type:rules) end to end: generated Validate() methods, service-level
+// enforcement and the 422 handler mapping.
+func TestGenerateProject_ValidationRules(t *testing.T) {
+	gen := NewTemplateGenerator(resolver.NewDependencyResolver(&parser.ProjectAnalysis{
+		Modules:      make(map[string]*parser.Module),
+		Dependencies: []parser.Dependency{},
+	}))
+
+	structure, err := gen.GenerateProject(&GeneratorConfig{
+		ProjectName:   "shop",
+		ProjectModule: "github.com/example/shop",
+		TemplateType:  "server",
+		Database:      "sqlite",
+		Auth:          "jwt",
+		Frontend:      "templ",
+		Features:      []string{"auth", "user", "product"},
+		ModuleFields: map[string][]string{
+			"product": {
+				"name:string:required,min=2",
+				"price:int:required,min=1",
+				"status:string:oneof=draft|active",
+				"contact_email:string:email",
+			},
+		},
+		CustomValues: map[string]string{"module_path": "github.com/example/shop"},
+	})
+	require.NoError(t, err)
+
+	validation := findFile(t, structure, "internal/modules/product/core/product_validation.go")
+	assert.Contains(t, validation, "type ValidationErrors map[string]string")
+	assert.Contains(t, validation, "func (e *Product) Validate() error")
+	assert.Contains(t, validation, `errs["name"] = "is required"`)
+	assert.Contains(t, validation, "utf8.RuneCountInString(e.Name) < 2")
+	assert.Contains(t, validation, "e.Price < 1")
+	assert.Contains(t, validation, `must be one of: draft, active`)
+	assert.Contains(t, validation, "emailPattern.MatchString(e.ContactEmail)")
+
+	service := findFile(t, structure, "internal/modules/product/core/product_service.go")
+	assert.Contains(t, service, "entity.Validate()", "services must enforce validation on create/update")
+
+	handler := findFile(t, structure, "internal/modules/product/api/product_handler.go")
+	assert.Contains(t, handler, "StatusUnprocessableEntity", "validation failures must map to 422")
+	assert.Contains(t, handler, "core.ValidationErrors")
+
+	// Modules without rules still get a compiling Validate() so the service
+	// call never breaks.
+	userValidation := findFile(t, structure, "internal/modules/user/core/user_validation.go")
+	assert.Contains(t, userValidation, "func (e *User) Validate() error")
+}
+
+// TestGenerateProject_QueueRuntime guards the background job runtime: the
+// queues feature must generate infrastructure (not a CRUD module) and wire it
+// into the fx bootstrap.
+func TestGenerateProject_QueueRuntime(t *testing.T) {
+	gen := NewTemplateGenerator(resolver.NewDependencyResolver(&parser.ProjectAnalysis{
+		Modules:      make(map[string]*parser.Module),
+		Dependencies: []parser.Dependency{},
+	}))
+
+	structure, err := gen.GenerateProject(&GeneratorConfig{
+		ProjectName:   "worker",
+		ProjectModule: "github.com/example/worker",
+		TemplateType:  "server",
+		Database:      "sqlite",
+		Auth:          "jwt",
+		Frontend:      "templ",
+		Features:      []string{"auth", "user", "queues"},
+		CustomValues:  map[string]string{"module_path": "github.com/example/worker"},
+	})
+	require.NoError(t, err)
+
+	queueFile := findFile(t, structure, "internal/infrastructure/queue/queue.go")
+	assert.Contains(t, queueFile, "func (q *Queue) Enqueue(")
+	assert.Contains(t, queueFile, "func (q *Queue) Every(")
+	assert.Contains(t, queueFile, "MaxAttempts")
+
+	findFile(t, structure, "internal/infrastructure/queue/queue_test.go")
+
+	jobsFile := findFile(t, structure, "internal/jobs/jobs.go")
+	assert.Contains(t, jobsFile, "func Register(q *queue.Queue) error")
+	assert.Contains(t, jobsFile, "github.com/example/worker/internal/infrastructure/queue")
+
+	bootstrap := findFile(t, structure, "pkg/bootstrap/app.go")
+	assert.Contains(t, bootstrap, "fx.Provide(newQueue)")
+	assert.Contains(t, bootstrap, "fx.Invoke(startQueue)")
+	assert.Contains(t, bootstrap, "jobs.Register(q)")
+
+	// "queues" is infrastructure, not a CRUD module.
+	for _, f := range structure.Files {
+		assert.NotContains(t, f.Path, "modules/queues/", "queues must not be generated as a CRUD module")
+	}
+}

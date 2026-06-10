@@ -3,12 +3,22 @@ package bootstrap
 import (
 	"net/http"
 	"os"
+{{if .QueueEnabled}}
+	"context"
+{{end}}
 
 	"github.com/gorilla/mux"
 	"go.uber.org/fx"
+{{if .QueueEnabled}}
+	"gorm.io/gorm"
+{{end}}
 
 	"{{.CoreImport}}"
 	"{{.ProjectModule}}/internal/infrastructure/database"
+{{if .QueueEnabled}}
+	"{{.ProjectModule}}/internal/infrastructure/queue"
+	"{{.ProjectModule}}/internal/jobs"
+{{end}}
 {{.ModuleImports}}
 {{if .GTHEnabled}}
 	"{{.ProjectModule}}/internal/adapters/http/gth"
@@ -24,11 +34,39 @@ func AppOptions() []fx.Option {
 
 		// Module providers
 {{.ModuleProviders}}
-
+{{if .QueueEnabled}}
+		// Background job queue + scheduler
+		fx.Provide(newQueue),
+		fx.Invoke(startQueue),
+{{end}}
 		// Route Registration
 		fx.Invoke(RegisterRoutes),
 	}
 }
+
+{{if .QueueEnabled}}
+func newQueue(db *gorm.DB) (*queue.Queue, error) {
+	return queue.New(db)
+}
+
+// startQueue registers application jobs and ties the worker pool to the
+// application lifecycle.
+func startQueue(lc fx.Lifecycle, q *queue.Queue) error {
+	if err := jobs.Register(q); err != nil {
+		return err
+	}
+	lc.Append(fx.Hook{
+		OnStart: func(context.Context) error {
+			q.Start()
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			return q.Stop(ctx)
+		},
+	})
+	return nil
+}
+{{end}}
 
 // RunMigrations runs database migrations if enabled via env var
 func RunMigrations() {

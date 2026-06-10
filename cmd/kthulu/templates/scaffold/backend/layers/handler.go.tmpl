@@ -3,6 +3,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -69,6 +70,19 @@ func decode{{.Title}}(r *http.Request) (core.{{.Title}}, error) {
 	return entity, nil
 }
 
+// writeServiceError maps service errors to HTTP responses. Validation
+// failures become a 422 with a field->message map; everything else is a 500.
+func writeServiceError(w http.ResponseWriter, err error) {
+	var verrs core.ValidationErrors
+	if errors.As(err, &verrs) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		json.NewEncoder(w).Encode(map[string]interface{}{"errors": verrs})
+		return
+	}
+	http.Error(w, err.Error(), http.StatusInternalServerError)
+}
+
 func coerceNumber(v interface{}) interface{} {
 	if s, ok := v.(string); ok {
 		if n, err := strconv.ParseFloat(s, 64); err == nil {
@@ -119,7 +133,7 @@ func (h *{{.Title}}Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.service.Create{{.Title}}(&entity); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeServiceError(w, err)
 		return
 	}
 	
@@ -173,7 +187,7 @@ func (h *{{.Title}}Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 	entity.ID = uint(id)
 	if err := h.service.Update{{.Title}}(&entity); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeServiceError(w, err)
 		return
 	}
 	

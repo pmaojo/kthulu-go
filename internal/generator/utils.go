@@ -134,9 +134,39 @@ type BackendField struct {
 	RelModule    string
 	RelTable     string
 	FKColumnName string
+	Rules        []FieldRule
 }
 
-// ParseBackendFields converts CLI field strings (name:type or name:belongs_to:module) to BackendField structs
+// FieldRule is a single validation rule declared in the field DSL, e.g.
+// "required", "min=2", "email" or "oneof=draft|sent|paid".
+type FieldRule struct {
+	Name  string
+	Param string
+}
+
+// ParseFieldRules parses a comma-separated rule list ("required,min=2").
+func ParseFieldRules(raw string) []FieldRule {
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+	var rules []FieldRule
+	for _, r := range strings.Split(raw, ",") {
+		r = strings.TrimSpace(r)
+		if r == "" {
+			continue
+		}
+		name, param, _ := strings.Cut(r, "=")
+		rules = append(rules, FieldRule{Name: strings.ToLower(name), Param: param})
+	}
+	return rules
+}
+
+// ParseBackendFields converts CLI field strings to BackendField structs.
+// Supported syntaxes:
+//
+//	name:type                  e.g. "price:int"
+//	name:type:rules            e.g. "price:int:required,min=0"
+//	name:belongs_to:module     e.g. "customer:belongs_to:contact"
 func ParseBackendFields(rawFields []string) []BackendField {
 	fields := make([]BackendField, 0, len(rawFields))
 	for _, f := range rawFields {
@@ -201,12 +231,18 @@ func ParseBackendFields(rawFields []string) []BackendField {
 			sqlType = "TIMESTAMP"
 		}
 
+		var rules []FieldRule
+		if len(parts) >= 3 {
+			rules = ParseFieldRules(strings.Join(parts[2:], ":"))
+		}
+
 		fields = append(fields, BackendField{
 			Name:    name,
 			Type:    goType,
 			JSONTag: ToSnakeCase(name),
 			GormTag: "column:" + ToSnakeCase(name),
 			SQLType: sqlType,
+			Rules:   rules,
 		})
 	}
 	return fields

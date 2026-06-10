@@ -94,6 +94,25 @@ type TemplateGenerator struct {
 	resolver  *resolver.DependencyResolver
 	templates map[string]*template.Template
 	config    *GeneratorConfig
+	// queueEnabled is set when the feature list requests the background
+	// job runtime (queue/queues/jobs/scheduler).
+	queueEnabled bool
+}
+
+// extractQueueFeature removes queue-runtime feature aliases from the list
+// and reports whether the queue infrastructure should be generated.
+func extractQueueFeature(features []string) ([]string, bool) {
+	kept := make([]string, 0, len(features))
+	enabled := false
+	for _, f := range features {
+		switch strings.ToLower(strings.TrimSpace(f)) {
+		case "queue", "queues", "jobs", "scheduler":
+			enabled = true
+		default:
+			kept = append(kept, f)
+		}
+	}
+	return kept, enabled
 }
 
 // GeneratorConfig configures the template generation
@@ -224,6 +243,10 @@ func (g *TemplateGenerator) GenerateProject(config *GeneratorConfig) (*ProjectSt
 		config.ProjectName, strings.Join(config.Features, ", "))
 
 	g.config = config
+
+	// Step 0: Split infrastructure features (queue runtime) from CRUD
+	// modules. They are generated as shared infrastructure, not modules.
+	config.Features, g.queueEnabled = extractQueueFeature(config.Features)
 
 	// Step 1: Resolve dependencies
 	plan, err := g.resolver.ResolveDependencies(config.Features)
@@ -424,6 +447,17 @@ func (g *TemplateGenerator) generateBaseStructure(structure *ProjectStructure) e
 		"internal/infrastructure/config/config.go":         TmplInfraConfig,
 	}
 
+	// Queue runtime (background jobs + scheduler)
+	if g.queueEnabled {
+		structure.Directories = append(structure.Directories,
+			"internal/infrastructure/queue",
+			"internal/jobs",
+		)
+		infraFiles["internal/infrastructure/queue/queue.go"] = "scaffold/backend/internal/infrastructure/queue/queue.go.tmpl"
+		infraFiles["internal/infrastructure/queue/queue_test.go"] = "scaffold/backend/internal/infrastructure/queue/queue_test.go.tmpl"
+		infraFiles["internal/jobs/jobs.go"] = "scaffold/backend/internal/jobs/jobs.go.tmpl"
+	}
+
 	// Generate placeholder static file to prevent go:embed error
 	structure.Files = append(structure.Files, GeneratedFile{
 		Path:    "internal/infrastructure/static/dist/index.html",
@@ -523,6 +557,7 @@ func (g *TemplateGenerator) generateBootstrapApp() string {
 		"InvokeParams":    g.generateInvokeParams(),
 		"ModuleRoutes":    g.generateModuleRoutes(),
 		"GTHEnabled":      g.config.Frontend != "none",
+		"QueueEnabled":    g.queueEnabled,
 		"FeatureList":     g.config.Features,
 	}
 
@@ -893,6 +928,11 @@ func (g *TemplateGenerator) GenerateBackendModule(moduleName string, fields []st
 		}
 		files[relPath] = content
 	}
+
+	// Validation layer (built from field rules; always generated so the
+	// service-level Validate() call compiles for every module).
+	title := Capitalize(inflection.Singular(moduleName))
+	files["core/"+moduleName+"_validation.go"] = GenerateValidationFile(moduleName, title, backendFields)
 
 	// Migration
 	migrationContent, err := g.executeTemplate("migration", TmplMigration, data)

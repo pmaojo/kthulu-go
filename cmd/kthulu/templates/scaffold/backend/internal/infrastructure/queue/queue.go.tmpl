@@ -1,0 +1,301 @@
+// @kthulu:infrastructure:queue
+// Database-backed job queue with retries, exponential backoff and a
+// recurring-job scheduler. Works on every supported database (SQLite,
+// PostgreSQL, MySQL) with no extra infrastructure.
+package queue
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log"
+	"sync"
+	"time"
+
+	"gorm.io/gorm"
+)
+
+// Job is a persisted background job.
+type Job struct {
+	ID          uint       `gorm:"primaryKey" json:"id"`
+	Queue       string     `gorm:"column:queue;index" json:"queue"`
+	Type        string     `gorm:"column:type" json:"type"`
+	Payload     string     `gorm:"column:payload" json:"payload"`
+	RunAt       time.Time  `gorm:"column:run_at;index" json:"run_at"`
+	Attempts    int        `gorm:"column:attempts" json:"attempts"`
+	MaxAttempts int        `gorm:"column:max_attempts" json:"max_attempts"`
+	LastError   string     `gorm:"column:last_error" json:"last_error"`
+	ReservedAt  *time.Time `gorm:"column:reserved_at" json:"reserved_at"`
+	CreatedAt   time.Time  `json:"created_at"`
+}
+
+// TableName overrides the table name used by Job.
+func (Job) TableName() string { return "jobs" }
+
+// Handler processes a job payload. Returning an error schedules a retry
+// with exponential backoff until MaxAttempts is exhausted.
+type Handler func(ctx context.Context, payload []byte) error
+
+type schedule struct {
+	every   time.Duration
+	jobType string
+	payload string
+}
+
+// Queue is a database-backed job queue and scheduler.
+type Queue struct {
+	db          *gorm.DB
+	mu          sync.RWMutex
+	handlers    map[string]Handler
+	schedules   []schedule
+	concurrency int
+	interval    time.Duration
+	visibility  time.Duration
+	backoffBase time.Duration
+	maxAttempts int
+
+	startOnce sync.Once
+	stop      chan struct{}
+	wg        sync.WaitGroup
+}
+
+// Option configures the queue.
+type Option func(*Queue)
+
+// WithConcurrency sets the number of worker goroutines (default 4).
+func WithConcurrency(n int) Option { return func(q *Queue) { q.concurrency = n } }
+
+// WithPollInterval sets how often idle workers poll for jobs (default 1s).
+func WithPollInterval(d time.Duration) Option { return func(q *Queue) { q.interval = d } }
+
+// WithMaxAttempts sets the default retry budget for new jobs (default 5).
+func WithMaxAttempts(n int) Option { return func(q *Queue) { q.maxAttempts = n } }
+
+// New creates the queue and migrates the jobs table.
+func New(db *gorm.DB, opts ...Option) (*Queue, error) {
+	q := &Queue{
+		db:          db,
+		handlers:    make(map[string]Handler),
+		concurrency: 4,
+		interval:    time.Second,
+		visibility:  5 * time.Minute,
+		backoffBase: 10 * time.Second,
+		maxAttempts: 5,
+		stop:        make(chan struct{}),
+	}
+	for _, opt := range opts {
+		opt(q)
+	}
+	if err := db.AutoMigrate(&Job{}); err != nil {
+		return nil, fmt.Errorf("queue: migrate jobs table: %w", err)
+	}
+	return q, nil
+}
+
+// Register binds a handler to a job type. Call before Start.
+func (q *Queue) Register(jobType string, h Handler) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	q.handlers[jobType] = h
+}
+
+// Enqueue schedules a job for immediate execution. The payload is
+// JSON-encoded.
+func (q *Queue) Enqueue(jobType string, payload interface{}) error {
+	return q.EnqueueIn(0, jobType, payload)
+}
+
+// EnqueueIn schedules a job to run after the given delay.
+func (q *Queue) EnqueueIn(delay time.Duration, jobType string, payload interface{}) error {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("queue: encode payload: %w", err)
+	}
+	job := Job{
+		Queue:       "default",
+		Type:        jobType,
+		Payload:     string(data),
+		RunAt:       time.Now().UTC().Add(delay),
+		MaxAttempts: q.maxAttempts,
+	}
+	return q.db.Create(&job).Error
+}
+
+// Every schedules a recurring job, enqueued on the given interval while the
+// application runs (the in-process equivalent of a cron entry).
+func (q *Queue) Every(every time.Duration, jobType string, payload interface{}) error {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("queue: encode payload: %w", err)
+	}
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	q.schedules = append(q.schedules, schedule{every: every, jobType: jobType, payload: string(data)})
+	return nil
+}
+
+// Start launches the worker pool and the scheduler. Safe to call once.
+func (q *Queue) Start() {
+	q.startOnce.Do(func() {
+		for i := 0; i < q.concurrency; i++ {
+			q.wg.Add(1)
+			go q.workerLoop()
+		}
+		q.mu.RLock()
+		for _, s := range q.schedules {
+			q.wg.Add(1)
+			go q.scheduleLoop(s)
+		}
+		q.mu.RUnlock()
+		log.Printf("queue: started %d workers, %d schedules", q.concurrency, len(q.schedules))
+	})
+}
+
+// Stop drains the workers, waiting up to the context deadline.
+func (q *Queue) Stop(ctx context.Context) error {
+	close(q.stop)
+	done := make(chan struct{})
+	go func() {
+		q.wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func (q *Queue) workerLoop() {
+	defer q.wg.Done()
+	for {
+		select {
+		case <-q.stop:
+			return
+		default:
+		}
+		job, err := q.claim()
+		if err != nil {
+			if !errors.Is(err, gorm.ErrRecordNotFound) {
+				log.Printf("queue: claim error: %v", err)
+			}
+			select {
+			case <-q.stop:
+				return
+			case <-time.After(q.interval):
+			}
+			continue
+		}
+		q.run(job)
+	}
+}
+
+func (q *Queue) scheduleLoop(s schedule) {
+	defer q.wg.Done()
+	ticker := time.NewTicker(s.every)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-q.stop:
+			return
+		case <-ticker.C:
+			job := Job{
+				Queue:       "default",
+				Type:        s.jobType,
+				Payload:     s.payload,
+				RunAt:       time.Now().UTC(),
+				MaxAttempts: q.maxAttempts,
+			}
+			if err := q.db.Create(&job).Error; err != nil {
+				log.Printf("queue: schedule enqueue %s: %v", s.jobType, err)
+			}
+		}
+	}
+}
+
+var errContended = errors.New("queue: job claimed by another worker")
+
+// claim reserves the next due job using an optimistic update so concurrent
+// workers never run the same job twice.
+func (q *Queue) claim() (*Job, error) {
+	now := time.Now().UTC()
+	staleBefore := now.Add(-q.visibility)
+
+	var job Job
+	err := q.db.
+		Where("run_at <= ? AND attempts < max_attempts AND (reserved_at IS NULL OR reserved_at < ?)", now, staleBefore).
+		Order("run_at asc").
+		First(&job).Error
+	if err != nil {
+		return nil, err
+	}
+
+	res := q.db.Model(&Job{}).
+		Where("id = ? AND (reserved_at IS NULL OR reserved_at < ?)", job.ID, staleBefore).
+		Update("reserved_at", now)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	if res.RowsAffected == 0 {
+		return nil, errContended
+	}
+	job.ReservedAt = &now
+	return &job, nil
+}
+
+func (q *Queue) run(job *Job) {
+	q.mu.RLock()
+	handler, ok := q.handlers[job.Type]
+	q.mu.RUnlock()
+
+	if !ok {
+		q.fail(job, fmt.Errorf("no handler registered for job type %q", job.Type))
+		return
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			q.fail(job, fmt.Errorf("panic: %v", r))
+		}
+	}()
+
+	if err := handler(context.Background(), []byte(job.Payload)); err != nil {
+		q.fail(job, err)
+		return
+	}
+	// Retry the completion delete: transient lock errors (e.g. SQLite under
+	// concurrent writers) must not resurrect an already-processed job.
+	var delErr error
+	for attempt := 0; attempt < 5; attempt++ {
+		if delErr = q.db.Delete(&Job{}, job.ID).Error; delErr == nil {
+			return
+		}
+		time.Sleep(time.Duration(attempt+1) * 20 * time.Millisecond)
+	}
+	log.Printf("queue: delete completed job %d: %v", job.ID, delErr)
+}
+
+// fail records the error and either schedules a retry with exponential
+// backoff or, once attempts are exhausted, leaves the job as a dead letter
+// for inspection in the jobs table.
+func (q *Queue) fail(job *Job, jobErr error) {
+	attempts := job.Attempts + 1
+	updates := map[string]interface{}{
+		"attempts":    attempts,
+		"last_error":  jobErr.Error(),
+		"reserved_at": nil,
+	}
+	if attempts < job.MaxAttempts {
+		backoff := q.backoffBase * time.Duration(1<<uint(attempts-1))
+		if backoff > time.Hour {
+			backoff = time.Hour
+		}
+		updates["run_at"] = time.Now().UTC().Add(backoff)
+	}
+	if err := q.db.Model(&Job{}).Where("id = ?", job.ID).Updates(updates).Error; err != nil {
+		log.Printf("queue: record failure for job %d: %v", job.ID, err)
+	}
+	log.Printf("queue: job %d (%s) failed (attempt %d/%d): %v", job.ID, job.Type, attempts, job.MaxAttempts, jobErr)
+}

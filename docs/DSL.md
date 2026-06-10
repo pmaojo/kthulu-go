@@ -55,20 +55,29 @@ features:
   - payment
 
 # Module Configuration (Fine-grained control)
-# Fields use the `name:type` syntax. Available types:
+# Fields use the `name:type[:rules]` syntax. Available types:
 #   string, int, float, bool, time
 # Relations use `name:belongs_to:module` and generate the foreign key,
 # the typed relation field, and the GORM association automatically.
+#
+# Validation rules (comma-separated) generate a Validate() method on the
+# entity, enforced by the service layer; HTTP handlers return a
+# 422 Unprocessable Entity with a field->message JSON map on failure:
+#   required          non-empty string / non-zero number / non-zero time
+#   min=N, max=N      length for strings, value for numbers
+#   email             RFC-style email shape
+#   oneof=a|b|c       enumerated string values
 modules:
   product:
     fields:
-      - name:string
-      - price:int
-      - sku:string
-      - description:string
+      - name:string:required,min=2
+      - price:int:required,min=1
+      - sku:string:required
+      - status:string:oneof=draft|active|archived
+      - contact_email:string:email
   invoice:
     fields:
-      - amount:float
+      - amount:float:required
       - status:string
       - issued_at:time
       - customer:belongs_to:contact
@@ -91,8 +100,33 @@ kthulu create my-shop --from-plan=kthulu-plan.yaml
 ```
 
 Every feature, module field and relation declared in the plan is generated:
-backend modules (entity, repository, service, HTTP handler), database
-auto-migration, and the GTH admin UI (tables, forms, HTMX live search).
+backend modules (entity, repository, service, HTTP handler), validation,
+database auto-migration, and the GTH admin UI (tables, forms, HTMX live
+search).
+
+### Background Jobs & Scheduler
+
+Add `queues` (aliases: `queue`, `jobs`, `scheduler`) to `features:` to
+generate a database-backed job runtime — no Redis or extra infrastructure
+required:
+
+- `internal/infrastructure/queue/` — worker pool, retries with exponential
+  backoff, dead-letter rows in the `jobs` table, recurring schedules, plus
+  runtime tests.
+- `internal/jobs/` — your application's job handlers (the `app/Jobs`
+  equivalent). Define a payload struct, a handler, and register it.
+
+```go
+// Enqueue from any service or handler:
+q.Enqueue(jobs.TypeWelcomeEmail, jobs.WelcomeEmail{UserID: 42})
+q.EnqueueIn(10*time.Minute, jobs.TypeWelcomeEmail, payload)
+
+// Cron equivalent, declared in jobs.Register:
+q.Every(time.Hour, jobs.TypeHeartbeat, nil)
+```
+
+The worker pool starts and stops with the application lifecycle (Uber Fx
+hooks) and works on SQLite, PostgreSQL and MySQL.
 
 ## Why use Blueprints?
 

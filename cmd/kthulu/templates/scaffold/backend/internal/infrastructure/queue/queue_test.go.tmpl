@@ -1,0 +1,104 @@
+// @kthulu:infrastructure:queue:test
+// Runtime tests for the generated job queue: processing, retries with
+// exponential backoff, and dead-lettering.
+package queue
+
+import (
+	"context"
+	"errors"
+	"sync/atomic"
+	"testing"
+	"time"
+
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+)
+
+func newTestQueue(t *testing.T) *Queue {
+	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{Logger: logger.Discard})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// SQLite shared-cache returns SQLITE_LOCKED under concurrent
+	// connections; a single connection keeps the runtime tests
+	// deterministic while workers still execute handlers in parallel.
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB.SetMaxOpenConns(1)
+	q, err := New(db, WithConcurrency(2), WithPollInterval(20*time.Millisecond), WithMaxAttempts(3))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return q
+}
+
+func TestQueueProcessesJobs(t *testing.T) {
+	q := newTestQueue(t)
+	var processed atomic.Int32
+	q.Register("test.ok", func(ctx context.Context, payload []byte) error {
+		processed.Add(1)
+		return nil
+	})
+	for i := 0; i < 5; i++ {
+		if err := q.Enqueue("test.ok", map[string]int{"i": i}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	q.Start()
+	deadline := time.After(5 * time.Second)
+	for processed.Load() < 5 {
+		select {
+		case <-deadline:
+			t.Fatalf("processed %d/5 jobs", processed.Load())
+		case <-time.After(20 * time.Millisecond):
+		}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	if err := q.Stop(ctx); err != nil {
+		t.Fatal(err)
+	}
+	var remaining int64
+	q.db.Model(&Job{}).Count(&remaining)
+	if remaining != 0 {
+		t.Fatalf("expected 0 jobs remaining, got %d", remaining)
+	}
+}
+
+func TestQueueRetriesAndDeadLetters(t *testing.T) {
+	q := newTestQueue(t)
+	q.backoffBase = 10 * time.Millisecond
+	var attempts atomic.Int32
+	q.Register("test.fail", func(ctx context.Context, payload []byte) error {
+		attempts.Add(1)
+		return errors.New("boom")
+	})
+	if err := q.Enqueue("test.fail", nil); err != nil {
+		t.Fatal(err)
+	}
+	q.Start()
+	deadline := time.After(8 * time.Second)
+	for attempts.Load() < 3 {
+		select {
+		case <-deadline:
+			t.Fatalf("attempts %d/3", attempts.Load())
+		case <-time.After(20 * time.Millisecond):
+		}
+	}
+	time.Sleep(100 * time.Millisecond) // let the final failure persist
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	if err := q.Stop(ctx); err != nil {
+		t.Fatal(err)
+	}
+	var dead Job
+	if err := q.db.First(&dead).Error; err != nil {
+		t.Fatalf("expected dead-letter row: %v", err)
+	}
+	if dead.Attempts != 3 || dead.LastError != "boom" {
+		t.Fatalf("unexpected dead letter: attempts=%d lastError=%q", dead.Attempts, dead.LastError)
+	}
+}

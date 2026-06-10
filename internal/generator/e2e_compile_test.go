@@ -37,9 +37,9 @@ func TestE2E_GeneratedProjectCompiles(t *testing.T) {
 		Auth:          "jwt",
 		Frontend:      "templ",
 		OutputPath:    outputPath,
-		Features:      []string{"auth", "user", "product", "payments"},
+		Features:      []string{"auth", "user", "product", "payments", "queues"},
 		ModuleFields: map[string][]string{
-			"product": {"name:string", "price:int", "in_stock:bool"},
+			"product": {"name:string:required,min=2", "price:int:required,min=1", "in_stock:bool", "contact_email:string:email"},
 		},
 		CustomValues: map[string]string{"module_path": "github.com/e2e/shopapp"},
 	})
@@ -59,4 +59,7 @@ func TestE2E_GeneratedProjectCompiles(t *testing.T) {
 	run("go", "mod", "tidy")
 	run("go", "build", "./...")
 	run("go", "vet", "./...")
+	// Exercises the generated queue runtime tests (processing, retries,
+	// dead-lettering) inside the generated project.
+	run("go", "test", "./internal/infrastructure/queue/...")
 }
