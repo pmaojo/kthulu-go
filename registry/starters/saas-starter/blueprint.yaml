@@ -1,3 +1,23 @@
-name: "SaaS Starter"
-template: "saas-starter"
-modules: ["auth", "ai"]
+name: saasapp
+description: "Full-stack SaaS with auth, organizations, billing and background jobs."
+template: saas
+database: sqlite
+frontend: templ
+auth: jwt
+features:
+  - auth
+  - user
+  - organization
+  - queues
+  - mail
+modules:
+  plan:
+    fields:
+      - name:string:required
+      - price_cents:int:required,min=0
+      - interval:string:oneof=monthly|yearly
+  subscription:
+    fields:
+      - status:string:oneof=trialing|active|past_due|cancelled
+      - started_at:time
+      - tier:belongs_to:plan

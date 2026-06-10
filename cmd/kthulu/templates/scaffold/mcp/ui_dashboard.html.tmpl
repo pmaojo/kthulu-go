@@ -1,0 +1,94 @@
+<!doctype html>
+<!--
+  MCP App view for {{ .ProjectName }} (spec: io.modelcontextprotocol/ui).
+  The host loads this HTML in a sandboxed iframe and talks JSON-RPC 2.0
+  over postMessage: the view sends ui/initialize, then receives
+  ui/notifications/tool-input and ui/notifications/tool-result, and may
+  call tools with standard tools/call requests.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 16px; }
+  .card { border: 1px solid rgba(128,128,128,.35); border-radius: 12px; padding: 16px; max-width: 480px; }
+  h2 { margin: 0 0 12px; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #22c55e; display: inline-block; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  td { padding: 4px 0; }
+  td:first-child { opacity: .65; width: 40%; }
+  button { margin-top: 12px; padding: 6px 14px; border-radius: 8px; border: 1px solid rgba(128,128,128,.4); background: transparent; cursor: pointer; font: inherit; }
+  button:hover { background: rgba(128,128,128,.15); }
+</style>
+</head>
+<body>
+<div class="card">
+  <h2><span class="dot" id="dot"></span> {{ .ProjectName }} status</h2>
+  <table id="stats"><tr><td>state</td><td>waiting for data…</td></tr></table>
+  <button id="refresh">Refresh</button>
+</div>
+<script>
+(function () {
+  var nextId = 1;
+  var pending = {};
+
+  function sendRequest(method, params) {
+    return new Promise(function (resolve, reject) {
+      var id = nextId++;
+      pending[id] = { resolve: resolve, reject: reject };
+      window.parent.postMessage({ jsonrpc: "2.0", id: id, method: method, params: params }, "*");
+    });
+  }
+
+  window.addEventListener("message", function (event) {
+    var msg = event.data;
+    if (!msg || msg.jsonrpc !== "2.0") return;
+
+    if (msg.id !== undefined && pending[msg.id]) {
+      var p = pending[msg.id];
+      delete pending[msg.id];
+      if (msg.error) { p.reject(new Error(msg.error.message)); } else { p.resolve(msg.result); }
+      return;
+    }
+
+    if (msg.method === "ui/notifications/tool-result") {
+      renderResult(msg.params);
+    }
+  });
+
+  function renderResult(result) {
+    var data = result && result.structuredContent;
+    if (!data) return;
+    var rows = "";
+    Object.keys(data).forEach(function (key) {
+      rows += "<tr><td>" + escapeHTML(key) + "</td><td>" + escapeHTML(String(data[key])) + "</td></tr>";
+    });
+    document.getElementById("stats").innerHTML = rows;
+    document.getElementById("dot").style.background = data.status === "online" ? "#22c55e" : "#ef4444";
+  }
+
+  function escapeHTML(s) {
+    return s.replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  document.getElementById("refresh").addEventListener("click", function () {
+    sendRequest("tools/call", { name: "get_status", arguments: {} })
+      .then(renderResult)
+      .catch(function (err) { console.error("refresh failed", err); });
+  });
+
+  // MCP Apps lifecycle: initialize handshake, then signal readiness.
+  sendRequest("ui/initialize", {
+    protocolVersion: "2026-01-26",
+    appInfo: { name: "{{ .ProjectName }}-dashboard", version: "0.1.0" },
+    appCapabilities: { availableDisplayModes: ["inline"] }
+  }).then(function () {
+    window.parent.postMessage({ jsonrpc: "2.0", method: "ui/notifications/initialized" }, "*");
+  }).catch(function (err) { console.error("ui/initialize failed", err); });
+})();
+</script>
+</body>
+</html>

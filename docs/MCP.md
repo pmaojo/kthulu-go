@@ -144,7 +144,9 @@ Since Kthulu is a CLI tool rather than a hosted API, it is primarily distributed
 
 ## Scaffolding New MCP Servers
 
-Kthulu can now scaffold new, standalone MCP servers to help you build your own tools for AI agents.
+Kthulu scaffolds standalone MCP servers with first-class support for the
+**MCP Apps extension** (`io.modelcontextprotocol/ui`): generated servers can
+ship interactive HTML views that hosts like Claude and ChatGPT render inline.
 
 To create a new MCP server project:
 
@@ -154,7 +156,11 @@ kthulu new my-mcp-server --template=mcp
 
 This will generate a project with:
 - `cmd/my-mcp-server/main.go`: The server entrypoint using `mcp-golang`.
-- `internal/tools/`: A sample tool implementation.
+- `internal/mcp/`: A dependency-free JSON-RPC 2.0 MCP server with MCP Apps
+  support (ui:// resources, _meta.ui tool links, extension negotiation) and
+  protocol tests.
+- `internal/tools/`: Sample tools, including a status dashboard tool whose
+  results render as an interactive app via `internal/tools/ui/dashboard.html`.
 - `go.mod`: Pre-configured dependencies.
 
 You can then extend this project by adding more tools in the `internal/tools` directory and registering them in `main.go`.

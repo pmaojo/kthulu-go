@@ -1,0 +1,30 @@
+name: blogcms
+description: "Publishing platform: posts, categories and comments with cache and file storage."
+template: microservice
+database: sqlite
+frontend: templ
+auth: jwt
+features:
+  - auth
+  - user
+  - cache
+  - storage
+modules:
+  category:
+    fields:
+      - name:string:required,min=2
+      - slug:string:required
+  post:
+    fields:
+      - title:string:required,min=3
+      - slug:string:required
+      - body:string
+      - published_at:time
+      - status:string:oneof=draft|published|archived
+      - topic:belongs_to:category
+  comment:
+    fields:
+      - author_name:string:required
+      - body:string:required,min=2
+      - approved:bool
+      - article:belongs_to:post

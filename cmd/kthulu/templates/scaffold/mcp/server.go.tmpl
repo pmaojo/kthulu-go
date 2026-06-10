@@ -1,0 +1,306 @@
+// Package mcp implements a dependency-free Model Context Protocol server
+// over stdio (newline-delimited JSON-RPC 2.0) with support for the MCP Apps
+// extension (io.modelcontextprotocol/ui): tools can declare interactive HTML
+// views that compliant hosts (Claude, ChatGPT, ...) render inline.
+package mcp
+
+import (
+	"bufio"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"sync"
+)
+
+const (
+	// AppsExtensionID identifies the MCP Apps extension in capability
+	// negotiation.
+	AppsExtensionID = "io.modelcontextprotocol/ui"
+	// AppsMimeType is the required mime type for HTML app views.
+	AppsMimeType = "text/html;profile=mcp-app"
+
+	defaultProtocolVersion = "2025-06-18"
+)
+
+// Content is one item of unstructured tool output.
+type Content struct {
+	Type string `json:"type"`
+	Text string `json:"text"`
+}
+
+// CallToolResult is the standard MCP tool result. StructuredContent is what
+// app views typically consume via ui/notifications/tool-result.
+type CallToolResult struct {
+	Content           []Content   `json:"content"`
+	StructuredContent interface{} `json:"structuredContent,omitempty"`
+	IsError           bool        `json:"isError,omitempty"`
+}
+
+// TextResult builds a plain-text tool result.
+func TextResult(text string) *CallToolResult {
+	content := Content{Type: "text", Text: text}
+	return &CallToolResult{Content: []Content{content}}
+}
+
+// StructuredResult builds a result carrying both a text summary and
+// structured data for an app view.
+func StructuredResult(summary string, data interface{}) *CallToolResult {
+	r := TextResult(summary)
+	r.StructuredContent = data
+	return r
+}
+
+// ToolHandler executes a tool. Raw arguments arrive as JSON.
+type ToolHandler func(ctx context.Context, arguments json.RawMessage) (*CallToolResult, error)
+
+// Tool describes a registered tool.
+type Tool struct {
+	Name        string
+	Description string
+	InputSchema map[string]interface{}
+	// UIResource optionally links the tool to a ui:// resource so hosts
+	// supporting MCP Apps render its results interactively.
+	UIResource string
+	Handler    ToolHandler
+}
+
+// UIResource is an HTML view declared under the ui:// scheme.
+type UIResource struct {
+	URI         string
+	Name        string
+	Description string
+	HTML        string
+}
+
+// Server dispatches MCP JSON-RPC requests.
+type Server struct {
+	name      string
+	version   string
+	mu        sync.RWMutex
+	tools     []*Tool
+	resources []*UIResource
+}
+
+// NewServer creates an MCP server.
+func NewServer(name, version string) *Server {
+	return &Server{name: name, version: version}
+}
+
+// RegisterTool adds a tool. Set tool.UIResource to a registered ui:// URI to
+// attach an interactive view.
+func (s *Server) RegisterTool(tool *Tool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.tools = append(s.tools, tool)
+}
+
+// RegisterUIResource declares an MCP Apps HTML view.
+func (s *Server) RegisterUIResource(res *UIResource) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.resources = append(s.resources, res)
+}
+
+type request struct {
+	JSONRPC string          `json:"jsonrpc"`
+	ID      json.RawMessage `json:"id"`
+	Method  string          `json:"method"`
+	Params  json.RawMessage `json:"params"`
+}
+
+type response struct {
+	JSONRPC string          `json:"jsonrpc"`
+	ID      json.RawMessage `json:"id,omitempty"`
+	Result  interface{}     `json:"result,omitempty"`
+	Error   *rpcError       `json:"error,omitempty"`
+}
+
+type rpcError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+// Serve reads newline-delimited JSON-RPC requests from r and writes
+// responses to w until EOF.
+func (s *Server) Serve(ctx context.Context, r io.Reader, w io.Writer) error {
+	scanner := bufio.NewScanner(r)
+	scanner.Buffer(make([]byte, 0, 1024*1024), 16*1024*1024)
+	encoder := json.NewEncoder(w)
+
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if len(line) == 0 {
+			continue
+		}
+		var req request
+		if err := json.Unmarshal(line, &req); err != nil {
+			log.Printf("mcp: skipping malformed message: %v", err)
+			continue
+		}
+		if req.ID == nil {
+			// Notification — nothing to respond to.
+			continue
+		}
+		resp := s.handle(ctx, &req)
+		if err := encoder.Encode(resp); err != nil {
+			return fmt.Errorf("mcp: write response: %w", err)
+		}
+	}
+	return scanner.Err()
+}
+
+func (s *Server) handle(ctx context.Context, req *request) *response {
+	result, err := s.dispatch(ctx, req.Method, req.Params)
+	if err != nil {
+		return &response{JSONRPC: "2.0", ID: req.ID, Error: &rpcError{Code: -32603, Message: err.Error()}}
+	}
+	if result == nil {
+		return &response{JSONRPC: "2.0", ID: req.ID, Error: &rpcError{Code: -32601, Message: "method not found: " + req.Method}}
+	}
+	return &response{JSONRPC: "2.0", ID: req.ID, Result: result}
+}
+
+func (s *Server) dispatch(ctx context.Context, method string, params json.RawMessage) (interface{}, error) {
+	switch method {
+	case "initialize":
+		return s.initializeResult(params), nil
+	case "ping":
+		return map[string]interface{}{}, nil
+	case "tools/list":
+		return s.toolsList(), nil
+	case "tools/call":
+		return s.toolsCall(ctx, params)
+	case "resources/list":
+		return s.resourcesList(), nil
+	case "resources/read":
+		return s.resourcesRead(params)
+	default:
+		return nil, nil
+	}
+}
+
+func (s *Server) initializeResult(params json.RawMessage) map[string]interface{} {
+	protocolVersion := defaultProtocolVersion
+	var p struct {
+		ProtocolVersion string `json:"protocolVersion"`
+	}
+	if json.Unmarshal(params, &p) == nil && p.ProtocolVersion != "" {
+		protocolVersion = p.ProtocolVersion
+	}
+
+	capabilities := map[string]interface{}{
+		"tools":     map[string]interface{}{},
+		"resources": map[string]interface{}{},
+	}
+	s.mu.RLock()
+	hasUI := len(s.resources) > 0
+	s.mu.RUnlock()
+	if hasUI {
+		capabilities["extensions"] = map[string]interface{}{
+			AppsExtensionID: map[string]interface{}{
+				"mimeTypes": []string{AppsMimeType},
+			},
+		}
+	}
+
+	return map[string]interface{}{
+		"protocolVersion": protocolVersion,
+		"capabilities":    capabilities,
+		"serverInfo": map[string]interface{}{
+			"name":    s.name,
+			"version": s.version,
+		},
+	}
+}
+
+func (s *Server) toolsList() map[string]interface{} {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	tools := make([]map[string]interface{}, 0, len(s.tools))
+	for _, t := range s.tools {
+		entry := map[string]interface{}{
+			"name":        t.Name,
+			"description": t.Description,
+			"inputSchema": t.InputSchema,
+		}
+		if t.UIResource != "" {
+			entry["_meta"] = map[string]interface{}{
+				"ui": map[string]interface{}{"resourceUri": t.UIResource},
+			}
+		}
+		tools = append(tools, entry)
+	}
+	return map[string]interface{}{"tools": tools}
+}
+
+func (s *Server) toolsCall(ctx context.Context, params json.RawMessage) (interface{}, error) {
+	var p struct {
+		Name      string          `json:"name"`
+		Arguments json.RawMessage `json:"arguments"`
+	}
+	if err := json.Unmarshal(params, &p); err != nil {
+		return nil, fmt.Errorf("invalid tools/call params: %w", err)
+	}
+
+	s.mu.RLock()
+	var tool *Tool
+	for _, t := range s.tools {
+		if t.Name == p.Name {
+			tool = t
+			break
+		}
+	}
+	s.mu.RUnlock()
+	if tool == nil {
+		return nil, fmt.Errorf("unknown tool: %s", p.Name)
+	}
+
+	result, err := tool.Handler(ctx, p.Arguments)
+	if err != nil {
+		failure := TextResult(err.Error())
+		failure.IsError = true
+		return failure, nil
+	}
+	return result, nil
+}
+
+func (s *Server) resourcesList() map[string]interface{} {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	resources := make([]map[string]interface{}, 0, len(s.resources))
+	for _, r := range s.resources {
+		resources = append(resources, map[string]interface{}{
+			"uri":         r.URI,
+			"name":        r.Name,
+			"description": r.Description,
+			"mimeType":    AppsMimeType,
+		})
+	}
+	return map[string]interface{}{"resources": resources}
+}
+
+func (s *Server) resourcesRead(params json.RawMessage) (interface{}, error) {
+	var p struct {
+		URI string `json:"uri"`
+	}
+	if err := json.Unmarshal(params, &p); err != nil {
+		return nil, fmt.Errorf("invalid resources/read params: %w", err)
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, r := range s.resources {
+		if r.URI == p.URI {
+			entry := map[string]interface{}{
+				"uri":      r.URI,
+				"mimeType": AppsMimeType,
+				"text":     r.HTML,
+			}
+			return map[string]interface{}{
+				"contents": []map[string]interface{}{entry},
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("unknown resource: %s", p.URI)
+}

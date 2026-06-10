@@ -1,0 +1,9 @@
+{
+  "id": "ecommerce-pro",
+  "name": "E-commerce Pro",
+  "type": "starter",
+  "description": "Storefront backbone: catalog, orders and payments with mail, storage and background jobs.",
+  "author": "Kthulu Team",
+  "stars": 54,
+  "icon": "ShoppingCart"
+}

@@ -1,3 +1,9 @@
-name: "Base API"
-template: "base-api"
-modules: ["auth", "ai"]
+name: baseapi
+description: "Minimal JSON API with auth and users."
+template: microservice
+database: sqlite
+frontend: none
+auth: jwt
+features:
+  - auth
+  - user

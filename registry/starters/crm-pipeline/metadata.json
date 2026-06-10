@@ -1,0 +1,9 @@
+{
+  "id": "crm-pipeline",
+  "name": "CRM Pipeline",
+  "type": "starter",
+  "description": "Sales CRM: companies, contacts, deals and activities with an event bus and mail.",
+  "author": "Kthulu Team",
+  "stars": 38,
+  "icon": "Users"
+}

@@ -1,18 +1,89 @@
+// Package tools defines the MCP tools exposed by {{ .ProjectName }}.
+//
+// Tools with a UIResource render an interactive MCP App (HTML view) in
+// compliant hosts such as Claude or ChatGPT. The view receives the tool's
+// structuredContent via ui/notifications/tool-result and can call tools
+// back through standard tools/call requests.
 package tools
 
 import (
 	"context"
+	_ "embed"
+	"encoding/json"
 	"fmt"
-	"github.com/metoro-io/mcp-golang"
+	"runtime"
+	"time"
+
+	"{{ .ModulePath }}/internal/mcp"
 )
 
-// HelloArguments defines the schema for the hello tool
-type HelloArguments struct {
-	Name string `json:"name" jsonschema:"description=The name to greet"`
+//go:embed ui/dashboard.html
+var dashboardHTML string
+
+// DashboardURI is the ui:// resource backing the status dashboard app.
+const DashboardURI = "ui://{{ .ProjectName }}/dashboard"
+
+var startedAt = time.Now()
+
+// Register wires every tool and UI resource into the server.
+func Register(server *mcp.Server) {
+	server.RegisterUIResource(&mcp.UIResource{
+		URI:         DashboardURI,
+		Name:        "Status Dashboard",
+		Description: "Interactive status dashboard for {{ .ProjectName }}",
+		HTML:        dashboardHTML,
+	})
+
+	server.RegisterTool(&mcp.Tool{
+		Name:        "get_status",
+		Description: "Get the live status of {{ .ProjectName }}. Renders an interactive dashboard in hosts that support MCP Apps.",
+		InputSchema: map[string]interface{}{
+			"type":       "object",
+			"properties": map[string]interface{}{},
+		},
+		UIResource: DashboardURI,
+		Handler:    handleGetStatus,
+	})
+
+	server.RegisterTool(&mcp.Tool{
+		Name:        "hello",
+		Description: "Say hello to someone.",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"name": map[string]interface{}{
+					"type":        "string",
+					"description": "The name to greet",
+				},
+			},
+			"required": []string{"name"},
+		},
+		Handler: handleHello,
+	})
 }
 
-// HelloHandler implements the hello tool logic
-func HelloHandler(ctx context.Context, args HelloArguments) (*mcp_golang.ToolResponse, error) {
-	message := fmt.Sprintf("Hello, %s!", args.Name)
-	return mcp_golang.NewToolResponse(mcp_golang.NewTextContent(message)), nil
+func handleGetStatus(ctx context.Context, _ json.RawMessage) (*mcp.CallToolResult, error) {
+	status := map[string]interface{}{
+		"server":     "{{ .ProjectName }}",
+		"status":     "online",
+		"uptime":     time.Since(startedAt).Round(time.Second).String(),
+		"go_version": runtime.Version(),
+		"goroutines": runtime.NumGoroutine(),
+		"time":       time.Now().UTC().Format(time.RFC3339),
+	}
+	summary := fmt.Sprintf("%s is online (uptime %s)", "{{ .ProjectName }}", status["uptime"])
+	return mcp.StructuredResult(summary, status), nil
+}
+
+func handleHello(ctx context.Context, arguments json.RawMessage) (*mcp.CallToolResult, error) {
+	var args struct {
+		Name string `json:"name"`
+	}
+	if err := json.Unmarshal(arguments, &args); err != nil {
+		return nil, fmt.Errorf("invalid arguments: %w", err)
+	}
+	if args.Name == "" {
+		args.Name = "world"
+	}
+	return mcp.TextResult(fmt.Sprintf("Hello, %s!", args.Name)), nil
 }

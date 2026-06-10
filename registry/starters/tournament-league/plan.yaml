@@ -1,0 +1,36 @@
+name: tournamentleague
+description: "Complete tournament management: teams, players, fixtures and standings with background jobs."
+template: microservice
+database: sqlite
+frontend: templ
+auth: jwt
+features:
+  - auth
+  - user
+  - queues
+modules:
+  tournament:
+    fields:
+      - title:string:required,min=3
+      - starts_at:time
+      - max_teams:int:min=2
+      - status:string:oneof=draft|open|running|finished
+  team:
+    fields:
+      - name:string:required
+      - city:string
+      - wins:int
+      - losses:int
+  player:
+    fields:
+      - name:string:required
+      - email:string:email
+      - number:int:min=1,max=99
+      - squad:belongs_to:team
+  match:
+    fields:
+      - played_at:time
+      - home_score:int
+      - away_score:int
+      - home:belongs_to:team
+      - away:belongs_to:team
