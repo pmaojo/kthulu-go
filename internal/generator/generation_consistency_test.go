@@ -267,3 +267,46 @@ func TestGenerateProject_MailAndStorage(t *testing.T) {
 		assert.NotContains(t, f.Path, "modules/storage/", "storage must not be generated as a CRUD module")
 	}
 }
+
+// TestGenerateProject_InfraCatalog guards the catalog-driven infrastructure
+// runtimes (cache, events, i18n, policy, rate, seeder, session, validate).
+func TestGenerateProject_InfraCatalog(t *testing.T) {
+	gen := NewTemplateGenerator(resolver.NewDependencyResolver(&parser.ProjectAnalysis{
+		Modules:      make(map[string]*parser.Module),
+		Dependencies: []parser.Dependency{},
+	}))
+
+	structure, err := gen.GenerateProject(&GeneratorConfig{
+		ProjectName:   "kitchen",
+		ProjectModule: "github.com/example/kitchen",
+		TemplateType:  "server",
+		Database:      "sqlite",
+		Auth:          "jwt",
+		Frontend:      "templ",
+		Features:      []string{"auth", "user", "cache", "events", "i18n", "policy", "rate", "seeder", "session", "validate"},
+		CustomValues:  map[string]string{"module_path": "github.com/example/kitchen"},
+	})
+	require.NoError(t, err)
+
+	for _, name := range []string{"cache", "events", "i18n", "policy", "rate", "seeder", "session", "validate"} {
+		findFile(t, structure, "internal/infrastructure/"+name+"/"+name+".go")
+		for _, f := range structure.Files {
+			assert.NotContains(t, f.Path, "modules/"+name+"/", name+" must not be generated as a CRUD module")
+		}
+	}
+
+	bootstrap := findFile(t, structure, "pkg/bootstrap/app.go")
+	for _, provider := range []string{
+		"fx.Provide(cache.NewCache)",
+		"fx.Provide(events.NewEventBus)",
+		"fx.Provide(i18n.NewTranslator)",
+		"fx.Provide(policy.NewGate)",
+		"fx.Provide(rate.NewRateLimiter)",
+		"fx.Provide(seeder.NewSeeder)",
+		"fx.Provide(session.NewSessionStore)",
+		"fx.Provide(session.NewManager)",
+		"fx.Provide(validate.NewValidator)",
+	} {
+		assert.Contains(t, bootstrap, provider)
+	}
+}

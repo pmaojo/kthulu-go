@@ -3,6 +3,8 @@ package scheduler
 
 import (
 	"context"
+
+	"go.uber.org/fx"
 	"fmt"
 	"log"
 	"sync"
@@ -200,6 +202,3 @@ func StartScheduler(lc fx.Lifecycle, s *Scheduler) {
 		},
 	})
 }
-
-// fx import for lifecycle
-import "go.uber.org/fx"

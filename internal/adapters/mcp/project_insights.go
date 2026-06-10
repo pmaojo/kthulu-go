@@ -30,7 +30,7 @@ func NewProjectInsightsService(p *parser.TagParser) *ProjectInsightsService {
 // OverviewTool returns a tool that summarizes the project.
 func (s *ProjectInsightsService) OverviewTool(projectPath string) RegisteredTool {
 	handler := func(ctx context.Context, _ projectInsightArgs) (*mcp_golang.ToolResponse, error) {
-		overview, err := s.BuildOverview(projectPath)
+		overview, err := s.BuildOverview(resolveWorkdir(projectPath))
 		if err != nil {
 			return nil, err
 		}
@@ -44,7 +44,7 @@ func (s *ProjectInsightsService) OverviewTool(projectPath string) RegisteredTool
 // ModulesTool returns a tool that lists modules, packages, files, and dependencies.
 func (s *ProjectInsightsService) ModulesTool(projectPath string) RegisteredTool {
 	handler := func(ctx context.Context, _ projectInsightArgs) (*mcp_golang.ToolResponse, error) {
-		description, err := s.DescribeModules(projectPath)
+		description, err := s.DescribeModules(resolveWorkdir(projectPath))
 		if err != nil {
 			return nil, err
 		}
@@ -58,7 +58,7 @@ func (s *ProjectInsightsService) ModulesTool(projectPath string) RegisteredTool 
 // TagsTool returns a tool that summarizes tag types across the project.
 func (s *ProjectInsightsService) TagsTool(projectPath string) RegisteredTool {
 	handler := func(ctx context.Context, _ projectInsightArgs) (*mcp_golang.ToolResponse, error) {
-		description, err := s.DescribeTags(projectPath)
+		description, err := s.DescribeTags(resolveWorkdir(projectPath))
 		if err != nil {
 			return nil, err
 		}
@@ -72,7 +72,7 @@ func (s *ProjectInsightsService) TagsTool(projectPath string) RegisteredTool {
 // DependenciesTool returns a tool that lists module dependency edges.
 func (s *ProjectInsightsService) DependenciesTool(projectPath string) RegisteredTool {
 	handler := func(ctx context.Context, _ projectInsightArgs) (*mcp_golang.ToolResponse, error) {
-		description, err := s.DescribeDependencies(projectPath)
+		description, err := s.DescribeDependencies(resolveWorkdir(projectPath))
 		if err != nil {
 			return nil, err
 		}

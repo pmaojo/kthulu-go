@@ -128,6 +128,12 @@ How to use:
 
 The tool will automatically resolve dependencies, create the folder structure,
 and prepare your development environment.
+
+IMPORTANT — entity fields: features without declared fields default to a
+single 'name' column. For real applications declare every entity's fields
+through a plan file (modules.<name>.fields with name:type[:rules] syntax)
+and pass --from-plan, or use the MCP scaffold_project tool which takes the
+domain model as structured data.
 `,
 	Args: cobra.ExactArgs(1),
 	Run:  runNewProjectIntelligent,
@@ -145,6 +151,7 @@ var (
 	newNoVercel        bool
 	newOutputPath      string
 	newDryRun          bool
+	newSkipPostgen     bool
 	newInteractive     bool
 	newFromPlan        string
 	newModuleFields    map[string][]string
@@ -168,6 +175,7 @@ func init() {
 	newCmd.Flags().BoolVar(&newNoVercel, "no-vercel", false, "Skip Vercel deployment files")
 	newCmd.Flags().StringVarP(&newOutputPath, "output", "o", "", "Output directory (default: current directory)")
 	newCmd.Flags().BoolVar(&newDryRun, "dry-run", false, "Show what would be generated without creating files")
+	newCmd.Flags().BoolVar(&newSkipPostgen, "skip-postgen", false, "Skip templ generate, go mod tidy and go test after generation (fast mode; default in MCP)")
 	newCmd.Flags().BoolVar(&newInteractive, "interactive", false, "Interactive project configuration")
 	newCmd.Flags().StringVar(&newFromPlan, "from-plan", "", "Create project from plan file")
 
@@ -264,6 +272,23 @@ func runNewProjectIntelligent(cmd *cobra.Command, args []string) {
 		} else {
 			fmt.Println("   📄 Copied plan file to project root")
 		}
+	}
+
+	// Steps 8-9 (templ generate, go mod tidy, go test) download module
+	// dependencies and can take minutes on a cold cache. Skip them when
+	// requested or when driven through MCP, where client tool calls have
+	// short timeouts — the agent can run the printed commands itself.
+	if newSkipPostgen || os.Getenv("KTHULU_MCP_MODE") == "1" {
+		fmt.Println("\n⏩ Skipping post-generation steps (templ generate, go mod tidy, go test).")
+		fmt.Println("   Finish setup with:")
+		fmt.Printf("     cd %s\n", structure.RootPath)
+		if config.Frontend == "templ" {
+			fmt.Println("     go run github.com/a-h/templ/cmd/templ@v0.3.977 generate ./...")
+		}
+		fmt.Println("     go mod tidy")
+		fmt.Println("     go test ./...")
+		displaySuccessMessage(projectName, config, structure)
+		return
 	}
 
 	// Step 8: Run templ generate first so view packages contain Go files

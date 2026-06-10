@@ -93,7 +93,7 @@ type FrontendField struct {
 
 // ParseFrontendFields converts CLI field strings (field:type) to FrontendField structs
 func ParseFrontendFields(rawFields []string) []FrontendField {
-	fields := make([]FrontendField, 0, len(rawFields) )
+	fields := make([]FrontendField, 0, len(rawFields))
 	for _, f := range rawFields {
 		parts := strings.Split(f, ":")
 		if len(parts) < 2 {

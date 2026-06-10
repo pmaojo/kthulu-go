@@ -405,7 +405,7 @@ func resolveWorkspacePath(workingDir, path string) (string, error) {
 	if filepath.IsAbs(path) {
 		return filepath.Clean(path), nil
 	}
-	return filepath.Clean(filepath.Join(workingDir, path)), nil
+	return filepath.Clean(filepath.Join(resolveWorkdir(workingDir), path)), nil
 }
 
 // shouldSkipDir reports whether a directory is noise for listing/search/AST walks.

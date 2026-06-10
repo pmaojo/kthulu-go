@@ -52,7 +52,7 @@ func (s *SearchService) codeSearchTool(workingDir string) RegisteredTool {
 		Name:        "code_search",
 		Description: "Search file contents with a regular expression. Returns path:line: text matches with optional context lines. Skips binary files and build/VCS directories.",
 		Handler: func(ctx context.Context, args CodeSearchArgs) (*mcp_golang.ToolResponse, error) {
-			result, err := s.CodeSearch(workingDir, args)
+			result, err := s.CodeSearch(resolveWorkdir(workingDir), args)
 			if err != nil {
 				return nil, err
 			}
@@ -66,7 +66,7 @@ func (s *SearchService) fileGlobTool(workingDir string) RegisteredTool {
 		Name:        "file_glob",
 		Description: "Find files by glob pattern. Supports ** for recursive matching, e.g. **/*_test.go.",
 		Handler: func(ctx context.Context, args FileGlobArgs) (*mcp_golang.ToolResponse, error) {
-			result, err := s.FileGlob(workingDir, args)
+			result, err := s.FileGlob(resolveWorkdir(workingDir), args)
 			if err != nil {
 				return nil, err
 			}

@@ -49,7 +49,7 @@ func (s *GoTestService) testTool(workingDir string) RegisteredTool {
 		Name:        "go_test",
 		Description: "Run Go tests natively with go test. Supports -run filters, race detector, coverage, and timeouts. Failures are returned as output rather than errors so results stay inspectable.",
 		Handler: func(ctx context.Context, args GoTestArgs) (*mcp_golang.ToolResponse, error) {
-			result, err := s.RunTests(ctx, workingDir, args)
+			result, err := s.RunTests(ctx, resolveWorkdir(workingDir), args)
 			if err != nil {
 				return nil, err
 			}
@@ -63,7 +63,7 @@ func (s *GoTestService) buildTool(workingDir string) RegisteredTool {
 		Name:        "go_build",
 		Description: "Compile Go packages with go build and report any compilation errors.",
 		Handler: func(ctx context.Context, args GoPackagesArgs) (*mcp_golang.ToolResponse, error) {
-			result, err := s.runGo(ctx, workingDir, "build", normalizePackages(args.Packages))
+			result, err := s.runGo(ctx, resolveWorkdir(workingDir), "build", normalizePackages(args.Packages))
 			if err != nil {
 				return nil, err
 			}
@@ -77,7 +77,7 @@ func (s *GoTestService) vetTool(workingDir string) RegisteredTool {
 		Name:        "go_vet",
 		Description: "Run go vet static analysis on Go packages and report findings.",
 		Handler: func(ctx context.Context, args GoPackagesArgs) (*mcp_golang.ToolResponse, error) {
-			result, err := s.runGo(ctx, workingDir, "vet", normalizePackages(args.Packages))
+			result, err := s.runGo(ctx, resolveWorkdir(workingDir), "vet", normalizePackages(args.Packages))
 			if err != nil {
 				return nil, err
 			}

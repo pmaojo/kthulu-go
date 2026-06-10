@@ -37,8 +37,8 @@ func NewBinaryCommandExecutor(binaryPath string, env ...string) *BinaryCommandEx
 // Run executes the kthulu binary with the provided arguments.
 func (e *BinaryCommandExecutor) Run(ctx context.Context, workingDir string, args []string) (CommandResult, error) {
 	cmd := exec.CommandContext(ctx, e.binaryPath, args...)
-	if workingDir != "" {
-		cmd.Dir = workingDir
+	if dir := resolveWorkdir(workingDir); dir != "" {
+		cmd.Dir = dir
 	}
 	if len(e.extraEnv) > 0 {
 		cmd.Env = append(os.Environ(), e.extraEnv...)

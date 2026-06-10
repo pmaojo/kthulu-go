@@ -68,7 +68,7 @@ func (s *GoASTService) outlineTool(workingDir string) RegisteredTool {
 		Name:        "go_outline",
 		Description: "Parse a Go file or package directory and list its symbols (functions, methods, types, consts, vars) with signatures and line numbers.",
 		Handler: func(ctx context.Context, args GoOutlineArgs) (*mcp_golang.ToolResponse, error) {
-			outline, err := s.Outline(workingDir, args)
+			outline, err := s.Outline(resolveWorkdir(workingDir), args)
 			if err != nil {
 				return nil, err
 			}
@@ -82,7 +82,7 @@ func (s *GoASTService) findSymbolTool(workingDir string) RegisteredTool {
 		Name:        "go_find_symbol",
 		Description: "Find Go symbols by name across the whole project. Returns kind, signature, and file:line for each match.",
 		Handler: func(ctx context.Context, args GoFindSymbolArgs) (*mcp_golang.ToolResponse, error) {
-			result, err := s.FindSymbol(workingDir, args)
+			result, err := s.FindSymbol(resolveWorkdir(workingDir), args)
 			if err != nil {
 				return nil, err
 			}
@@ -96,7 +96,7 @@ func (s *GoASTService) symbolSourceTool(workingDir string) RegisteredTool {
 		Name:        "go_symbol_source",
 		Description: "Extract the exact source code (including doc comment) of a named Go symbol from a file or the whole project.",
 		Handler: func(ctx context.Context, args GoSymbolSourceArgs) (*mcp_golang.ToolResponse, error) {
-			result, err := s.SymbolSource(workingDir, args)
+			result, err := s.SymbolSource(resolveWorkdir(workingDir), args)
 			if err != nil {
 				return nil, err
 			}

@@ -35,7 +35,7 @@ func (s *ShellService) ExecuteTool(workingDir string) RegisteredTool {
 			}
 
 			cmd := exec.CommandContext(ctx, "sh", "-c", cmdStr)
-			cmd.Dir = workingDir
+			cmd.Dir = resolveWorkdir(workingDir)
 			out, err := cmd.CombinedOutput()
 
 			output := string(out)
