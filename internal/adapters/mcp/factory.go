@@ -22,6 +22,10 @@ func (f *ToolFactory) BuildTools(workingDir string, filter CommandFilter) []Regi
 	tools := BuildCommandTools(f.root, f.executor, workingDir, filter)
 
 	guide := NewGuideTaggingService(f.parser)
+	// Session working-directory tools so agents can retarget the session
+	// at a project they just scaffolded.
+	tools = append(tools, WorkdirTools(workingDir)...)
+
 	tools = append(tools, guide.Tool(workingDir))
 
 	insights := NewProjectInsightsService(f.parser)

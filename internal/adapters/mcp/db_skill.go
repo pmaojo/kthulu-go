@@ -76,7 +76,7 @@ func (s *DatabaseService) queryTool(workingDir string) RegisteredTool {
 
 // Schema introspects the database schema.
 func (s *DatabaseService) Schema(ctx context.Context, workingDir string, args DbSchemaArgs) (string, error) {
-	db, driver, err := s.open(workingDir, args.Driver, args.DSN)
+	db, driver, err := s.open(resolveWorkdir(workingDir), args.Driver, args.DSN)
 	if err != nil {
 		return "", err
 	}
@@ -101,7 +101,7 @@ func (s *DatabaseService) Query(ctx context.Context, workingDir string, args DbQ
 		return "", fmt.Errorf("statement appears to modify data; set allow_write=true to run it")
 	}
 
-	db, _, err := s.open(workingDir, args.Driver, args.DSN)
+	db, _, err := s.open(resolveWorkdir(workingDir), args.Driver, args.DSN)
 	if err != nil {
 		return "", err
 	}

@@ -33,7 +33,7 @@ func (s *GitService) statusTool(workingDir string) RegisteredTool {
 		Name:        "git_status",
 		Description: "Get the current git status of the project",
 		Handler: func(ctx context.Context, _ NoArgs) (*mcp_golang.ToolResponse, error) {
-			return s.runGit(ctx, workingDir, "status")
+			return s.runGit(ctx, resolveWorkdir(workingDir), "status")
 		},
 	}
 }
@@ -43,7 +43,7 @@ func (s *GitService) diffTool(workingDir string) RegisteredTool {
 		Name:        "git_diff",
 		Description: "Get the git diff of the current working tree",
 		Handler: func(ctx context.Context, _ NoArgs) (*mcp_golang.ToolResponse, error) {
-			return s.runGit(ctx, workingDir, "diff")
+			return s.runGit(ctx, resolveWorkdir(workingDir), "diff")
 		},
 	}
 }
@@ -57,7 +57,7 @@ func (s *GitService) logTool(workingDir string) RegisteredTool {
 			if count == 0 {
 				count = 10
 			}
-			return s.runGit(ctx, workingDir, "log", fmt.Sprintf("-%d", count), "--oneline")
+			return s.runGit(ctx, resolveWorkdir(workingDir), "log", fmt.Sprintf("-%d", count), "--oneline")
 		},
 	}
 }

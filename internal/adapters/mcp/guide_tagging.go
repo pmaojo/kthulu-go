@@ -36,9 +36,9 @@ func NewGuideTaggingService(p *parser.TagParser) *GuideTaggingService {
 // Tool returns the MCP tool registration for the guide_tagging tool.
 func (s *GuideTaggingService) Tool(projectPath string) RegisteredTool {
 	handler := func(ctx context.Context, args TaggingGuideArguments) (*mcp_golang.ToolResponse, error) {
-		target := projectPath
+		target := resolveWorkdir(projectPath)
 		if args.Focus != "" {
-			target = filepath.Join(projectPath, args.Focus)
+			target = filepath.Join(target, args.Focus)
 		}
 
 		guide, err := s.BuildGuide(target)

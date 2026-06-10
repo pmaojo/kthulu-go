@@ -14,9 +14,11 @@ import (
 
 	"github.com/pmaojo/kthulu-go/internal/blueprint"
 
-	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/jackc/pgx/v5/stdlib"
-	_ "modernc.org/sqlite"
+	// Database drivers registered for database/sql so the console can
+	// connect to any database a generated project uses.
+	_ "github.com/go-sql-driver/mysql" // mysql driver
+	_ "github.com/jackc/pgx/v5/stdlib" // postgres driver (pgx)
+	_ "modernc.org/sqlite"             // sqlite driver (CGO-free)
 )
 
 var (
@@ -46,7 +48,7 @@ Commands:
 var consoleCmd = &cobra.Command{
 	Use:   "console",
 	Short: "🔮 Interactive database console for your project (tinker equivalent)",
-	Long: consoleHelp,
+	Long:  consoleHelp,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		driver, dsn, err := resolveConsoleDB()
 		if err != nil {
@@ -102,36 +104,55 @@ func init() {
 // project blueprint plus standard env vars, then the default SQLite path.
 func resolveConsoleDB() (driver, dsn string, err error) {
 	if consoleDSN != "" {
-		driver = consoleDriver
-		if driver == "" {
-			driver = "sqlite"
-		}
-		if driver == "postgres" {
-			driver = "pgx"
-		}
-		return driver, consoleDSN, nil
+		return explicitConsoleDriver(), consoleDSN, nil
 	}
 
 	if url := os.Getenv("DATABASE_URL"); url != "" {
 		return "pgx", url, nil
 	}
 
-	dbType := "sqlite"
-	projectName := "app"
-	if data, readErr := os.ReadFile("kthulu-plan.yaml"); readErr == nil {
-		var bp blueprint.ProjectBlueprint
-		if yamlErr := yaml.Unmarshal(data, &bp); yamlErr == nil {
-			if bp.Database != "" {
-				dbType = bp.Database
-			}
-			if bp.Name != "" {
-				projectName = bp.Name
-			}
-		}
-	} else if cwd, cwdErr := os.Getwd(); cwdErr == nil {
-		projectName = filepath.Base(cwd)
-	}
+	dbType, projectName := projectDBSettings()
+	return buildConsoleDSN(dbType, projectName)
+}
 
+// explicitConsoleDriver normalizes the --driver flag for database/sql.
+func explicitConsoleDriver() string {
+	switch consoleDriver {
+	case "":
+		return "sqlite"
+	case "postgres":
+		return "pgx"
+	default:
+		return consoleDriver
+	}
+}
+
+// projectDBSettings reads the database type and project name from
+// kthulu-plan.yaml, falling back to sqlite and the directory name.
+func projectDBSettings() (dbType, projectName string) {
+	dbType, projectName = "sqlite", "app"
+	data, err := os.ReadFile("kthulu-plan.yaml")
+	if err != nil {
+		if cwd, cwdErr := os.Getwd(); cwdErr == nil {
+			projectName = filepath.Base(cwd)
+		}
+		return dbType, projectName
+	}
+	var bp blueprint.ProjectBlueprint
+	if yaml.Unmarshal(data, &bp) == nil {
+		if bp.Database != "" {
+			dbType = bp.Database
+		}
+		if bp.Name != "" {
+			projectName = bp.Name
+		}
+	}
+	return dbType, projectName
+}
+
+// buildConsoleDSN assembles the DSN for the project database from standard
+// environment variables, mirroring the generated app's providers.
+func buildConsoleDSN(dbType, projectName string) (driver, dsn string, err error) {
 	envOr := func(key, fallback string) string {
 		if v := os.Getenv(key); v != "" {
 			return v
@@ -194,44 +215,13 @@ func (c *console) dispatch(line string) error {
 	case "tables":
 		return c.tables()
 	case "schema":
-		if len(args) != 1 {
-			return fmt.Errorf("usage: schema <table>")
-		}
-		return c.schema(args[0])
+		return c.cmdSchema(args)
 	case "list", "all":
-		if len(args) < 1 {
-			return fmt.Errorf("usage: list <table> [limit]")
-		}
-		limit := "20"
-		if len(args) > 1 {
-			limit = args[1]
-		}
-		if !regexp.MustCompile(`^\d+$`).MatchString(limit) {
-			return fmt.Errorf("limit must be a number")
-		}
-		table, err := c.ident(args[0])
-		if err != nil {
-			return err
-		}
-		return c.query(fmt.Sprintf("SELECT * FROM %s LIMIT %s", table, limit))
+		return c.cmdList(args)
 	case "find":
-		if len(args) != 2 {
-			return fmt.Errorf("usage: find <table> <id>")
-		}
-		table, err := c.ident(args[0])
-		if err != nil {
-			return err
-		}
-		return c.queryArgs(fmt.Sprintf("SELECT * FROM %s WHERE id = %s", table, c.placeholder(1)), args[1])
+		return c.cmdFind(args)
 	case "count":
-		if len(args) != 1 {
-			return fmt.Errorf("usage: count <table>")
-		}
-		table, err := c.ident(args[0])
-		if err != nil {
-			return err
-		}
-		return c.query(fmt.Sprintf("SELECT COUNT(*) AS count FROM %s", table))
+		return c.cmdCount(args)
 	case "create":
 		if len(args) < 2 {
 			return fmt.Errorf("usage: create <table> col=val ...")
@@ -243,27 +233,85 @@ func (c *console) dispatch(line string) error {
 		}
 		return c.update(args[0], args[1], args[2:])
 	case "delete":
-		if len(args) != 2 {
-			return fmt.Errorf("usage: delete <table> <id>")
-		}
-		table, err := c.ident(args[0])
-		if err != nil {
-			return err
-		}
-		return c.exec(fmt.Sprintf("DELETE FROM %s WHERE id = %s", table, c.placeholder(1)), args[1])
+		return c.cmdDelete(args)
 	case "sql":
-		stmt := strings.TrimSpace(strings.TrimPrefix(line, cmd))
-		if stmt == "" {
-			return fmt.Errorf("usage: sql <statement>")
-		}
-		lowered := strings.ToLower(stmt)
-		if strings.HasPrefix(lowered, "select") || strings.HasPrefix(lowered, "show") || strings.HasPrefix(lowered, "pragma") || strings.HasPrefix(lowered, "explain") {
-			return c.query(stmt)
-		}
-		return c.exec(stmt)
+		return c.cmdSQL(strings.TrimSpace(strings.TrimPrefix(line, cmd)))
 	default:
 		return fmt.Errorf("unknown command %q (try 'help')", cmd)
 	}
+}
+
+func (c *console) cmdSchema(args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("usage: schema <table>")
+	}
+	return c.schema(args[0])
+}
+
+var limitPattern = regexp.MustCompile(`^\d+$`)
+
+func (c *console) cmdList(args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("usage: list <table> [limit]")
+	}
+	limit := "20"
+	if len(args) > 1 {
+		limit = args[1]
+	}
+	if !limitPattern.MatchString(limit) {
+		return fmt.Errorf("limit must be a number")
+	}
+	table, err := c.ident(args[0])
+	if err != nil {
+		return err
+	}
+	return c.query(fmt.Sprintf("SELECT * FROM %s LIMIT %s", table, limit))
+}
+
+func (c *console) cmdFind(args []string) error {
+	if len(args) != 2 {
+		return fmt.Errorf("usage: find <table> <id>")
+	}
+	table, err := c.ident(args[0])
+	if err != nil {
+		return err
+	}
+	return c.queryArgs(fmt.Sprintf("SELECT * FROM %s WHERE id = %s", table, c.placeholder(1)), args[1])
+}
+
+func (c *console) cmdCount(args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("usage: count <table>")
+	}
+	table, err := c.ident(args[0])
+	if err != nil {
+		return err
+	}
+	return c.query(fmt.Sprintf("SELECT COUNT(*) AS count FROM %s", table))
+}
+
+func (c *console) cmdDelete(args []string) error {
+	if len(args) != 2 {
+		return fmt.Errorf("usage: delete <table> <id>")
+	}
+	table, err := c.ident(args[0])
+	if err != nil {
+		return err
+	}
+	return c.exec(fmt.Sprintf("DELETE FROM %s WHERE id = %s", table, c.placeholder(1)), args[1])
+}
+
+func (c *console) cmdSQL(stmt string) error {
+	if stmt == "" {
+		return fmt.Errorf("usage: sql <statement>")
+	}
+	lowered := strings.ToLower(stmt)
+	for _, prefix := range []string{"select", "show", "pragma", "explain"} {
+		if strings.HasPrefix(lowered, prefix) {
+			return c.query(stmt)
+		}
+	}
+	return c.exec(stmt)
 }
 
 func (c *console) tables() error {

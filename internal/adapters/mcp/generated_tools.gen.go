@@ -20,6 +20,7 @@ var GeneratedToolRegistry = map[string]func(Executor CommandExecutor, workingDir
 	"claude":              NewClaudeArgsTool,
 	"coder":               NewCoderArgsTool,
 	"compile":             NewCompileArgsTool,
+	"console":             NewConsoleArgsTool,
 	"create":              NewCreateArgsTool,
 	"debug":               NewDebugArgsTool,
 	"deploy":              NewDeployArgsTool,
@@ -31,6 +32,7 @@ var GeneratedToolRegistry = map[string]func(Executor CommandExecutor, workingDir
 	"marketplace_install": NewMarketplaceInstallArgsTool,
 	"marketplace_list":    NewMarketplaceListArgsTool,
 	"migrate_create":      NewMigrateCreateArgsTool,
+	"migrate_diff":        NewMigrateDiffArgsTool,
 	"migrate_down":        NewMigrateDownArgsTool,
 	"migrate_reset":       NewMigrateResetArgsTool,
 	"migrate_status":      NewMigrateStatusArgsTool,
@@ -384,6 +386,26 @@ func NewCompileArgsTool(executor CommandExecutor, workingDir string) RegisteredT
 	)
 }
 
+// ConsoleArgs defines arguments for the console command.
+type ConsoleArgs struct {
+	Driver string `json:"driver,omitempty" jsonschema:"description=Database driver override: sqlite, postgres, mysql" kthulu:"flag,name=driver"`
+	Dsn    string `json:"dsn,omitempty" jsonschema:"description=Database DSN override (skips auto-discovery)" kthulu:"flag,name=dsn"`
+	Exec   string `json:"exec,omitempty" jsonschema:"description=Run a single console command and exit" kthulu:"flag,name=exec"`
+}
+
+// NewConsoleArgsTool creates a RegisteredTool for console.
+func NewConsoleArgsTool(executor CommandExecutor, workingDir string) RegisteredTool {
+	return NewReflectTool[ConsoleArgs](
+		"console",
+		"🔮 Interactive database console for your project (tinker equivalent)\nUsage: kthulu console [flags]",
+		[]string{
+			"console",
+		},
+		executor,
+		workingDir,
+	)
+}
+
 // CreateArgs defines arguments for the create command.
 type CreateArgs struct {
 	Name          string   `json:"name,omitempty" jsonschema:"description=Positional argument: name" kthulu:"pos,index=0"`
@@ -399,6 +421,7 @@ type CreateArgs struct {
 	NoVercel      bool     `json:"no-vercel,omitempty" jsonschema:"description=Skip Vercel deployment files" kthulu:"flag,name=no-vercel"`
 	Observability bool     `json:"observability,omitempty" jsonschema:"description=Enable observability stack" kthulu:"flag,name=observability"`
 	Output        string   `json:"output,omitempty" jsonschema:"description=Output directory (default: current directory)" kthulu:"flag,name=output"`
+	SkipPostgen   bool     `json:"skip-postgen,omitempty" jsonschema:"description=Skip templ generate, go mod tidy and go test after generation (fast mode; default in MCP)" kthulu:"flag,name=skip-postgen"`
 	Template      string   `json:"template,omitempty" jsonschema:"description=Project template" kthulu:"flag,name=template"`
 }
 
@@ -599,6 +622,26 @@ func NewMigrateCreateArgsTool(executor CommandExecutor, workingDir string) Regis
 		[]string{
 			"migrate",
 			"create",
+		},
+		executor,
+		workingDir,
+	)
+}
+
+// MigrateDiffArgs defines arguments for the migrate_diff command.
+type MigrateDiffArgs struct {
+	DryRun bool   `json:"dry-run,omitempty" jsonschema:"description=Print the migration instead of writing a file" kthulu:"flag,name=dry-run"`
+	Name   string `json:"name,omitempty" jsonschema:"description=Migration name suffix (default schema_diff)" kthulu:"flag,name=name"`
+}
+
+// NewMigrateDiffArgsTool creates a RegisteredTool for migrate_diff.
+func NewMigrateDiffArgsTool(executor CommandExecutor, workingDir string) RegisteredTool {
+	return NewReflectTool[MigrateDiffArgs](
+		"migrate_diff",
+		"Generate a migration from the gap between your entities and the database\nUsage: kthulu migrate diff [flags]",
+		[]string{
+			"migrate",
+			"diff",
 		},
 		executor,
 		workingDir,

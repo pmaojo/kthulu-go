@@ -153,26 +153,7 @@ func parseEntityFile(path string) ([]entityTable, error) {
 		return nil, err
 	}
 
-	// TableName() overrides: map struct name -> table name.
-	tableNames := map[string]string{}
-	for _, decl := range node.Decls {
-		fn, ok := decl.(*ast.FuncDecl)
-		if !ok || fn.Name.Name != "TableName" || fn.Recv == nil || len(fn.Recv.List) == 0 {
-			continue
-		}
-		recv := exprTypeName(fn.Recv.List[0].Type)
-		if recv == "" {
-			continue
-		}
-		ast.Inspect(fn.Body, func(n ast.Node) bool {
-			if ret, ok := n.(*ast.ReturnStmt); ok && len(ret.Results) == 1 {
-				if lit, ok := ret.Results[0].(*ast.BasicLit); ok && lit.Kind == token.STRING {
-					tableNames[recv] = strings.Trim(lit.Value, `"`)
-				}
-			}
-			return true
-		})
-	}
+	tableNames := collectTableNameOverrides(node)
 
 	var tables []entityTable
 	ast.Inspect(node, func(n ast.Node) bool {
@@ -198,50 +179,86 @@ func parseEntityFile(path string) ([]entityTable, error) {
 	return tables, nil
 }
 
+// collectTableNameOverrides maps struct names to the table names returned by
+// their TableName() methods.
+func collectTableNameOverrides(node *ast.File) map[string]string {
+	tableNames := map[string]string{}
+	for _, decl := range node.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || fn.Name.Name != "TableName" || fn.Recv == nil || len(fn.Recv.List) == 0 {
+			continue
+		}
+		recv := exprTypeName(fn.Recv.List[0].Type)
+		if recv == "" {
+			continue
+		}
+		ast.Inspect(fn.Body, func(n ast.Node) bool {
+			ret, ok := n.(*ast.ReturnStmt)
+			if !ok || len(ret.Results) != 1 {
+				return true
+			}
+			if lit, ok := ret.Results[0].(*ast.BasicLit); ok && lit.Kind == token.STRING {
+				tableNames[recv] = strings.Trim(lit.Value, `"`)
+			}
+			return true
+		})
+	}
+	return tableNames
+}
+
 // structColumns derives SQL columns from a struct, or nil if the struct does
 // not look like a persisted entity (no ID field).
 func structColumns(structType *ast.StructType) []entityColumn {
 	var cols []entityColumn
 	hasID := false
 	for _, field := range structType.Fields.List {
-		if len(field.Names) == 0 {
-			continue // embedded
-		}
-		name := field.Names[0].Name
-		if !ast.IsExported(name) {
-			continue
-		}
-
-		gormTag := ""
-		if field.Tag != nil {
-			tag := strings.Trim(field.Tag.Value, "`")
-			gormTag = reflect.StructTag(tag).Get("gorm")
-		}
-		if gormTag == "-" {
-			continue
-		}
-
-		goType := exprTypeName(field.Type)
-		sqlType, ok := goTypeToSQL(goType)
+		col, ok := fieldToColumn(field)
 		if !ok {
-			continue // relations, slices, nested structs
+			continue
 		}
-
-		column := gormColumnName(gormTag)
-		if column == "" {
-			column = toSnake(name)
-		}
-
-		isPK := name == "ID" || strings.Contains(gormTag, "primaryKey")
-		if isPK {
+		if col.IsPK {
 			hasID = true
 		}
-		cols = append(cols, entityColumn{Name: column, SQLType: sqlType, IsPK: isPK})
+		cols = append(cols, col)
 	}
 	if !hasID {
 		return nil
 	}
 	return cols
+}
+
+// fieldToColumn converts one struct field into a SQL column. It reports
+// false for embedded, unexported, ignored and relation fields.
+func fieldToColumn(field *ast.Field) (entityColumn, bool) {
+	if len(field.Names) == 0 {
+		return entityColumn{}, false // embedded
+	}
+	name := field.Names[0].Name
+	if !ast.IsExported(name) {
+		return entityColumn{}, false
+	}
+
+	gormTag := ""
+	if field.Tag != nil {
+		tag := strings.Trim(field.Tag.Value, "`")
+		gormTag = reflect.StructTag(tag).Get("gorm")
+	}
+	if gormTag == "-" {
+		return entityColumn{}, false
+	}
+
+	sqlType, ok := goTypeToSQL(exprTypeName(field.Type))
+	if !ok {
+		return entityColumn{}, false // relations, slices, nested structs
+	}
+
+	column := gormColumnName(gormTag)
+	if column == "" {
+		column = toSnake(name)
+	}
+
+	isPK := name == "ID" || strings.Contains(gormTag, "primaryKey")
+	return entityColumn{Name: column, SQLType: sqlType, IsPK: isPK}, true
 }
 
 func gormColumnName(tag string) string {
@@ -311,48 +328,7 @@ func introspectSchema(db *sql.DB, driver string) (map[string]map[string]bool, er
 	case "mysql":
 		query = "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = DATABASE()"
 	default:
-		// SQLite: list tables, then pragma each.
-		rows, err := db.Query("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'")
-		if err != nil {
-			return nil, err
-		}
-		var names []string
-		for rows.Next() {
-			var name string
-			if err := rows.Scan(&name); err != nil {
-				rows.Close()
-				return nil, err
-			}
-			names = append(names, name)
-		}
-		rows.Close()
-		if err := rows.Err(); err != nil {
-			return nil, err
-		}
-		for _, name := range names {
-			cols := map[string]bool{}
-			crows, err := db.Query(fmt.Sprintf("PRAGMA table_info(%q)", name))
-			if err != nil {
-				return nil, err
-			}
-			for crows.Next() {
-				var cid int
-				var cname, ctype string
-				var notnull, pk int
-				var dflt interface{}
-				if err := crows.Scan(&cid, &cname, &ctype, &notnull, &dflt, &pk); err != nil {
-					crows.Close()
-					return nil, err
-				}
-				cols[strings.ToLower(cname)] = true
-			}
-			crows.Close()
-			if err := crows.Err(); err != nil {
-				return nil, err
-			}
-			schema[strings.ToLower(name)] = cols
-		}
-		return schema, nil
+		return introspectSQLiteSchema(db)
 	}
 
 	rows, err := db.Query(query)
@@ -372,6 +348,60 @@ func introspectSchema(db *sql.DB, driver string) (map[string]map[string]bool, er
 		schema[key][strings.ToLower(column)] = true
 	}
 	return schema, rows.Err()
+}
+
+// introspectSQLiteSchema lists tables via sqlite_master and reads each
+// table's columns with PRAGMA table_info.
+func introspectSQLiteSchema(db *sql.DB) (map[string]map[string]bool, error) {
+	names, err := sqliteTableNames(db)
+	if err != nil {
+		return nil, err
+	}
+	schema := map[string]map[string]bool{}
+	for _, name := range names {
+		cols, err := sqliteTableColumns(db, name)
+		if err != nil {
+			return nil, err
+		}
+		schema[strings.ToLower(name)] = cols
+	}
+	return schema, nil
+}
+
+func sqliteTableNames(db *sql.DB) ([]string, error) {
+	rows, err := db.Query("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var names []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		names = append(names, name)
+	}
+	return names, rows.Err()
+}
+
+func sqliteTableColumns(db *sql.DB, table string) (map[string]bool, error) {
+	rows, err := db.Query(fmt.Sprintf("PRAGMA table_info(%q)", table))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	cols := map[string]bool{}
+	for rows.Next() {
+		var cid, notnull, pk int
+		var cname, ctype string
+		var dflt interface{}
+		if err := rows.Scan(&cid, &cname, &ctype, &notnull, &dflt, &pk); err != nil {
+			return nil, err
+		}
+		cols[strings.ToLower(cname)] = true
+	}
+	return cols, rows.Err()
 }
 
 // diffSchema computes additive Up/Down statements plus advisory notes.

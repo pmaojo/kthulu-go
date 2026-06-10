@@ -35,7 +35,7 @@ func (s *BDDService) ListFeaturesTool(workingDir string) RegisteredTool {
 
 			found := false
 			for _, searchPath := range searchPaths {
-				fullPath := filepath.Join(workingDir, searchPath)
+				fullPath := filepath.Join(resolveWorkdir(workingDir), searchPath)
 				if _, err := os.Stat(fullPath); err == nil {
 					found = true
 					err := filepath.Walk(fullPath, func(path string, info os.FileInfo, err error) error {
@@ -83,7 +83,7 @@ func (s *BDDService) ReadFeatureTool(workingDir string) RegisteredTool {
 				return nil, fmt.Errorf("argument 'path' is required")
 			}
 
-			fullPath := filepath.Join(workingDir, path)
+			fullPath := filepath.Join(resolveWorkdir(workingDir), path)
 			content, err := os.ReadFile(fullPath)
 			if err != nil {
 				return nil, fmt.Errorf("failed to read file %s: %w", path, err)
@@ -110,9 +110,9 @@ func (s *BDDService) RunScenarioTool(workingDir string) RegisteredTool {
 
 			// Determine where the tests are.
 			testPath := "./..."
-			if _, err := os.Stat(filepath.Join(workingDir, "backend/features")); err == nil {
+			if _, err := os.Stat(filepath.Join(resolveWorkdir(workingDir), "backend/features")); err == nil {
 				testPath = "./backend/features/..."
-			} else if _, err := os.Stat(filepath.Join(workingDir, "features")); err == nil {
+			} else if _, err := os.Stat(filepath.Join(resolveWorkdir(workingDir), "features")); err == nil {
 				testPath = "./features/..."
 			}
 
@@ -123,7 +123,7 @@ func (s *BDDService) RunScenarioTool(workingDir string) RegisteredTool {
 			}
 
 			cmd := exec.CommandContext(ctx, "go", cmdArgs...)
-			cmd.Dir = workingDir
+			cmd.Dir = resolveWorkdir(workingDir)
 			cmd.Env = os.Environ()
 
 			output, err := cmd.CombinedOutput()

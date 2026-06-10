@@ -6,13 +6,14 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
-	"time"
 	"text/template"
+	"time"
 
 	"github.com/jinzhu/inflection"
-	"github.com/pmaojo/kthulu-go/internal/resolver"
 	"github.com/pmaojo/kthulu-go/cmd/kthulu/templates"
+	"github.com/pmaojo/kthulu-go/internal/resolver"
 )
 
 const (
@@ -29,8 +30,8 @@ const (
 	PathAdaptersHttpModules = "internal/adapters/http/modules"
 
 	// File paths
-	FileGoMod    = "go.mod"
-	FileReadme   = "README.md"
+	FileGoMod  = "go.mod"
+	FileReadme = "README.md"
 
 	// Error format
 	ErrGenerateFmt = "failed to generate %s: %w"
@@ -83,10 +84,10 @@ const (
 	TmplGTHLandingPage  = "scaffold/frontend/gth/pages/landing.templ.tmpl"
 
 	// Vercel Deployment Templates
-	TmplVercelAPIIndex    = "scaffold/vercel/api_index.go.tmpl"
-	TmplVercelConfig      = "scaffold/vercel/vercel.json.tmpl"
-	TmplVercelDBFactory   = "scaffold/vercel/database_factory.go.tmpl"
-	TmplVercelDBMigrate   = "scaffold/vercel/database_automigrate.go.tmpl"
+	TmplVercelAPIIndex  = "scaffold/vercel/api_index.go.tmpl"
+	TmplVercelConfig    = "scaffold/vercel/vercel.json.tmpl"
+	TmplVercelDBFactory = "scaffold/vercel/database_factory.go.tmpl"
+	TmplVercelDBMigrate = "scaffold/vercel/database_automigrate.go.tmpl"
 )
 
 // TemplateGenerator generates code templates based on dependency analysis
@@ -99,27 +100,108 @@ type TemplateGenerator struct {
 	infra InfraFeatures
 }
 
-// InfraFeatures flags the infrastructure runtimes requested via features.
-type InfraFeatures struct {
-	Queue   bool // queue, queues, jobs, scheduler
-	Mail    bool // mail, mailer
-	Storage bool // storage, files
+// InfraFeatures flags the infrastructure runtimes requested via features,
+// keyed by canonical name (queue, mail, storage, cache, events, i18n,
+// policy, rate, seeder, session, validate).
+type InfraFeatures map[string]bool
+
+// infraAliases maps feature aliases to canonical infrastructure names.
+var infraAliases = map[string]string{
+	"queue": "queue", "queues": "queue", "jobs": "queue", "scheduler": "queue",
+	"mail": "mail", "mailer": "mail",
+	"storage": "storage", "files": "storage",
+	"cache":  "cache",
+	"events": "events", "eventbus": "events",
+	"i18n":   "i18n",
+	"policy": "policy", "gates": "policy",
+	"rate": "rate", "ratelimit": "rate",
+	"seeder": "seeder", "seed": "seeder",
+	"session": "session", "sessions": "session",
+	"validate": "validate", "validation": "validate",
+}
+
+// infraWiring describes how one infrastructure runtime is generated and
+// registered in the fx bootstrap. The queue runtime is wired separately
+// because it also needs lifecycle hooks and the jobs package.
+type infraWiring struct {
+	files     map[string]string // generated path -> template path
+	providers []string          // fx.Provide constructor expressions
+}
+
+var infraCatalog = map[string]infraWiring{
+	"mail": {
+		files: map[string]string{
+			"internal/infrastructure/mail/mailer.go":      "scaffold/backend/internal/infrastructure/mail/mailer.go.tmpl",
+			"internal/infrastructure/mail/mailer_test.go": "scaffold/backend/internal/infrastructure/mail/mailer_test.go.tmpl",
+		},
+		providers: []string{"mail.NewMailer"},
+	},
+	"storage": {
+		files: map[string]string{
+			"internal/infrastructure/storage/storage.go":      "scaffold/backend/internal/infrastructure/storage/storage.go.tmpl",
+			"internal/infrastructure/storage/storage_test.go": "scaffold/backend/internal/infrastructure/storage/storage_test.go.tmpl",
+		},
+		providers: []string{"storage.NewStorage"},
+	},
+	"cache": {
+		files: map[string]string{
+			"internal/infrastructure/cache/cache.go": "scaffold/backend/internal/infrastructure/cache/cache.go.tmpl",
+		},
+		providers: []string{"cache.NewCache"},
+	},
+	"events": {
+		files: map[string]string{
+			"internal/infrastructure/events/events.go": "scaffold/backend/internal/infrastructure/events/events.go.tmpl",
+		},
+		providers: []string{"events.NewEventBus"},
+	},
+	"i18n": {
+		files: map[string]string{
+			"internal/infrastructure/i18n/i18n.go": "scaffold/backend/internal/infrastructure/i18n/i18n.go.tmpl",
+		},
+		providers: []string{"i18n.NewTranslator"},
+	},
+	"policy": {
+		files: map[string]string{
+			"internal/infrastructure/policy/policy.go": "scaffold/backend/internal/infrastructure/policy/policy.go.tmpl",
+		},
+		providers: []string{"policy.NewGate"},
+	},
+	"rate": {
+		files: map[string]string{
+			"internal/infrastructure/rate/rate.go": "scaffold/backend/internal/infrastructure/rate/rate.go.tmpl",
+		},
+		providers: []string{"rate.NewRateLimiter"},
+	},
+	"seeder": {
+		files: map[string]string{
+			"internal/infrastructure/seeder/seeder.go": "scaffold/backend/internal/infrastructure/seeder/seeder.go.tmpl",
+		},
+		providers: []string{"seeder.NewSeeder"},
+	},
+	"session": {
+		files: map[string]string{
+			"internal/infrastructure/session/session.go": "scaffold/backend/internal/infrastructure/session/session.go.tmpl",
+		},
+		providers: []string{"session.NewSessionStore", "session.NewManager"},
+	},
+	"validate": {
+		files: map[string]string{
+			"internal/infrastructure/validate/validate.go": "scaffold/backend/internal/infrastructure/validate/validate.go.tmpl",
+		},
+		providers: []string{"validate.NewValidator"},
+	},
 }
 
 // extractInfraFeatures removes infrastructure feature aliases from the list
 // and reports which runtimes should be generated.
 func extractInfraFeatures(features []string) ([]string, InfraFeatures) {
 	kept := make([]string, 0, len(features))
-	var infra InfraFeatures
+	infra := InfraFeatures{}
 	for _, f := range features {
-		switch strings.ToLower(strings.TrimSpace(f)) {
-		case "queue", "queues", "jobs", "scheduler":
-			infra.Queue = true
-		case "mail", "mailer":
-			infra.Mail = true
-		case "storage", "files":
-			infra.Storage = true
-		default:
+		if canonical, ok := infraAliases[strings.ToLower(strings.TrimSpace(f))]; ok {
+			infra[canonical] = true
+		} else {
 			kept = append(kept, f)
 		}
 	}
@@ -128,16 +210,16 @@ func extractInfraFeatures(features []string) ([]string, InfraFeatures) {
 
 // GeneratorConfig configures the template generation
 type GeneratorConfig struct {
-	ProjectName   string            `json:"project_name"`
-	OutputPath    string            `json:"output_path"`
-	Frontend      string            `json:"frontend"`      // react, templ, fyne, none
-	ProjectModule string            `json:"project_module"`
-	TemplateType  string            `json:"template_type"` // server, cli, mcp
-	Database      string            `json:"database"`      // sqlite, postgres, mysql
-	Auth          string            `json:"auth"`          // jwt, oauth, both
-	Features      []string          `json:"features"`      // modules to include
-	Enterprise    bool              `json:"enterprise"`    // enterprise features
-	Observability bool              `json:"observability"` // monitoring
+	ProjectName     string              `json:"project_name"`
+	OutputPath      string              `json:"output_path"`
+	Frontend        string              `json:"frontend"` // react, templ, fyne, none
+	ProjectModule   string              `json:"project_module"`
+	TemplateType    string              `json:"template_type"`    // server, cli, mcp
+	Database        string              `json:"database"`         // sqlite, postgres, mysql
+	Auth            string              `json:"auth"`             // jwt, oauth, both
+	Features        []string            `json:"features"`         // modules to include
+	Enterprise      bool                `json:"enterprise"`       // enterprise features
+	Observability   bool                `json:"observability"`    // monitoring
 	CustomValues    map[string]string   `json:"custom_values"`    // custom template values
 	ModuleFields    map[string][]string `json:"module_fields"`    // fields for each module
 	FrontendModules []string            `json:"frontend_modules"` // modules that get frontend (from schema 'modules:')
@@ -301,10 +383,10 @@ func (g *TemplateGenerator) GenerateProject(config *GeneratorConfig) (*ProjectSt
 			continue
 		}
 		if len(config.ModuleFields[feature]) == 0 {
-	        if config.ModuleFields == nil {
+			if config.ModuleFields == nil {
 				config.ModuleFields = make(map[string][]string)
 			}
-			
+
 			switch feature {
 			case "product":
 				config.ModuleFields[feature] = []string{FieldNameString, "sku:string", "price:int", "description:text", "stock:int"}
@@ -402,8 +484,6 @@ func (g *TemplateGenerator) generateBaseStructure(structure *ProjectStructure) e
 	}
 	structure.Files = append(structure.Files, bootstrapFile)
 
-
-
 	// Generate main.go
 	mainFile := GeneratedFile{
 		Path:     "cmd/server/main.go",
@@ -458,8 +538,9 @@ func (g *TemplateGenerator) generateBaseStructure(structure *ProjectStructure) e
 		"internal/infrastructure/config/config.go":         TmplInfraConfig,
 	}
 
-	// Queue runtime (background jobs + scheduler)
-	if g.infra.Queue {
+	// Queue runtime (background jobs + scheduler) — wired separately
+	// because it also generates the jobs package and lifecycle hooks.
+	if g.infra["queue"] {
 		structure.Directories = append(structure.Directories,
 			"internal/infrastructure/queue",
 			"internal/jobs",
@@ -469,18 +550,15 @@ func (g *TemplateGenerator) generateBaseStructure(structure *ProjectStructure) e
 		infraFiles["internal/jobs/jobs.go"] = "scaffold/backend/internal/jobs/jobs.go.tmpl"
 	}
 
-	// Mail driver (SMTP + log drivers, env-configured)
-	if g.infra.Mail {
-		structure.Directories = append(structure.Directories, "internal/infrastructure/mail")
-		infraFiles["internal/infrastructure/mail/mailer.go"] = "scaffold/backend/internal/infrastructure/mail/mailer.go.tmpl"
-		infraFiles["internal/infrastructure/mail/mailer_test.go"] = "scaffold/backend/internal/infrastructure/mail/mailer_test.go.tmpl"
-	}
-
-	// Storage driver (local disk driver, env-configured)
-	if g.infra.Storage {
-		structure.Directories = append(structure.Directories, "internal/infrastructure/storage")
-		infraFiles["internal/infrastructure/storage/storage.go"] = "scaffold/backend/internal/infrastructure/storage/storage.go.tmpl"
-		infraFiles["internal/infrastructure/storage/storage_test.go"] = "scaffold/backend/internal/infrastructure/storage/storage_test.go.tmpl"
+	// Catalog-driven infrastructure runtimes (mail, storage, cache, ...).
+	for name, wiring := range infraCatalog {
+		if !g.infra[name] {
+			continue
+		}
+		structure.Directories = append(structure.Directories, "internal/infrastructure/"+name)
+		for path, tmpl := range wiring.files {
+			infraFiles[path] = tmpl
+		}
 	}
 
 	// Generate placeholder static file to prevent go:embed error
@@ -569,8 +647,40 @@ func (g *TemplateGenerator) generateModuleFiles(moduleName string, structure *Pr
 	return nil
 }
 
-// generateMainFile generates the main.go file
-// generateMainFile generates the main.go file
+// sortedInfraNames returns the enabled catalog runtimes in stable order.
+func (g *TemplateGenerator) sortedInfraNames() []string {
+	names := make([]string, 0, len(infraCatalog))
+	for name := range infraCatalog {
+		if g.infra[name] {
+			names = append(names, name)
+		}
+	}
+	sort.Strings(names)
+	return names
+}
+
+// generateInfraImports renders the bootstrap import lines for the enabled
+// catalog-driven infrastructure runtimes.
+func (g *TemplateGenerator) generateInfraImports() string {
+	var imports []string
+	for _, name := range g.sortedInfraNames() {
+		imports = append(imports, fmt.Sprintf("\t\"%s/internal/infrastructure/%s\"", g.modulePath(), name))
+	}
+	return strings.Join(imports, "\n")
+}
+
+// generateInfraProviders renders the fx.Provide lines for the enabled
+// catalog-driven infrastructure runtimes.
+func (g *TemplateGenerator) generateInfraProviders() string {
+	var providers []string
+	for _, name := range g.sortedInfraNames() {
+		for _, ctor := range infraCatalog[name].providers {
+			providers = append(providers, fmt.Sprintf("\t\tfx.Provide(%s),", ctor))
+		}
+	}
+	return strings.Join(providers, "\n")
+}
+
 // generateBootstrapApp generates the bootstrap/app.go file
 func (g *TemplateGenerator) generateBootstrapApp() string {
 	coreImport := g.moduleImportPath("internal/core")
@@ -582,9 +692,9 @@ func (g *TemplateGenerator) generateBootstrapApp() string {
 		"InvokeParams":    g.generateInvokeParams(),
 		"ModuleRoutes":    g.generateModuleRoutes(),
 		"GTHEnabled":      g.config.Frontend != "none",
-		"QueueEnabled":    g.infra.Queue,
-		"MailEnabled":     g.infra.Mail,
-		"StorageEnabled":  g.infra.Storage,
+		"QueueEnabled":    g.infra["queue"],
+		"InfraImports":    g.generateInfraImports(),
+		"InfraProviders":  g.generateInfraProviders(),
 		"FeatureList":     g.config.Features,
 	}
 
@@ -611,7 +721,6 @@ func (g *TemplateGenerator) generateMainFile() string {
 	}
 	return content
 }
-
 
 // generateGoMod generates the go.mod file
 func (g *TemplateGenerator) generateGoMod() string {
@@ -852,9 +961,9 @@ func (g *TemplateGenerator) GenerateDomainFile(name string, fields []BackendFiel
 func (g *TemplateGenerator) GenerateRepositoryFile(name string) string {
 	relPath := g.getModuleRelPath()
 	data := map[string]interface{}{
-		"Name":         name,
-		"Title":        Capitalize(inflection.Singular(name)),
-		"CoreImport":   g.moduleImportPath(relPath, name, "core"),
+		"Name":       name,
+		"Title":      Capitalize(inflection.Singular(name)),
+		"CoreImport": g.moduleImportPath(relPath, name, "core"),
 	}
 
 	content, err := g.executeTemplate("repository", TmplLayerRepo, data)
@@ -868,10 +977,10 @@ func (g *TemplateGenerator) GenerateRepositoryFile(name string) string {
 func (g *TemplateGenerator) GenerateServiceFile(name string) string {
 	relPath := g.getModuleRelPath()
 	data := map[string]interface{}{
-		"Name":         name,
-		"Title":        Capitalize(inflection.Singular(name)),
-		"PluralTitle":  Pluralize(Capitalize(name)),
-		"CoreImport":   g.moduleImportPath(relPath, name, "core"),
+		"Name":        name,
+		"Title":       Capitalize(inflection.Singular(name)),
+		"PluralTitle": Pluralize(Capitalize(name)),
+		"CoreImport":  g.moduleImportPath(relPath, name, "core"),
 	}
 
 	content, err := g.executeTemplate("service", TmplLayerService, data)
@@ -905,7 +1014,7 @@ func (g *TemplateGenerator) GenerateBackendModule(moduleName string, fields []st
 	fmt.Printf("  📦 Generating backend module: %s\n", moduleName)
 
 	backendFields := ParseBackendFields(fields)
-	
+
 	// Collect imports
 	imports := make([]string, 0)
 	seenImports := make(map[string]bool)
@@ -938,14 +1047,14 @@ func (g *TemplateGenerator) GenerateBackendModule(moduleName string, fields []st
 	}
 
 	files := make(map[string]string)
-	
+
 	// Core layers
 	layers := map[string]string{
-		"module.go":                             "scaffold/backend/module.go.tmpl",
-		"core/" + moduleName + ".go":            TmplLayerCore,
-		"store/" + moduleName + "_store.go":     TmplLayerStore,
-		"core/" + moduleName + "_service.go":    TmplLayerService,
-		"api/" + moduleName + "_handler.go":     TmplLayerHandler,
+		"module.go":                          "scaffold/backend/module.go.tmpl",
+		"core/" + moduleName + ".go":         TmplLayerCore,
+		"store/" + moduleName + "_store.go":  TmplLayerStore,
+		"core/" + moduleName + "_service.go": TmplLayerService,
+		"api/" + moduleName + "_handler.go":  TmplLayerHandler,
 	}
 
 	for relPath, tmplPath := range layers {
@@ -969,6 +1078,7 @@ func (g *TemplateGenerator) GenerateBackendModule(moduleName string, fields []st
 
 	return files, migrationContent, nil
 }
+
 // generateGTHFrontend generates GTH (Go+Templ+HTMX) frontend structure
 func (g *TemplateGenerator) generateGTHFrontend(structure *ProjectStructure) error {
 	fmt.Println("  🎨 Setting up GTH (Go+Templ+HTMX) frontend...")
@@ -1062,7 +1172,6 @@ func (g *TemplateGenerator) generateGTHFrontend(structure *ProjectStructure) err
 		Path:    "internal/adapters/http/gth/routes.go",
 		Content: routesContent,
 	})
-
 
 	// Generate module-specific views
 	for _, feature := range g.config.Features {
@@ -1173,7 +1282,7 @@ func (g *TemplateGenerator) generateBuildScripts(structure *ProjectStructure) er
 		Template: TmplDockerfile,
 		Content:  g.generateDockerfile(),
 	}
-		structure.Files = append(structure.Files, dockerFile)
+	structure.Files = append(structure.Files, dockerFile)
 
 	// Generate build script
 	buildScript := GeneratedFile{
@@ -1414,7 +1523,7 @@ func (g *TemplateGenerator) WriteProject(structure *ProjectStructure) error {
 // ResultRegisterFrontendNavigation registers a module in the frontend navigation config
 func (g *TemplateGenerator) ResultRegisterFrontendNavigation(title, name, rootPath string) error {
 	configPath := filepath.Join(rootPath, "frontend/src/config/navigation.ts")
-	
+
 	// Read existing file
 	content, err := os.ReadFile(configPath)
 	if err != nil {
@@ -1423,14 +1532,14 @@ func (g *TemplateGenerator) ResultRegisterFrontendNavigation(title, name, rootPa
 		}
 		return err
 	}
-	
+
 	text := string(content)
-	
+
 	// Check if already registered
 	if strings.Contains(text, `path: '/`+name+`'`) {
 		return nil
 	}
-	
+
 	// Prepare new item
 	newItem := fmt.Sprintf(`  {
     title: '%s',
@@ -1445,9 +1554,9 @@ func (g *TemplateGenerator) ResultRegisterFrontendNavigation(title, name, rootPa
 	if lastBracket == -1 {
 		return fmt.Errorf("could not find closing bracket in navigation.ts")
 	}
-	
+
 	newText := text[:lastBracket] + newItem + text[lastBracket:]
-	
+
 	return os.WriteFile(configPath, []byte(newText), 0644)
 }
 

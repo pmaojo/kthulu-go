@@ -4,6 +4,7 @@ package policy
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"sync"
 )
 
@@ -250,5 +251,3 @@ func getUserFromContext(ctx context.Context) User {
 	}
 	return nil
 }
-
-import "net/http"
