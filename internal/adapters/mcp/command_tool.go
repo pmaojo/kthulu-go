@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -155,6 +156,22 @@ func formatCommandResult(label string, workingDir string, result CommandResult) 
 		builder.WriteString(trimmed)
 	}
 	return builder.String()
+}
+
+// runCreateCLI runs a kthulu create command and switches the session working
+// directory to the newly created project. It returns the formatted output.
+// errorVerb is used in the error message (e.g. "scaffold", "create").
+func runCreateCLI(ctx context.Context, executor CommandExecutor, dir, workingDir, projectName, errorVerb string, cmdArgs []string) (string, error) {
+	result, err := executor.Run(ctx, dir, cmdArgs)
+	response := formatCommandResult(strings.Join(append([]string{"kthulu"}, cmdArgs...), " "), dir, result)
+	if err != nil {
+		return "", fmt.Errorf("%s failed: %w\n%s", errorVerb, err, response)
+	}
+	projectDir := filepath.Join(dir, projectName)
+	if _, wdErr := setSessionWorkdir(workingDir, projectDir); wdErr == nil {
+		response += fmt.Sprintf("\n\n📂 Session working directory switched to %s", projectDir)
+	}
+	return response, nil
 }
 
 func normalizeOutput(value string) string {

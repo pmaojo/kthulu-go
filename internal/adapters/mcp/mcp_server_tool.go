@@ -3,7 +3,6 @@ package mcp
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	mcp_golang "github.com/metoro-io/mcp-golang"
@@ -36,15 +35,9 @@ func CreateMCPServerTool(executor CommandExecutor, workingDir string) Registered
 				cmdArgs = append(cmdArgs, "--module-path", args.ModulePath)
 			}
 
-			result, err := executor.Run(ctx, dir, cmdArgs)
-			response := formatCommandResult(strings.Join(append([]string{"kthulu"}, cmdArgs...), " "), dir, result)
+			response, err := runCreateCLI(ctx, executor, dir, workingDir, args.Name, "create", cmdArgs)
 			if err != nil {
-				return nil, fmt.Errorf("create failed: %w\n%s", err, response)
-			}
-
-			projectDir := filepath.Join(dir, args.Name)
-			if _, wdErr := setSessionWorkdir(workingDir, projectDir); wdErr == nil {
-				response += fmt.Sprintf("\n\n📂 Session working directory switched to %s", projectDir)
+				return nil, err
 			}
 
 			response += fmt.Sprintf(`
