@@ -54,15 +54,9 @@ func ScaffoldProjectTool(executor CommandExecutor, workingDir string) Registered
 				cmdArgs = append(cmdArgs, "--module-path", args.ModulePath)
 			}
 
-			result, err := executor.Run(ctx, dir, cmdArgs)
-			response := formatCommandResult(strings.Join(append([]string{"kthulu"}, cmdArgs...), " "), dir, result)
+			response, err := runCreateCLI(ctx, executor, dir, workingDir, args.Name, "scaffold", cmdArgs)
 			if err != nil {
-				return nil, fmt.Errorf("scaffold failed: %w\n%s", err, response)
-			}
-
-			projectDir := filepath.Join(dir, args.Name)
-			if _, wdErr := setSessionWorkdir(workingDir, projectDir); wdErr == nil {
-				response += fmt.Sprintf("\n\n📂 Session working directory switched to %s — all tools now operate inside the project.", projectDir)
+				return nil, err
 			}
 			response += "\n\nNEXT STEPS:\n1. Finish setup (run via shell_execute):\n   go run github.com/a-h/templ/cmd/templ@v0.3.977 generate ./...\n   go mod tidy\n2. Verify with go_build, then go_test"
 			if findings := reviewDomainModel(args.Modules); len(findings) > 0 {

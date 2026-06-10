@@ -31,6 +31,9 @@ func (f *ToolFactory) BuildTools(workingDir string, filter CommandFilter) []Regi
 	tools = append(tools, ScaffoldProjectTool(f.executor, workingDir))
 	tools = append(tools, ReviewDomainModelTool())
 
+	// MCP server creation (dependency-free server with MCP Apps support).
+	tools = append(tools, CreateMCPServerTool(f.executor, workingDir))
+
 	tools = append(tools, guide.Tool(workingDir))
 
 	insights := NewProjectInsightsService(f.parser)

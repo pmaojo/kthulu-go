@@ -17,7 +17,7 @@ Kthulu is a comprehensive toolkit for building high-performance, maintainable we
 ## Key Features
 
 - **AI Scaffolding**: Describe your app, and Kthulu builds the skeleton.
-- **Self-Healing**: The dev server detects panics and suggests fixes automatically.
+- **Self-Healing**: The dev server detects panics and provides AI-powered diagnostic suggestions (set `OPENAI_API_KEY` for full AI diagnosis; falls back to heuristic hints).
 - **Marketplace**: a rich ecosystem of plug-and-play modules (Auth, Payments, CRM).
 - **Admin UI**: Instant back-office generation for your data models.
 

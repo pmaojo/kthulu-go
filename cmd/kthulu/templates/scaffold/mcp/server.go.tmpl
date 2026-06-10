@@ -24,6 +24,36 @@ const (
 	defaultProtocolVersion = "2025-06-18"
 )
 
+// PromptArgument describes one argument a prompt accepts.
+type PromptArgument struct {
+	Name        string
+	Description string
+	Required    bool
+}
+
+// PromptMessage is a single message returned by a prompt (role: "user" or "assistant").
+type PromptMessage struct {
+	Role    string
+	Content string
+}
+
+// GetPromptResult is what a PromptHandler returns.
+type GetPromptResult struct {
+	Description string
+	Messages    []PromptMessage
+}
+
+// PromptHandler builds a prompt result from caller-supplied arguments.
+type PromptHandler func(ctx context.Context, arguments map[string]string) (*GetPromptResult, error)
+
+// Prompt describes a registered prompt template.
+type Prompt struct {
+	Name        string
+	Description string
+	Arguments   []PromptArgument
+	Handler     PromptHandler
+}
+
 // Content is one item of unstructured tool output.
 type Content struct {
 	Type string `json:"type"`
@@ -63,6 +93,9 @@ type Tool struct {
 	// UIResource optionally links the tool to a ui:// resource so hosts
 	// supporting MCP Apps render its results interactively.
 	UIResource string
+	// Visibility controls who can call this tool: "model" (the AI agent),
+	// "app" (the linked UI view), or both (default). Nil means ["model","app"].
+	Visibility []string
 	Handler    ToolHandler
 }
 
@@ -81,6 +114,7 @@ type Server struct {
 	mu        sync.RWMutex
 	tools     []*Tool
 	resources []*UIResource
+	prompts   []*Prompt
 }
 
 // NewServer creates an MCP server.
@@ -101,6 +135,13 @@ func (s *Server) RegisterUIResource(res *UIResource) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.resources = append(s.resources, res)
+}
+
+// RegisterPrompt adds a prompt template that clients can enumerate and invoke.
+func (s *Server) RegisterPrompt(prompt *Prompt) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.prompts = append(s.prompts, prompt)
 }
 
 type request struct {
@@ -176,6 +217,10 @@ func (s *Server) dispatch(ctx context.Context, method string, params json.RawMes
 		return s.resourcesList(), nil
 	case "resources/read":
 		return s.resourcesRead(params)
+	case "prompts/list":
+		return s.promptsList(), nil
+	case "prompts/get":
+		return s.promptsGet(ctx, params)
 	default:
 		return nil, nil
 	}
@@ -190,13 +235,18 @@ func (s *Server) initializeResult(params json.RawMessage) map[string]interface{}
 		protocolVersion = p.ProtocolVersion
 	}
 
+	s.mu.RLock()
+	hasUI := len(s.resources) > 0
+	hasPrompts := len(s.prompts) > 0
+	s.mu.RUnlock()
+
 	capabilities := map[string]interface{}{
 		"tools":     map[string]interface{}{},
 		"resources": map[string]interface{}{},
 	}
-	s.mu.RLock()
-	hasUI := len(s.resources) > 0
-	s.mu.RUnlock()
+	if hasPrompts {
+		capabilities["prompts"] = map[string]interface{}{}
+	}
 	if hasUI {
 		capabilities["extensions"] = map[string]interface{}{
 			AppsExtensionID: map[string]interface{}{
@@ -226,8 +276,15 @@ func (s *Server) toolsList() map[string]interface{} {
 			"inputSchema": t.InputSchema,
 		}
 		if t.UIResource != "" {
+			vis := t.Visibility
+			if len(vis) == 0 {
+				vis = []string{"model", "app"}
+			}
 			entry["_meta"] = map[string]interface{}{
-				"ui": map[string]interface{}{"resourceUri": t.UIResource},
+				"ui": map[string]interface{}{
+					"resourceUri": t.UIResource,
+					"visibility":  vis,
+				},
 			}
 		}
 		tools = append(tools, entry)
@@ -303,4 +360,67 @@ func (s *Server) resourcesRead(params json.RawMessage) (interface{}, error) {
 		}
 	}
 	return nil, fmt.Errorf("unknown resource: %s", p.URI)
+}
+
+func (s *Server) promptsList() map[string]interface{} {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	prompts := make([]map[string]interface{}, 0, len(s.prompts))
+	for _, p := range s.prompts {
+		args := make([]map[string]interface{}, 0, len(p.Arguments))
+		for _, a := range p.Arguments {
+			args = append(args, map[string]interface{}{
+				"name":        a.Name,
+				"description": a.Description,
+				"required":    a.Required,
+			})
+		}
+		entry := map[string]interface{}{
+			"name":        p.Name,
+			"description": p.Description,
+			"arguments":   args,
+		}
+		prompts = append(prompts, entry)
+	}
+	return map[string]interface{}{"prompts": prompts}
+}
+
+func (s *Server) promptsGet(ctx context.Context, params json.RawMessage) (interface{}, error) {
+	var p struct {
+		Name      string            `json:"name"`
+		Arguments map[string]string `json:"arguments"`
+	}
+	if err := json.Unmarshal(params, &p); err != nil {
+		return nil, fmt.Errorf("invalid prompts/get params: %w", err)
+	}
+	s.mu.RLock()
+	var prompt *Prompt
+	for _, pr := range s.prompts {
+		if pr.Name == p.Name {
+			prompt = pr
+			break
+		}
+	}
+	s.mu.RUnlock()
+	if prompt == nil {
+		return nil, fmt.Errorf("unknown prompt: %s", p.Name)
+	}
+	if p.Arguments == nil {
+		p.Arguments = map[string]string{}
+	}
+	result, err := prompt.Handler(ctx, p.Arguments)
+	if err != nil {
+		return nil, err
+	}
+	messages := make([]map[string]interface{}, 0, len(result.Messages))
+	for _, m := range result.Messages {
+		messages = append(messages, map[string]interface{}{
+			"role":    m.Role,
+			"content": map[string]interface{}{"type": "text", "text": m.Content},
+		})
+	}
+	return map[string]interface{}{
+		"description": result.Description,
+		"messages":    messages,
+	}, nil
 }
