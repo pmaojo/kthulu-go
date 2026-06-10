@@ -74,3 +74,4 @@ tm.SendTemplate(ctx, []string{"user@example.com"}, "Welcome", "welcome.html", da
 The provider-SDK drivers (SES, SendGrid, Mailgun, Resend) are generated as typed stubs with clear errors pointing at the SDK dependency to add — drop in the SDK and fill in one method.
 
 
+
