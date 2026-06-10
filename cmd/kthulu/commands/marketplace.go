@@ -3,13 +3,18 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
+	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"text/tabwriter"
 	"time"
 
 	"github.com/spf13/cobra"
+
+	"github.com/pmaojo/kthulu-go/registry"
 )
 
 // MarketplaceItem represents a module, starter, or plugin
@@ -22,7 +27,8 @@ type MarketplaceItem struct {
 	Stars       int               `json:"stars"`
 	Tags        []string          `json:"tags"`
 	Version     string            `json:"version"`
-	Install     map[string]string `json:"install,omitempty"` // os -> url map for plugins
+	Template    string            `json:"template,omitempty"` // for starters scaffolded via create --template
+	Install     map[string]string `json:"install,omitempty"`  // os -> url map for plugins
 }
 
 var marketplaceCmd = &cobra.Command{
@@ -42,32 +48,45 @@ var marketplaceListCmd = &cobra.Command{
 }
 
 var marketplaceInstallCmd = &cobra.Command{
-	Use:   "install [id]",
-	Short: "Install a plugin or add a module",
-	Args:  cobra.ExactArgs(1),
+	Use:   "install [id] [project-name]",
+	Short: "Install an item: scaffold starters, add modules, install plugins",
+	Long: `Install a marketplace item.
+
+Starters scaffold a complete project: the starter's blueprint is copied next
+to the new project and 'kthulu create --from-plan' runs automatically.
+
+  kthulu marketplace install ecommerce-pro my-shop`,
+	Args: cobra.RangeArgs(1, 2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		itemID := args[0]
+		projectName := ""
+		if len(args) > 1 {
+			projectName = args[1]
+		}
 		repoPath, _ := cmd.Flags().GetString("repo")
-		return runMarketplaceInstall(itemID, repoPath)
+		return runMarketplaceInstall(itemID, projectName, repoPath)
 	},
 }
 
 func init() {
 	// List command flags
 	marketplaceListCmd.Flags().String("type", "", "Filter by type (starter, module, plugin)")
-	marketplaceListCmd.Flags().String("repo", "/Users/pelayo/projects/kthulu-go/registry", "Path to marketplace repository")
+	marketplaceListCmd.Flags().String("repo", "", "Path to a marketplace registry (default: ./registry if present, else the registry embedded in the binary)")
 
 	// Install command flags
-	marketplaceInstallCmd.Flags().String("repo", "/Users/pelayo/projects/kthulu-go/registry", "Path to marketplace repository")
+	marketplaceInstallCmd.Flags().String("repo", "", "Path to a marketplace registry (default: ./registry if present, else the registry embedded in the binary)")
 
 	marketplaceCmd.AddCommand(marketplaceListCmd)
 	marketplaceCmd.AddCommand(marketplaceInstallCmd)
 	rootCmd.AddCommand(marketplaceCmd)
 }
 
-func runMarketplaceInstall(itemID, repoPath string) error {
-	repoPath = os.ExpandEnv(repoPath)
-	items, err := fetchMarketplaceItems(repoPath)
+func runMarketplaceInstall(itemID, projectName, repoPath string) error {
+	source, label, err := resolveRegistryFS(repoPath)
+	if err != nil {
+		return err
+	}
+	items, err := fetchMarketplaceItems(source)
 	if err != nil {
 		return err
 	}
@@ -81,17 +100,14 @@ func runMarketplaceInstall(itemID, repoPath string) error {
 	}
 
 	if targetItem == nil {
-		return fmt.Errorf("item '%s' not found", itemID)
+		return fmt.Errorf("item '%s' not found in %s", itemID, label)
 	}
 
 	switch targetItem.Type {
 	case "module":
 		return installModule(targetItem)
 	case "starter":
-		return fmt.Errorf("starters are project blueprints, not installable modules.\n"+
-			"Scaffold a project from this starter with:\n"+
-			"  kthulu create my-app --from-plan=registry/starters/%s/plan.yaml\n"+
-			"(MCP server starters use: kthulu create my-app --template=mcp)", itemID)
+		return installStarter(targetItem, source, projectName)
 	case "plugin":
 		return installPlugin(targetItem)
 	default:
@@ -99,13 +115,95 @@ func runMarketplaceInstall(itemID, repoPath string) error {
 	}
 }
 
-func installModule(item *MarketplaceItem) error {
-	fmt.Printf("📦 Adding module '%s' to project...\n", item.Name)
-	// Logic to add module (delegating to 'kthulu add module' essentially)
-	// For "WOW" demo:
-	fmt.Println("✅ Module definition downloaded.")
-	fmt.Println("👉 Run 'kthulu add module' to integrate it.")
+// resolveRegistryFS picks the registry source: an explicit --repo path, a
+// local ./registry checkout, or the registry embedded in the binary.
+func resolveRegistryFS(repoPath string) (fs.FS, string, error) {
+	if repoPath != "" {
+		repoPath = os.ExpandEnv(repoPath)
+		if _, err := os.Stat(repoPath); err != nil {
+			return nil, "", fmt.Errorf("marketplace registry not found at '%s'", repoPath)
+		}
+		return os.DirFS(repoPath), repoPath, nil
+	}
+	if info, err := os.Stat("registry"); err == nil && info.IsDir() {
+		return os.DirFS("registry"), "./registry", nil
+	}
+	return registry.Files, "the embedded registry", nil
+}
+
+// installStarter scaffolds a project from a starter: it copies the starter's
+// blueprint next to the project and runs 'kthulu create' on it.
+func installStarter(item *MarketplaceItem, source fs.FS, projectName string) error {
+	if projectName == "" {
+		projectName = strings.ReplaceAll(item.ID, "-", "")
+	}
+	if _, err := os.Stat(projectName); err == nil {
+		return fmt.Errorf("directory %q already exists — pass a different project name: kthulu marketplace install %s <name>", projectName, item.ID)
+	}
+
+	self, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("resolve kthulu binary: %w", err)
+	}
+
+	fmt.Printf("🚀 Scaffolding %q from starter '%s'...\n", projectName, item.Name)
+
+	var createArgs []string
+	runHint := "go run ./cmd/server"
+	if plan, planErr := findStarterPlan(source, item.ID); planErr == nil {
+		planFile := projectName + "-plan.yaml"
+		if writeErr := os.WriteFile(planFile, plan, 0o644); writeErr != nil {
+			return fmt.Errorf("write plan file: %w", writeErr)
+		}
+		fmt.Printf("   📄 Blueprint copied to %s\n", planFile)
+		createArgs = []string{"create", projectName, "--from-plan", planFile}
+	} else if item.Template != "" {
+		createArgs = []string{"create", projectName, "--template", item.Template}
+		runHint = "go run ./cmd/" + projectName
+	} else {
+		return fmt.Errorf("starter '%s' has no blueprint (plan.yaml/blueprint.yaml) and no template: %w", item.ID, planErr)
+	}
+
+	cmd := exec.Command(self, createArgs...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("create failed: %w", err)
+	}
+
+	fmt.Printf("\n✅ Starter '%s' installed. Next:\n   cd %s && %s\n", item.Name, projectName, runHint)
 	return nil
+}
+
+// findStarterPlan loads the starter blueprint (plan.yaml, falling back to
+// blueprint.yaml) from the registry source.
+func findStarterPlan(source fs.FS, starterID string) ([]byte, error) {
+	var lastErr error
+	for _, name := range []string{"plan.yaml", "blueprint.yaml"} {
+		data, err := fs.ReadFile(source, path.Join("starters", starterID, name))
+		if err == nil {
+			return data, nil
+		}
+		lastErr = err
+	}
+	return nil, lastErr
+}
+
+func installModule(item *MarketplaceItem) error {
+	if _, err := os.Stat("go.mod"); err != nil {
+		return fmt.Errorf("not inside a project (go.mod not found) — run this from your project directory")
+	}
+	self, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("resolve kthulu binary: %w", err)
+	}
+	fmt.Printf("📦 Adding module '%s' to the current project...\n", item.Name)
+	cmd := exec.Command(self, "add", "module", item.ID)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	return cmd.Run()
 }
 
 func installPlugin(item *MarketplaceItem) error {
@@ -150,14 +248,14 @@ echo "Args: $@"
 }
 
 func runMarketplaceList(filterType, repoPath string) error {
-	repoPath = os.ExpandEnv(repoPath)
-	if _, err := os.Stat(repoPath); os.IsNotExist(err) {
-		return fmt.Errorf("marketplace repository not found at '%s'. \nClone it first or use --repo flag.", repoPath)
+	source, label, err := resolveRegistryFS(repoPath)
+	if err != nil {
+		return err
 	}
 
-	fmt.Printf("🏪 Scanning marketplace at: %s\n", repoPath)
+	fmt.Printf("🏪 Scanning marketplace: %s\n", label)
 
-	items, err := fetchMarketplaceItems(repoPath)
+	items, err := fetchMarketplaceItems(source)
 	if err != nil {
 		return fmt.Errorf("failed to fetch items: %w", err)
 	}
@@ -184,12 +282,12 @@ func runMarketplaceList(filterType, repoPath string) error {
 	return nil
 }
 
-func fetchMarketplaceItems(rootPath string) ([]MarketplaceItem, error) {
+func fetchMarketplaceItems(source fs.FS) ([]MarketplaceItem, error) {
 	var items []MarketplaceItem
 	categories := []string{"starters", "modules", "plugins"}
 
 	for _, cat := range categories {
-		catItems, err := scanCategoryItems(rootPath, cat)
+		catItems, err := scanCategoryItems(source, cat)
 		if err != nil {
 			return nil, err
 		}
@@ -199,19 +297,15 @@ func fetchMarketplaceItems(rootPath string) ([]MarketplaceItem, error) {
 	return items, nil
 }
 
-func scanCategoryItems(rootPath, category string) ([]MarketplaceItem, error) {
-	// Support scanning React 'public' folder if it exists
-	// This allows the same repo to host the Marketplace UI and the Data Registry
-	publicCatPath := filepath.Join(rootPath, "public", category)
-	var catPath string
-
-	if _, err := os.Stat(publicCatPath); err == nil {
-		catPath = publicCatPath
-	} else {
-		catPath = filepath.Join(rootPath, category)
+func scanCategoryItems(source fs.FS, category string) ([]MarketplaceItem, error) {
+	// Support scanning a React 'public' folder if it exists, so the same
+	// repo can host the Marketplace UI and the Data Registry.
+	catPath := category
+	if _, err := fs.Stat(source, path.Join("public", category)); err == nil {
+		catPath = path.Join("public", category)
 	}
 
-	entries, err := os.ReadDir(catPath)
+	entries, err := fs.ReadDir(source, catPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
@@ -225,18 +319,17 @@ func scanCategoryItems(rootPath, category string) ([]MarketplaceItem, error) {
 			continue
 		}
 
-		item := parseMarketplaceItem(catPath, entry.Name(), category)
+		item := parseMarketplaceItem(source, catPath, entry.Name(), category)
 		items = append(items, item)
 	}
 	return items, nil
 }
 
-func parseMarketplaceItem(catPath, dirName, category string) MarketplaceItem {
-	itemPath := filepath.Join(catPath, dirName)
+func parseMarketplaceItem(source fs.FS, catPath, dirName, category string) MarketplaceItem {
 	var item MarketplaceItem
 
 	// Try reading metadata.json
-	metaData, err := os.ReadFile(filepath.Join(itemPath, "metadata.json"))
+	metaData, err := fs.ReadFile(source, path.Join(catPath, dirName, "metadata.json"))
 	if err == nil {
 		if err := json.Unmarshal(metaData, &item); err != nil {
 			// In a real app we might log this warning
