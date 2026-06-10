@@ -193,6 +193,23 @@ var infraCatalog = map[string]infraWiring{
 	},
 }
 
+// IsInfraFeature reports whether a feature name (or alias) is generated as
+// shared infrastructure rather than a CRUD module.
+func IsInfraFeature(name string) bool {
+	_, ok := infraAliases[strings.ToLower(strings.TrimSpace(name))]
+	return ok
+}
+
+// HasCuratedDefaultFields reports whether a module gets meaningful default
+// fields when none are declared (instead of the single-name fallback).
+func HasCuratedDefaultFields(name string) bool {
+	switch name {
+	case "auth", "user", "organization", "product", "contact", "calendar", "inventory", "invoice", "verifactu":
+		return true
+	}
+	return false
+}
+
 // extractInfraFeatures removes infrastructure feature aliases from the list
 // and reports which runtimes should be generated.
 func extractInfraFeatures(features []string) ([]string, InfraFeatures) {
@@ -417,27 +434,33 @@ func (g *TemplateGenerator) GenerateProject(config *GeneratorConfig) (*ProjectSt
 		}
 	}
 
+	// Steps 5-8 only apply to server projects: CLI and MCP scaffolds are
+	// self-contained and need no web frontend, app config or deployment.
+	isServer := config.TemplateType == "server" || config.TemplateType == ""
+
 	// Step 5: Generate GTH (Go+Templ+HTMX) frontend if not disabled
-	if config.Frontend != "none" {
+	if isServer && config.Frontend != "none" {
 		if err := g.generateGTHFrontend(structure); err != nil {
 			return nil, fmt.Errorf("failed to generate GTH frontend: %w", err)
 		}
 	}
 
-	// Step 6: Generate configuration files
-	if err := g.generateConfiguration(structure); err != nil {
-		return nil, fmt.Errorf("failed to generate configuration: %w", err)
-	}
+	if isServer {
+		// Step 6: Generate configuration files
+		if err := g.generateConfiguration(structure); err != nil {
+			return nil, fmt.Errorf("failed to generate configuration: %w", err)
+		}
 
-	// Step 7: Generate build scripts
-	if err := g.generateBuildScripts(structure); err != nil {
-		return nil, fmt.Errorf("failed to generate build scripts: %w", err)
-	}
+		// Step 7: Generate build scripts
+		if err := g.generateBuildScripts(structure); err != nil {
+			return nil, fmt.Errorf("failed to generate build scripts: %w", err)
+		}
 
-	// Step 8: Generate Vercel deployment config (default: enabled)
-	if config.CustomValues["no_vercel"] != "true" {
-		if err := g.generateVercelConfig(structure); err != nil {
-			return nil, fmt.Errorf("failed to generate Vercel config: %w", err)
+		// Step 8: Generate Vercel deployment config (default: enabled)
+		if config.CustomValues["no_vercel"] != "true" {
+			if err := g.generateVercelConfig(structure); err != nil {
+				return nil, fmt.Errorf("failed to generate Vercel config: %w", err)
+			}
 		}
 	}
 
@@ -1594,21 +1617,31 @@ func (g *TemplateGenerator) generateCLIStructure(structure *ProjectStructure) er
 func (g *TemplateGenerator) generateMCPStructure(structure *ProjectStructure) error {
 	structure.Directories = append(structure.Directories,
 		fmt.Sprintf("cmd/%s", g.config.ProjectName),
+		"internal/mcp",
 		"internal/tools",
+		"internal/tools/ui",
 	)
 
-	structure.Files = append(structure.Files, GeneratedFile{
-		Path:    FileGoMod,
-		Content: g.generateMCPGoMod(),
-	})
-	structure.Files = append(structure.Files, GeneratedFile{
-		Path:    fmt.Sprintf("cmd/%s/main.go", g.config.ProjectName),
-		Content: g.generateMCPMain(),
-	})
-	structure.Files = append(structure.Files, GeneratedFile{
-		Path:    "internal/tools/tools.go",
-		Content: g.generateMCPTools(),
-	})
+	data := map[string]interface{}{
+		"ModulePath":  g.modulePath(),
+		"ProjectName": g.config.ProjectName,
+	}
+	files := map[string]string{
+		FileGoMod: "scaffold/mcp/go.mod.tmpl",
+		fmt.Sprintf("cmd/%s/main.go", g.config.ProjectName): "scaffold/mcp/main.go.tmpl",
+		"internal/mcp/server.go":           "scaffold/mcp/server.go.tmpl",
+		"internal/mcp/server_test.go":      "scaffold/mcp/server_test.go.tmpl",
+		"internal/tools/tools.go":          "scaffold/mcp/tools.go.tmpl",
+		"internal/tools/ui/dashboard.html": "scaffold/mcp/ui_dashboard.html.tmpl",
+	}
+	for path, tmpl := range files {
+		content, err := g.executeTemplate(path, tmpl, data)
+		if err != nil {
+			return fmt.Errorf(ErrGenerateFmt, path, err)
+		}
+		structure.Files = append(structure.Files, GeneratedFile{Path: path, Content: content})
+	}
+
 	structure.Files = append(structure.Files, GeneratedFile{
 		Path:    FileReadme,
 		Content: g.generateReadme(),
@@ -1648,44 +1681,6 @@ func (g *TemplateGenerator) generateCLIGoMod() string {
 	content, err := g.executeTemplate("cli_gomod", "scaffold/cli/go.mod.tmpl", data)
 	if err != nil {
 		fmt.Printf("⚠️  Error generating CLI go.mod: %v\n", err)
-		return ""
-	}
-	return content
-}
-
-func (g *TemplateGenerator) generateMCPMain() string {
-	data := map[string]interface{}{
-		"ProjectName": g.config.ProjectName,
-		"ModulePath":  g.modulePath(),
-	}
-	content, err := g.executeTemplate("mcp_main", "scaffold/mcp/main.go.tmpl", data)
-	if err != nil {
-		fmt.Printf("⚠️  Error generating MCP main.go: %v\n", err)
-		return ""
-	}
-	return content
-}
-
-func (g *TemplateGenerator) generateMCPTools() string {
-	data := map[string]interface{}{
-		"ProjectName": g.config.ProjectName,
-	}
-	content, err := g.executeTemplate("mcp_tools", "scaffold/mcp/tools.go.tmpl", data)
-	if err != nil {
-		fmt.Printf("⚠️  Error generating MCP tools.go: %v\n", err)
-		return ""
-	}
-	return content
-}
-
-func (g *TemplateGenerator) generateMCPGoMod() string {
-	data := map[string]interface{}{
-		"ModulePath": g.modulePath(),
-		"GoVersion":  "1.24",
-	}
-	content, err := g.executeTemplate("mcp_gomod", "scaffold/mcp/go.mod.tmpl", data)
-	if err != nil {
-		fmt.Printf("⚠️  Error generating MCP go.mod: %v\n", err)
 		return ""
 	}
 	return content

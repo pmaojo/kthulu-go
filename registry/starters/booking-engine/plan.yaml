@@ -1,0 +1,30 @@
+name: bookingengine
+description: "Reservations for venues, rooms or courts: availability, bookings and reminders."
+template: microservice
+database: sqlite
+frontend: templ
+auth: jwt
+features:
+  - auth
+  - user
+  - queues
+  - mail
+modules:
+  venue:
+    fields:
+      - name:string:required
+      - address:string
+      - capacity:int:min=1
+  guest:
+    fields:
+      - name:string:required
+      - email:string:required,email
+      - phone:string
+  booking:
+    fields:
+      - starts_at:time
+      - ends_at:time
+      - status:string:oneof=requested|confirmed|cancelled|completed
+      - party_size:int:min=1
+      - place:belongs_to:venue
+      - holder:belongs_to:guest

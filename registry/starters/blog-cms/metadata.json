@@ -1,0 +1,9 @@
+{
+  "id": "blog-cms",
+  "name": "Blog CMS",
+  "type": "starter",
+  "description": "Publishing platform: posts, categories and comments with cache and file storage.",
+  "author": "Kthulu Team",
+  "stars": 22,
+  "icon": "FileText"
+}

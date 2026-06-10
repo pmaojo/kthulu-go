@@ -1,0 +1,37 @@
+name: ecommercepro
+description: "Storefront backbone: catalog, orders and payments with mail, storage and background jobs."
+template: microservice
+database: sqlite
+frontend: templ
+auth: jwt
+features:
+  - auth
+  - user
+  - queues
+  - mail
+  - storage
+modules:
+  product:
+    fields:
+      - name:string:required,min=2
+      - sku:string:required
+      - price:int:required,min=1
+      - stock:int:min=0
+      - description:string
+  customer:
+    fields:
+      - name:string:required
+      - email:string:required,email
+      - phone:string
+  order:
+    fields:
+      - status:string:oneof=pending|paid|shipped|delivered|cancelled
+      - total:int:min=0
+      - placed_at:time
+      - buyer:belongs_to:customer
+  payment:
+    fields:
+      - amount:int:required,min=1
+      - method:string:oneof=card|paypal|transfer
+      - paid_at:time
+      - invoice:belongs_to:order

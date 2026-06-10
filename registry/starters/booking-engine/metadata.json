@@ -1,0 +1,9 @@
+{
+  "id": "booking-engine",
+  "name": "Booking Engine",
+  "type": "starter",
+  "description": "Reservations for venues, rooms or courts: availability, bookings and reminders.",
+  "author": "Kthulu Team",
+  "stars": 27,
+  "icon": "Calendar"
+}

@@ -28,6 +28,8 @@ We enforce a "Vertical Slice" architecture (GTH Stack: Go + Templ + HTMX). Code 
 ### 4. MCP Native
 Kthulu exposes its entire CLI as a **Model Context Protocol (MCP)** server. This means any MCP-compliant agent (Claude Desktop, Cursor, etc.) can "drive" Kthulu to build software for you.
 
+Kthulu also **generates MCP servers**: `kthulu create my-app --template=mcp` scaffolds a dependency-free server with an interactive **MCP Apps** UI ([ext-apps](https://github.com/modelcontextprotocol/ext-apps)) that renders inline in Claude and ChatGPT — `ui://` resources, `_meta.ui` tool links and protocol tests included.
+
 [👉 Integrating with MCP](./docs/MCP.md)
 
 ---

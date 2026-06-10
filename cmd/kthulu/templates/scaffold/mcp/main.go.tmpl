@@ -1,32 +1,26 @@
+// {{ .ProjectName }} — an MCP server with MCP Apps (interactive UI) support.
+//
+// Connect it to Claude Desktop / any MCP host:
+//
+//	{ "mcpServers": { "{{ .ProjectName }}": { "command": "/path/to/{{ .ProjectName }}" } } }
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
-	"github.com/metoro-io/mcp-golang"
-	"github.com/metoro-io/mcp-golang/transport/stdio"
+	"{{ .ModulePath }}/internal/mcp"
 	"{{ .ModulePath }}/internal/tools"
 )
 
 func main() {
-	// Create a new MCP server
-	server := mcp_golang.NewServer(
-		stdio.NewStdioServerTransport(),
-		mcp_golang.WithName("{{ .ProjectName }}"),
-		mcp_golang.WithVersion("0.1.0"),
-	)
+	server := mcp.NewServer("{{ .ProjectName }}", "0.1.0")
+	tools.Register(server)
 
-	// Register tools
-	if err := server.RegisterTool("hello", "Say hello", tools.HelloHandler); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to register tool: %v\n", err)
-		os.Exit(1)
-	}
-
-	// Start the server
-	fmt.Fprintf(os.Stderr, "Starting MCP server {{ .ProjectName }}...\n")
-	if err := server.Serve(); err != nil {
-		fmt.Fprintf(os.Stderr, "Server error: %v\n", err)
+	fmt.Fprintln(os.Stderr, "{{ .ProjectName }} MCP server listening on stdio")
+	if err := server.Serve(context.Background(), os.Stdin, os.Stdout); err != nil {
+		fmt.Fprintf(os.Stderr, "server error: %v\n", err)
 		os.Exit(1)
 	}
 }

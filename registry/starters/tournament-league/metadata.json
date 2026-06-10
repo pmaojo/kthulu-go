@@ -1,0 +1,9 @@
+{
+  "id": "tournament-league",
+  "name": "Tournament League",
+  "type": "starter",
+  "description": "Complete tournament management: teams, players, fixtures and standings with background jobs.",
+  "author": "Kthulu Team",
+  "stars": 31,
+  "icon": "Trophy"
+}

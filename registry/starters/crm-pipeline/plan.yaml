@@ -1,0 +1,36 @@
+name: crmpipeline
+description: "Sales CRM: companies, contacts, deals and activities with an event bus and mail."
+template: microservice
+database: sqlite
+frontend: templ
+auth: jwt
+features:
+  - auth
+  - user
+  - events
+  - mail
+modules:
+  company:
+    fields:
+      - name:string:required
+      - domain:string
+      - industry:string
+  lead:
+    fields:
+      - name:string:required
+      - email:string:required,email
+      - phone:string
+      - employer:belongs_to:company
+  deal:
+    fields:
+      - title:string:required
+      - value:int:min=0
+      - stage:string:oneof=new|qualified|proposal|won|lost
+      - closes_at:time
+      - account:belongs_to:company
+  activity:
+    fields:
+      - kind:string:oneof=call|email|meeting|note
+      - notes:string
+      - happened_at:time
+      - deal_ref:belongs_to:deal

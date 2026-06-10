@@ -29,6 +29,7 @@ func (f *ToolFactory) BuildTools(workingDir string, filter CommandFilter) []Regi
 	// Structured project scaffolding (preferred over the raw create command
 	// for agents: takes the domain model with fields as structured data).
 	tools = append(tools, ScaffoldProjectTool(f.executor, workingDir))
+	tools = append(tools, ReviewDomainModelTool())
 
 	tools = append(tools, guide.Tool(workingDir))
 

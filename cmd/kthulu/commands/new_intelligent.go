@@ -212,6 +212,20 @@ func runNewProjectIntelligent(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
+	// Step 1b: Guardrail for agent-driven creates. Under MCP, refuse to
+	// silently generate skeleton modules (single default 'name' field):
+	// the agent should model the domain via scaffold_project or a plan.
+	if os.Getenv("KTHULU_MCP_MODE") == "1" {
+		if offenders := fieldlessDomainModules(config); len(offenders) > 0 {
+			fmt.Printf("❌ Modules without declared fields: %s\n", strings.Join(offenders, ", "))
+			fmt.Println("   Refusing to generate skeleton entities with only a 'name' column.")
+			fmt.Println("   Use the scaffold_project tool with each entity's real fields")
+			fmt.Println("   (name:type[:rules], relations via name:belongs_to:module),")
+			fmt.Println("   or pass --from-plan with modules.<name>.fields declared.")
+			os.Exit(1)
+		}
+	}
+
 	// Step 2: Interactive mode if requested
 	if newInteractive {
 		if err := runInteractiveMode(config); err != nil {
@@ -313,6 +327,21 @@ func runNewProjectIntelligent(cmd *cobra.Command, args []string) {
 
 	// Step 10: Display success message and next steps
 	displaySuccessMessage(projectName, config, structure)
+}
+
+// fieldlessDomainModules returns requested CRUD modules that would fall back
+// to the single default 'name' field because no fields were declared.
+func fieldlessDomainModules(config *generator.GeneratorConfig) []string {
+	var offenders []string
+	for _, feature := range config.Features {
+		if generator.IsInfraFeature(feature) || generator.HasCuratedDefaultFields(feature) {
+			continue
+		}
+		if len(config.ModuleFields[feature]) == 0 {
+			offenders = append(offenders, feature)
+		}
+	}
+	return offenders
 }
 
 func runGoTests(projectPath string) error {

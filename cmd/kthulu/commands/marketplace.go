@@ -88,7 +88,10 @@ func runMarketplaceInstall(itemID, repoPath string) error {
 	case "module":
 		return installModule(targetItem)
 	case "starter":
-		return fmt.Errorf("starters cannot be installed. Use 'kthulu create --template=%s' instead", itemID)
+		return fmt.Errorf("starters are project blueprints, not installable modules.\n"+
+			"Scaffold a project from this starter with:\n"+
+			"  kthulu create my-app --from-plan=registry/starters/%s/plan.yaml\n"+
+			"(MCP server starters use: kthulu create my-app --template=mcp)", itemID)
 	case "plugin":
 		return installPlugin(targetItem)
 	default:

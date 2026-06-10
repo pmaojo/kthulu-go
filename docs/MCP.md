@@ -90,8 +90,24 @@ single `name` column:
 ```
 
 Modules without fields are rejected with an explanatory error, so agents are
-forced to model the domain. The raw `create` and `add_module` tools remain
-available; `add_module` accepts the same `name:type[:rules]` field syntax.
+forced to model the domain. After scaffolding, the session working directory
+is switched to the new project automatically.
+
+Three more layers keep weak agents on the golden path:
+
+- **Server instructions**: the MCP initialize response describes the
+  model-first workflow, so agents read it before choosing tools.
+- **`review_domain_model`**: a deterministic reviewer that critiques a
+  proposed model (missing relations, enum fields without `oneof`,
+  timestamps not typed `time`, emails without validation, plural names,
+  no required fields). It also runs automatically inside
+  `scaffold_project` and appends suggestions to the result.
+- **`create` guardrail**: under MCP, the raw `create` command refuses to
+  generate skeleton modules that would fall back to a single default
+  `name` field, and redirects the agent to `scaffold_project`.
+
+The raw `create` and `add_module` tools remain available; `add_module`
+accepts the same `name:type[:rules]` field syntax.
 
 ### Fast Project Creation (No Timeouts)
 
@@ -128,7 +144,9 @@ Since Kthulu is a CLI tool rather than a hosted API, it is primarily distributed
 
 ## Scaffolding New MCP Servers
 
-Kthulu can now scaffold new, standalone MCP servers to help you build your own tools for AI agents.
+Kthulu scaffolds standalone MCP servers with first-class support for the
+**MCP Apps extension** (`io.modelcontextprotocol/ui`): generated servers can
+ship interactive HTML views that hosts like Claude and ChatGPT render inline.
 
 To create a new MCP server project:
 
@@ -138,7 +156,11 @@ kthulu new my-mcp-server --template=mcp
 
 This will generate a project with:
 - `cmd/my-mcp-server/main.go`: The server entrypoint using `mcp-golang`.
-- `internal/tools/`: A sample tool implementation.
+- `internal/mcp/`: A dependency-free JSON-RPC 2.0 MCP server with MCP Apps
+  support (ui:// resources, _meta.ui tool links, extension negotiation) and
+  protocol tests.
+- `internal/tools/`: Sample tools, including a status dashboard tool whose
+  results render as an interactive app via `internal/tools/ui/dashboard.html`.
 - `go.mod`: Pre-configured dependencies.
 
 You can then extend this project by adding more tools in the `internal/tools` directory and registering them in `main.go`.

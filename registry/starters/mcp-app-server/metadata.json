@@ -1,0 +1,9 @@
+{
+  "id": "mcp-app-server",
+  "name": "MCP App Server",
+  "type": "starter",
+  "description": "Model Context Protocol server with an interactive MCP Apps UI (ext-apps) \u2014 renders inline in Claude and ChatGPT.",
+  "author": "Kthulu Team",
+  "stars": 47,
+  "icon": "Bot"
+}

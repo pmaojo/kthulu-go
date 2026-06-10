@@ -1,0 +1,112 @@
+package mcp
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"strings"
+	"testing"
+)
+
+func newTestServer() *Server {
+	s := NewServer("test-server", "0.0.1")
+	s.RegisterUIResource(&UIResource{
+		URI:         "ui://test-server/view",
+		Name:        "View",
+		Description: "Test view",
+		HTML:        "<html><body>hi</body></html>",
+	})
+	s.RegisterTool(&Tool{
+		Name:        "echo",
+		Description: "Echo a message",
+		InputSchema: map[string]interface{}{"type": "object"},
+		UIResource:  "ui://test-server/view",
+		Handler: func(ctx context.Context, arguments json.RawMessage) (*CallToolResult, error) {
+			var args struct {
+				Message string `json:"message"`
+			}
+			_ = json.Unmarshal(arguments, &args)
+			return StructuredResult("echo: "+args.Message, map[string]string{"message": args.Message}), nil
+		},
+	})
+	return s
+}
+
+// roundTrip serves the given newline-delimited requests and returns the
+// decoded responses in order.
+func roundTrip(t *testing.T, requests ...string) []map[string]interface{} {
+	t.Helper()
+	in := strings.NewReader(strings.Join(requests, "\n") + "\n")
+	var out bytes.Buffer
+	if err := newTestServer().Serve(context.Background(), in, &out); err != nil {
+		t.Fatal(err)
+	}
+	var responses []map[string]interface{}
+	dec := json.NewDecoder(&out)
+	for dec.More() {
+		var resp map[string]interface{}
+		if err := dec.Decode(&resp); err != nil {
+			t.Fatal(err)
+		}
+		responses = append(responses, resp)
+	}
+	return responses
+}
+
+func TestInitializeDeclaresAppsExtension(t *testing.T) {
+	resps := roundTrip(t, `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18"}}`)
+	result := resps[0]["result"].(map[string]interface{})
+	caps := result["capabilities"].(map[string]interface{})
+	ext, ok := caps["extensions"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("missing extensions capability: %v", caps)
+	}
+	if _, ok := ext[AppsExtensionID]; !ok {
+		t.Fatalf("missing %s extension: %v", AppsExtensionID, ext)
+	}
+}
+
+func TestToolsListLinksUIResource(t *testing.T) {
+	resps := roundTrip(t, `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`)
+	tools := resps[0]["result"].(map[string]interface{})["tools"].([]interface{})
+	tool := tools[0].(map[string]interface{})
+	meta := tool["_meta"].(map[string]interface{})
+	ui := meta["ui"].(map[string]interface{})
+	if ui["resourceUri"] != "ui://test-server/view" {
+		t.Fatalf("wrong ui resourceUri: %v", ui)
+	}
+}
+
+func TestResourcesReadReturnsAppHTML(t *testing.T) {
+	resps := roundTrip(t, `{"jsonrpc":"2.0","id":1,"method":"resources/read","params":{"uri":"ui://test-server/view"}}`)
+	contents := resps[0]["result"].(map[string]interface{})["contents"].([]interface{})
+	entry := contents[0].(map[string]interface{})
+	if entry["mimeType"] != AppsMimeType {
+		t.Fatalf("wrong mime type: %v", entry["mimeType"])
+	}
+	if !strings.Contains(entry["text"].(string), "<html>") {
+		t.Fatalf("missing HTML body: %v", entry["text"])
+	}
+}
+
+func TestToolsCallReturnsStructuredContent(t *testing.T) {
+	resps := roundTrip(t, `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"echo","arguments":{"message":"hi"}}}`)
+	result := resps[0]["result"].(map[string]interface{})
+	structured := result["structuredContent"].(map[string]interface{})
+	if structured["message"] != "hi" {
+		t.Fatalf("wrong structured content: %v", structured)
+	}
+}
+
+func TestUnknownMethodAndNotificationHandling(t *testing.T) {
+	resps := roundTrip(t,
+		`{"jsonrpc":"2.0","method":"notifications/initialized"}`,
+		`{"jsonrpc":"2.0","id":7,"method":"bogus/method"}`,
+	)
+	if len(resps) != 1 {
+		t.Fatalf("notifications must not produce responses, got %d", len(resps))
+	}
+	if resps[0]["error"] == nil {
+		t.Fatalf("expected error for unknown method, got %v", resps[0])
+	}
+}

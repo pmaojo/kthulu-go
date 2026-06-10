@@ -61,7 +61,13 @@ func ScaffoldProjectTool(executor CommandExecutor, workingDir string) Registered
 			}
 
 			projectDir := filepath.Join(dir, args.Name)
-			response += fmt.Sprintf("\n\nNEXT STEPS:\n1. Call workdir_set with path %q\n2. Finish setup (run via shell_execute):\n   go run github.com/a-h/templ/cmd/templ@v0.3.977 generate ./...\n   go mod tidy\n3. Verify with go_build, then go_test", projectDir)
+			if _, wdErr := setSessionWorkdir(workingDir, projectDir); wdErr == nil {
+				response += fmt.Sprintf("\n\n📂 Session working directory switched to %s — all tools now operate inside the project.", projectDir)
+			}
+			response += "\n\nNEXT STEPS:\n1. Finish setup (run via shell_execute):\n   go run github.com/a-h/templ/cmd/templ@v0.3.977 generate ./...\n   go mod tidy\n2. Verify with go_build, then go_test"
+			if findings := reviewDomainModel(args.Modules); len(findings) > 0 {
+				response += "\n\nDOMAIN MODEL REVIEW (optional improvements — apply with add_module or by editing entities):\n- " + strings.Join(findings, "\n- ")
+			}
 			return mcp_golang.NewToolResponse(mcp_golang.NewTextContent(response)), nil
 		},
 	}
