@@ -32,11 +32,16 @@ validation, REST API, and a GTH (Templ + HTMX) admin page.
 
 ## Get Started
 
+One command — the blueprint ships inside the kthulu binary:
+
 ```bash
-# Copy the plan from this page into my-app-plan.yaml, then:
-kthulu create my-app --from-plan=my-app-plan.yaml
+kthulu marketplace install tournament-league my-app
 cd my-app && go run ./cmd/server
 ```
 
-The full plan file ships with the framework at
-`registry/starters/tournament-league/plan.yaml`.
+Or scaffold manually from the plan file at
+`registry/starters/tournament-league/plan.yaml`:
+
+```bash
+kthulu create my-app --from-plan=registry/starters/tournament-league/plan.yaml
+```
