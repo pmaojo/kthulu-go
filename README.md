@@ -86,6 +86,26 @@ kthulu ai "Add a Stripe payment webhook handler" --apply
 kthulu ai gen-feature "User checkout flow" --apply
 ```
 
+### ✅ Declarative Validation
+Declare rules in the blueprint; get a generated `Validate()` method, service-level enforcement, and 422 responses with field-level error maps.
+
+```yaml
+modules:
+  product:
+    fields:
+      - name:string:required,min=2
+      - price:int:required,min=1
+      - status:string:oneof=draft|active|archived
+```
+
+### ⚙️ Background Jobs & Scheduler
+Add the `queues` feature and get a database-backed job runtime — worker pool, exponential-backoff retries, dead letters, and recurring schedules — with zero extra infrastructure.
+
+```go
+q.Enqueue(jobs.TypeWelcomeEmail, jobs.WelcomeEmail{UserID: 42})
+q.Every(time.Hour, jobs.TypeHeartbeat, nil) // cron equivalent
+```
+
 ### 🥒 Behavior Driven Development (BDD)
 First-class support for Cucumber/Gherkin. Define *behavior* first.
 

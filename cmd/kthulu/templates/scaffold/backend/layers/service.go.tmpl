@@ -10,6 +10,9 @@ func New{{.Title}}Service(repo {{.Title}}Repository) {{.Title}}Service {
 }
 
 func (s *{{.Title | lower}}Service) Create{{.Title}}(entity *{{.Title}}) error {
+	if err := entity.Validate(); err != nil {
+		return err
+	}
 	// Add business logic here
 	return s.repo.Create(entity)
 }
@@ -19,6 +22,9 @@ func (s *{{.Title | lower}}Service) Get{{.Title}}ByID(id uint) (*{{.Title}}, err
 }
 
 func (s *{{.Title | lower}}Service) Update{{.Title}}(entity *{{.Title}}) error {
+	if err := entity.Validate(); err != nil {
+		return err
+	}
 	// Add business logic here
 	return s.repo.Update(entity)
 }

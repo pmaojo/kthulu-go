@@ -1,0 +1,57 @@
+// @kthulu:jobs
+// Application background jobs. Define a payload struct and a handler, then
+// register it in Register below. Enqueue from anywhere with:
+//
+//	q.Enqueue(jobs.TypeWelcomeEmail, jobs.WelcomeEmail{UserID: 42})
+//	q.EnqueueIn(10*time.Minute, jobs.TypeWelcomeEmail, payload)
+//
+// Recurring jobs (the cron equivalent) are declared in Register with
+// q.Every. Failed jobs retry automatically with exponential backoff.
+package jobs
+
+import (
+	"context"
+	"encoding/json"
+	"log"
+	"time"
+
+	"{{.ModuleName}}/internal/infrastructure/queue"
+)
+
+// Job type identifiers.
+const (
+	TypeWelcomeEmail = "email.welcome"
+	TypeHeartbeat    = "system.heartbeat"
+)
+
+// WelcomeEmail is an example job payload.
+type WelcomeEmail struct {
+	UserID uint   `json:"user_id"`
+	Email  string `json:"email"`
+}
+
+// Register wires all application job handlers and recurring schedules.
+func Register(q *queue.Queue) error {
+	q.Register(TypeWelcomeEmail, HandleWelcomeEmail)
+	q.Register(TypeHeartbeat, HandleHeartbeat)
+
+	// Recurring jobs — runs while the application is up.
+	return q.Every(time.Hour, TypeHeartbeat, nil)
+}
+
+// HandleWelcomeEmail sends a welcome email to a new user.
+func HandleWelcomeEmail(ctx context.Context, payload []byte) error {
+	var p WelcomeEmail
+	if err := json.Unmarshal(payload, &p); err != nil {
+		return err
+	}
+	// TODO: integrate your mailer here.
+	log.Printf("jobs: sending welcome email to user %d <%s>", p.UserID, p.Email)
+	return nil
+}
+
+// HandleHeartbeat is an example recurring job.
+func HandleHeartbeat(ctx context.Context, payload []byte) error {
+	log.Println("jobs: heartbeat")
+	return nil
+}
