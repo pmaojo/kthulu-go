@@ -1,6 +1,6 @@
 ---
 title: "Storage"
-description: "StorageModule provides file storage functionality. Supports multiple drivers: local, s3, gcs, azure"
+description: "Generated file storage infrastructure: a Storage interface with a complete local-disk driver, env-configured, injected via Fx."
 type: "module"
 author: "Kthulu Core"
 stars: 0
@@ -9,36 +9,29 @@ icon: "Box"
 
 # Storage
 
-StorageModule provides file storage functionality. Supports multiple drivers: local, s3, gcs, azure
+Add `storage` to your project features and Kthulu generates `internal/infrastructure/storage/` — a `Storage` interface with a complete **local disk** driver (put/get/list/copy/move/delete, URLs, metadata) plus generated tests. The driver is provided through Fx, so any service can inject it.
 
-## Features
+```bash
+kthulu create my-app --features=auth,user,storage
+```
 
+## Usage
 
-- Auto-configured Fx Module
-- Clean Architecture structure
+```go
+func NewUploadService(store storage.Storage) *UploadService { ... }
 
-
+store.PutBytes(ctx, "avatars/42.png", data)
+data, _ := store.GetBytes(ctx, "avatars/42.png")
+files, _ := store.List(ctx, "avatars")
+url := store.URL("avatars/42.png")
+```
 
 ## Configuration
 
-The module is configured via environment variables:
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `STORAGE_DRIVER` | `local` | `local` (S3/GCS/Azure are scaffolded stubs) |
+| `STORAGE_ROOT` | `./storage` | Base path for local files |
+| `STORAGE_URL` | `/storage` | Base URL for public files |
 
-| Variable | Description |
-|----------|-------------|
-| - | No environment variables detected |
-
-
-## Installation
-
-Add this module to your project:
-
-```bash
-kthulu add module storage
-```
-
-## Components
-
-This module provides the following components to the application:
-
-- **Backend**: Go module wired with Uber Fx.
-
+The cloud drivers (S3, GCS, Azure) are generated as typed stubs with clear errors pointing at the SDK dependency to add.

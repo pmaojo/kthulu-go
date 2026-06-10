@@ -1,0 +1,33 @@
+// @kthulu:infrastructure:storage:test
+package storage
+
+import (
+	"context"
+	"testing"
+)
+
+func TestLocalStorageRoundTrip(t *testing.T) {
+	s := NewLocalStorage(&Config{Driver: "local", Root: t.TempDir(), URL: "http://localhost/files"})
+	ctx := context.Background()
+	if err := s.PutBytes(ctx, "docs/hello.txt", []byte("hi kthulu")); err != nil {
+		t.Fatal(err)
+	}
+	ok, err := s.Exists(ctx, "docs/hello.txt")
+	if err != nil || !ok {
+		t.Fatalf("exists: %v %v", ok, err)
+	}
+	data, err := s.GetBytes(ctx, "docs/hello.txt")
+	if err != nil || string(data) != "hi kthulu" {
+		t.Fatalf("get: %q %v", data, err)
+	}
+	if err := s.Copy(ctx, "docs/hello.txt", "docs/copy.txt"); err != nil {
+		t.Fatal(err)
+	}
+	files, err := s.List(ctx, "docs")
+	if err != nil || len(files) != 2 {
+		t.Fatalf("list: %d %v", len(files), err)
+	}
+	if err := s.Delete(ctx, "docs/hello.txt"); err != nil {
+		t.Fatal(err)
+	}
+}

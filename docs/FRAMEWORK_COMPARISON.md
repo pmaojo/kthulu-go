@@ -14,7 +14,7 @@ While Kthulu excels at HTTP/REST APIs, it takes a more explicit approach to non-
 *   **Kthulu Current State:**
     *   Primarily **HTTP/REST centric**.
     *   **gRPC Support:** Available via `grpc-gateway` to expose services as both gRPC and REST, but requires defining `.proto` files explicitly.
-    *   **Background Jobs:** First-class support for Redis-based jobs via `asynq`, but lacking a unified event bus abstraction for Kafka/NATS.
+    *   **Background Jobs:** First-class, database-backed job runtime (workers, retries with exponential backoff, dead letters, recurring schedules) generated with the `queues` feature — no Redis required. A unified event bus abstraction for Kafka/NATS is still on the roadmap.
 
 ### Why it matters
 For large-scale distributed systems, HTTP overhead is often too high. Kthulu prioritizes the **Modular Monolith** pattern, where internal function calls replace network RPCs, deferring the need for complex microservice transports until absolutely necessary.
@@ -49,8 +49,8 @@ Kthulu uses industry-standard tools (GORM, Goose), but adheres to Go's explicit 
     *   **Rich DSL:** Migration files use a high-level Domain Specific Language (e.g., `t.string :name`) that abstracts the specific SQL dialect differences completely.
 
 *   **Kthulu Current State:**
-    *   **Explicit SQL/Go:** Migrations are often raw SQL or basic Go structs.
-    *   **Manual Work:** Developers often need to write the specific migration logic manually, although scaffolding helps.
+    *   **Schema Diffing:** `kthulu migrate diff` compares your entity structs against the live database and generates a goose SQL migration for the gap (additive: `CREATE TABLE`, `ADD COLUMN`); destructive changes are reported, never applied automatically.
+    *   **Explicit SQL:** Generated migrations are plain, reviewable SQL — no opaque DSL between you and the database.
 
 ### Why it matters
 Smoother migration workflows reduce friction during rapid iteration cycles. Kthulu encourages understanding the underlying SQL, preventing "ORM magic" performance pitfalls later.

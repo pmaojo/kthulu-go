@@ -13,16 +13,16 @@ Modules are the building blocks of a Kthulu application. Each encapsulates a spe
 
 | Module      | Description                                          |
 | ----------- | ---------------------------------------------------- |
-| `mail`      | Email service (SMTP, SES, SendGrid, Mailgun, Resend) |
+| `mail`      | Mailer driver (SMTP + log; provider SDK stubs)       |
 | `cache`     | Caching (Memory, Redis, Memcached)                   |
-| `storage`   | File storage (Local, S3, GCS, Azure)                 |
-| `scheduler` | Task scheduling (@hourly, @daily, @every)            |
+| `storage`   | File storage (local driver; S3/GCS/Azure stubs)      |
+| `queues`    | Background jobs: retries, dead letters, scheduler    |
 | `events`    | Pub/Sub event system                                 |
 | `policy`    | Authorization gates & policies                       |
 | `rate`      | Rate limiting (Token Bucket, Sliding Window)         |
 | `session`   | Session management                                   |
 | `i18n`      | Internationalization                                 |
-| `validate`  | Advanced validation rules                            |
+| `validate`  | Declarative field rules -> Validate() + 422 errors   |
 | `seeder`    | Database seeding + Faker                             |
 
 ### Business

@@ -1,0 +1,22 @@
+// @kthulu:infrastructure:mail:test
+package mail
+
+import (
+	"context"
+	"testing"
+)
+
+func TestLogMailerSend(t *testing.T) {
+	m := NewLogMailer()
+	err := m.Send(context.Background(), &Message{To: []string{"a@b.co"}, Subject: "hi", Body: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestNewMailerDefaultsToLogDriver(t *testing.T) {
+	t.Setenv("MAIL_DRIVER", "")
+	if _, ok := NewMailer().(*LogMailer); !ok {
+		t.Fatal("expected log mailer by default")
+	}
+}

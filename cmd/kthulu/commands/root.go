@@ -64,6 +64,7 @@ func init() {
 
 	// Other commands
 	rootCmd.AddCommand(migrateCmd) // kthulu migrate
+	rootCmd.AddCommand(consoleCmd) // kthulu console
 
 	// Aliases
 	// generateCmd was an alias for add component, now replaced by AI generate

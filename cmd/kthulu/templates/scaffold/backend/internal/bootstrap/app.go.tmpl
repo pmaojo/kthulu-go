@@ -19,6 +19,12 @@ import (
 	"{{.ProjectModule}}/internal/infrastructure/queue"
 	"{{.ProjectModule}}/internal/jobs"
 {{end}}
+{{if .MailEnabled}}
+	"{{.ProjectModule}}/internal/infrastructure/mail"
+{{end}}
+{{if .StorageEnabled}}
+	"{{.ProjectModule}}/internal/infrastructure/storage"
+{{end}}
 {{.ModuleImports}}
 {{if .GTHEnabled}}
 	"{{.ProjectModule}}/internal/adapters/http/gth"
@@ -38,6 +44,14 @@ func AppOptions() []fx.Option {
 		// Background job queue + scheduler
 		fx.Provide(newQueue),
 		fx.Invoke(startQueue),
+{{end}}
+{{if .MailEnabled}}
+		// Mail driver (MAIL_DRIVER env: smtp, log, ...)
+		fx.Provide(mail.NewMailer),
+{{end}}
+{{if .StorageEnabled}}
+		// File storage driver (STORAGE_DRIVER env: local, ...)
+		fx.Provide(storage.NewStorage),
 {{end}}
 		// Route Registration
 		fx.Invoke(RegisterRoutes),

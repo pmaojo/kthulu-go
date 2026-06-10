@@ -128,6 +128,18 @@ q.Every(time.Hour, jobs.TypeHeartbeat, nil)
 The worker pool starts and stops with the application lifecycle (Uber Fx
 hooks) and works on SQLite, PostgreSQL and MySQL.
 
+### Mail & Storage Drivers
+
+`mail` and `storage` in `features:` generate env-configured infrastructure
+drivers, provided through Fx so any service can inject them:
+
+- `internal/infrastructure/mail/` — `Mailer` interface with SMTP and log
+  drivers (`MAIL_DRIVER`, default `log`), plus an HTML template mailer.
+- `internal/infrastructure/storage/` — `Storage` interface with a complete
+  local-disk driver (`STORAGE_DRIVER`, default `local`): put/get/list/copy/
+  move/delete, URLs and metadata. Cloud drivers (S3/GCS/Azure) are typed
+  stubs ready for the SDK of your choice.
+
 ## Why use Blueprints?
 
 - **Architecture as Code**: Version control your architecture decisions.
