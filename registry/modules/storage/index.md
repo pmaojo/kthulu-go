@@ -1,6 +1,6 @@
 ---
 title: "Storage"
-description: "Generated file storage infrastructure: a Storage interface with a complete local-disk driver, env-configured, injected via Fx."
+description: "StorageModule provides file storage functionality. Supports multiple drivers: local, s3, gcs, azure"
 type: "module"
 author: "Kthulu Core"
 stars: 0
@@ -9,11 +9,39 @@ icon: "Box"
 
 # Storage
 
-Add `storage` to your project features and Kthulu generates `internal/infrastructure/storage/` — a `Storage` interface with a complete **local disk** driver (put/get/list/copy/move/delete, URLs, metadata) plus generated tests. The driver is provided through Fx, so any service can inject it.
+StorageModule provides file storage functionality. Supports multiple drivers: local, s3, gcs, azure
+
+## Features
+
+
+- Auto-configured Fx Module
+- Clean Architecture structure
+
+
+
+## Configuration
+
+The module is configured via environment variables:
+
+| Variable | Description |
+|----------|-------------|
+| - | No environment variables detected |
+
+
+## Installation
+
+Add this module to your project:
 
 ```bash
-kthulu create my-app --features=auth,user,storage
+kthulu add module storage
 ```
+
+## Components
+
+This module provides the following components to the application:
+
+- **Backend**: Go module wired with Uber Fx.
+
 
 ## Usage
 
@@ -35,3 +63,4 @@ url := store.URL("avatars/42.png")
 | `STORAGE_URL` | `/storage` | Base URL for public files |
 
 The cloud drivers (S3, GCS, Azure) are generated as typed stubs with clear errors pointing at the SDK dependency to add.
+
