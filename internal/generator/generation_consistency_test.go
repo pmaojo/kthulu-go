@@ -229,3 +229,41 @@ func TestGenerateProject_QueueRuntime(t *testing.T) {
 		assert.NotContains(t, f.Path, "modules/queues/", "queues must not be generated as a CRUD module")
 	}
 }
+
+// TestGenerateProject_MailAndStorage guards the mail and storage drivers:
+// generated as infrastructure with tests and wired into the fx bootstrap.
+func TestGenerateProject_MailAndStorage(t *testing.T) {
+	gen := NewTemplateGenerator(resolver.NewDependencyResolver(&parser.ProjectAnalysis{
+		Modules:      make(map[string]*parser.Module),
+		Dependencies: []parser.Dependency{},
+	}))
+
+	structure, err := gen.GenerateProject(&GeneratorConfig{
+		ProjectName:   "infra",
+		ProjectModule: "github.com/example/infra",
+		TemplateType:  "server",
+		Database:      "sqlite",
+		Auth:          "jwt",
+		Frontend:      "templ",
+		Features:      []string{"auth", "user", "mail", "storage"},
+		CustomValues:  map[string]string{"module_path": "github.com/example/infra"},
+	})
+	require.NoError(t, err)
+
+	mailFile := findFile(t, structure, "internal/infrastructure/mail/mailer.go")
+	assert.Contains(t, mailFile, "func NewMailer() Mailer")
+	findFile(t, structure, "internal/infrastructure/mail/mailer_test.go")
+
+	storageFile := findFile(t, structure, "internal/infrastructure/storage/storage.go")
+	assert.Contains(t, storageFile, "func NewStorage() Storage")
+	findFile(t, structure, "internal/infrastructure/storage/storage_test.go")
+
+	bootstrap := findFile(t, structure, "pkg/bootstrap/app.go")
+	assert.Contains(t, bootstrap, "fx.Provide(mail.NewMailer)")
+	assert.Contains(t, bootstrap, "fx.Provide(storage.NewStorage)")
+
+	for _, f := range structure.Files {
+		assert.NotContains(t, f.Path, "modules/mail/", "mail must not be generated as a CRUD module")
+		assert.NotContains(t, f.Path, "modules/storage/", "storage must not be generated as a CRUD module")
+	}
+}

@@ -2,7 +2,7 @@
   "id": "queues",
   "name": "Queues Module",
   "type": "module",
-  "description": "High-performance queues module for Kthulu Go ecosystems.",
+  "description": "Database-backed background jobs with retries, dead letters and a recurring scheduler. No Redis required.",
   "author": "Kthulu Core",
   "stars": 0,
   "icon": "Box"

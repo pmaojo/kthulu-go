@@ -70,6 +70,35 @@ Create new migration file.
 kthulu migrate create add_orders_table
 ```
 
+### `kthulu migrate diff`
+
+Compare your entity structs against the live database schema and generate a
+goose SQL migration for the difference. Only additive changes are generated
+(`CREATE TABLE`, `ADD COLUMN`); database columns missing from entities are
+reported as comments, never dropped.
+
+```bash
+kthulu migrate diff --dry-run      # preview
+kthulu migrate diff --name add_reviews
+```
+
+### `kthulu console`
+
+Interactive database console for your project — the `rails console` /
+`artisan tinker` equivalent. Connection is discovered the same way the
+generated app connects (DATABASE_URL, kthulu-plan.yaml, env vars).
+
+```bash
+kthulu console                     # interactive REPL
+kthulu console -e "tables"         # one-shot command
+kthulu console -e "list Products 50"
+kthulu console -e "create Products name=Widget price=10"
+kthulu console -e "sql SELECT name, price FROM Products"
+```
+
+Commands: `tables`, `schema`, `list`, `find`, `count`, `create`, `update`,
+`delete`, `sql`.
+
 ### `kthulu seed`
 
 Run database seeders.

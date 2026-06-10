@@ -192,7 +192,11 @@ func (s *LocalStorage) List(ctx context.Context, prefix string) ([]FileInfo, err
 		if err != nil {
 			return err
 		}
-		
+		// Skip the prefix directory itself; callers expect its contents.
+		if path == root {
+			return nil
+		}
+
 		relPath, _ := filepath.Rel(s.config.Root, path)
 		files = append(files, FileInfo{
 			Path:         relPath,

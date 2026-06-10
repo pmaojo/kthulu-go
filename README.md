@@ -99,11 +99,29 @@ modules:
 ```
 
 ### ⚙️ Background Jobs & Scheduler
-Add the `queues` feature and get a database-backed job runtime — worker pool, exponential-backoff retries, dead letters, and recurring schedules — with zero extra infrastructure.
+Add the `queues` feature and get a database-backed job runtime — worker pool, exponential-backoff retries, dead letters, and recurring schedules — with zero extra infrastructure. The `mail` and `storage` features generate env-configured drivers (SMTP/log mailer, local-disk storage) injected via Fx.
 
 ```go
 q.Enqueue(jobs.TypeWelcomeEmail, jobs.WelcomeEmail{UserID: 42})
 q.Every(time.Hour, jobs.TypeHeartbeat, nil) // cron equivalent
+```
+
+### 🔮 Interactive Console
+The `rails console` / `artisan tinker` equivalent — inspect and manipulate your project's database with auto-discovered connection settings.
+
+```bash
+kthulu console
+kthulu> list Products
+kthulu> create Products name=Widget price=10
+kthulu> sql SELECT name, price FROM Products
+```
+
+### 🧬 Smart Migrations
+`kthulu migrate diff` compares your entity structs against the live database and generates the SQL migration for the gap — additive only, destructive changes are reported but never applied.
+
+```bash
+kthulu migrate diff --dry-run
+kthulu migrate diff --name add_reviews
 ```
 
 ### 🥒 Behavior Driven Development (BDD)

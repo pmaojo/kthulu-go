@@ -94,25 +94,36 @@ type TemplateGenerator struct {
 	resolver  *resolver.DependencyResolver
 	templates map[string]*template.Template
 	config    *GeneratorConfig
-	// queueEnabled is set when the feature list requests the background
-	// job runtime (queue/queues/jobs/scheduler).
-	queueEnabled bool
+	// infra records which shared infrastructure runtimes the feature list
+	// requested (generated as infrastructure, not CRUD modules).
+	infra InfraFeatures
 }
 
-// extractQueueFeature removes queue-runtime feature aliases from the list
-// and reports whether the queue infrastructure should be generated.
-func extractQueueFeature(features []string) ([]string, bool) {
+// InfraFeatures flags the infrastructure runtimes requested via features.
+type InfraFeatures struct {
+	Queue   bool // queue, queues, jobs, scheduler
+	Mail    bool // mail, mailer
+	Storage bool // storage, files
+}
+
+// extractInfraFeatures removes infrastructure feature aliases from the list
+// and reports which runtimes should be generated.
+func extractInfraFeatures(features []string) ([]string, InfraFeatures) {
 	kept := make([]string, 0, len(features))
-	enabled := false
+	var infra InfraFeatures
 	for _, f := range features {
 		switch strings.ToLower(strings.TrimSpace(f)) {
 		case "queue", "queues", "jobs", "scheduler":
-			enabled = true
+			infra.Queue = true
+		case "mail", "mailer":
+			infra.Mail = true
+		case "storage", "files":
+			infra.Storage = true
 		default:
 			kept = append(kept, f)
 		}
 	}
-	return kept, enabled
+	return kept, infra
 }
 
 // GeneratorConfig configures the template generation
@@ -244,9 +255,9 @@ func (g *TemplateGenerator) GenerateProject(config *GeneratorConfig) (*ProjectSt
 
 	g.config = config
 
-	// Step 0: Split infrastructure features (queue runtime) from CRUD
-	// modules. They are generated as shared infrastructure, not modules.
-	config.Features, g.queueEnabled = extractQueueFeature(config.Features)
+	// Step 0: Split infrastructure features (queue, mail, storage) from
+	// CRUD modules. They are generated as shared infrastructure.
+	config.Features, g.infra = extractInfraFeatures(config.Features)
 
 	// Step 1: Resolve dependencies
 	plan, err := g.resolver.ResolveDependencies(config.Features)
@@ -448,7 +459,7 @@ func (g *TemplateGenerator) generateBaseStructure(structure *ProjectStructure) e
 	}
 
 	// Queue runtime (background jobs + scheduler)
-	if g.queueEnabled {
+	if g.infra.Queue {
 		structure.Directories = append(structure.Directories,
 			"internal/infrastructure/queue",
 			"internal/jobs",
@@ -456,6 +467,20 @@ func (g *TemplateGenerator) generateBaseStructure(structure *ProjectStructure) e
 		infraFiles["internal/infrastructure/queue/queue.go"] = "scaffold/backend/internal/infrastructure/queue/queue.go.tmpl"
 		infraFiles["internal/infrastructure/queue/queue_test.go"] = "scaffold/backend/internal/infrastructure/queue/queue_test.go.tmpl"
 		infraFiles["internal/jobs/jobs.go"] = "scaffold/backend/internal/jobs/jobs.go.tmpl"
+	}
+
+	// Mail driver (SMTP + log drivers, env-configured)
+	if g.infra.Mail {
+		structure.Directories = append(structure.Directories, "internal/infrastructure/mail")
+		infraFiles["internal/infrastructure/mail/mailer.go"] = "scaffold/backend/internal/infrastructure/mail/mailer.go.tmpl"
+		infraFiles["internal/infrastructure/mail/mailer_test.go"] = "scaffold/backend/internal/infrastructure/mail/mailer_test.go.tmpl"
+	}
+
+	// Storage driver (local disk driver, env-configured)
+	if g.infra.Storage {
+		structure.Directories = append(structure.Directories, "internal/infrastructure/storage")
+		infraFiles["internal/infrastructure/storage/storage.go"] = "scaffold/backend/internal/infrastructure/storage/storage.go.tmpl"
+		infraFiles["internal/infrastructure/storage/storage_test.go"] = "scaffold/backend/internal/infrastructure/storage/storage_test.go.tmpl"
 	}
 
 	// Generate placeholder static file to prevent go:embed error
@@ -557,7 +582,9 @@ func (g *TemplateGenerator) generateBootstrapApp() string {
 		"InvokeParams":    g.generateInvokeParams(),
 		"ModuleRoutes":    g.generateModuleRoutes(),
 		"GTHEnabled":      g.config.Frontend != "none",
-		"QueueEnabled":    g.queueEnabled,
+		"QueueEnabled":    g.infra.Queue,
+		"MailEnabled":     g.infra.Mail,
+		"StorageEnabled":  g.infra.Storage,
 		"FeatureList":     g.config.Features,
 	}
 
