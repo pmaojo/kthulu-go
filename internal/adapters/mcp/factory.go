@@ -76,5 +76,10 @@ func (f *ToolFactory) BuildTools(workingDir string, filter CommandFilter) []Regi
 	watch := NewFileWatchService()
 	tools = append(tools, watch.GetTools(workingDir)...)
 
+	// Plugin tools registered via RegisterPlugin / init() in any tool file.
+	for _, builder := range pluginBuilders {
+		tools = append(tools, builder(f.executor, workingDir)...)
+	}
+
 	return tools
 }
