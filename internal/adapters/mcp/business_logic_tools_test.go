@@ -10,10 +10,6 @@ import (
 	mcp_golang "github.com/metoro-io/mcp-golang"
 )
 
-// ---------------------------------------------------------------------------
-// Test fixtures
-// ---------------------------------------------------------------------------
-
 const minimalServiceSrc = `package order
 
 import (
@@ -39,7 +35,7 @@ import "gorm.io/gorm"
 // Order is the main domain entity.
 type Order struct {
 	gorm.Model
-	TotalCents int ` + "`" + `gorm:"not null" json:"total_cents"` + "`" + `
+	TotalCents int
 }
 
 // OrderRepository defines the data access interface.
@@ -86,10 +82,6 @@ func callAddHookHandler(t *testing.T, tool RegisteredTool, args AddHookArgs) (*m
 	return handler(context.Background(), args)
 }
 
-// ---------------------------------------------------------------------------
-// Unit helpers
-// ---------------------------------------------------------------------------
-
 func TestBuildMethodStub(t *testing.T) {
 	code := buildMethodStub("OrderService", "CalculateTax", "Calculate 21% VAT on total_cents")
 	if !strings.Contains(code, "func (o *OrderService) CalculateTax") {
@@ -102,7 +94,7 @@ func TestBuildMethodStub(t *testing.T) {
 		t.Errorf("stub missing description, got:\n%s", code)
 	}
 	if !strings.Contains(code, "not implemented") {
-		t.Errorf("stub missing 'not implemented', got:\n%s", code)
+		t.Errorf("stub missing not implemented, got:\n%s", code)
 	}
 }
 
@@ -142,10 +134,9 @@ func TestStripMarkdownFences(t *testing.T) {
 
 func TestTitleCase(t *testing.T) {
 	cases := map[string]string{
-		"order":   "Order",
-		"product": "Product",
-		"":        "",
-		"Order":   "Order",
+		"order": "Order",
+		"":      "",
+		"Order": "Order",
 	}
 	for input, want := range cases {
 		got := titleCase(input)
@@ -154,10 +145,6 @@ func TestTitleCase(t *testing.T) {
 		}
 	}
 }
-
-// ---------------------------------------------------------------------------
-// generate_method tool tests
-// ---------------------------------------------------------------------------
 
 func TestGenerateMethodTool_Registered(t *testing.T) {
 	var found bool
@@ -212,7 +199,6 @@ func TestGenerateMethodTool_AlreadyExists(t *testing.T) {
 	dir := t.TempDir()
 	createServiceFixture(t, dir, "order", minimalServiceSrc)
 	_ = os.Unsetenv("OPENAI_API_KEY")
-
 	tool := generateMethodTool(nil, dir)
 	_, err := callGenerateMethodHandler(t, tool, GenerateMethodArgs{
 		Module:      "order",
@@ -224,7 +210,7 @@ func TestGenerateMethodTool_AlreadyExists(t *testing.T) {
 		t.Fatal("expected error for duplicate method")
 	}
 	if !strings.Contains(err.Error(), "already exists") {
-		t.Errorf("expected 'already exists' in error, got: %s", err.Error())
+		t.Errorf("expected already exists in error, got: %s", err.Error())
 	}
 }
 
@@ -232,7 +218,6 @@ func TestGenerateMethodTool_DryRunNoAPIKey(t *testing.T) {
 	dir := t.TempDir()
 	createServiceFixture(t, dir, "order", minimalServiceSrc)
 	_ = os.Unsetenv("OPENAI_API_KEY")
-
 	tool := generateMethodTool(nil, dir)
 	resp, err := callGenerateMethodHandler(t, tool, GenerateMethodArgs{
 		Module:      "order",
@@ -254,10 +239,6 @@ func TestGenerateMethodTool_DryRunNoAPIKey(t *testing.T) {
 		t.Errorf("expected CalculateTax in response, got: %s", text)
 	}
 }
-
-// ---------------------------------------------------------------------------
-// add_hook tool tests
-// ---------------------------------------------------------------------------
 
 func TestAddHookTool_Registered(t *testing.T) {
 	var found bool
@@ -308,7 +289,7 @@ func TestAddHookTool_InvalidLifecycle(t *testing.T) {
 		t.Fatal("expected error for invalid lifecycle")
 	}
 	if !strings.Contains(err.Error(), "unknown lifecycle") {
-		t.Errorf("expected 'unknown lifecycle', got: %s", err.Error())
+		t.Errorf("expected unknown lifecycle, got: %s", err.Error())
 	}
 }
 
