@@ -95,6 +95,58 @@ type Recommendation struct {
 	AutoApply bool   `json:"auto_apply"`
 }
 
+// Static configuration maps hoisted to avoid per-call allocation
+var (
+	moduleDescriptions = map[string]string{
+		"user":         "User management and authentication core",
+		"auth":         "Authentication and authorization system",
+		"organization": "Multi-tenant organization management",
+		"contact":      "Customer and vendor contact management",
+		"product":      "Product catalog and management",
+		"invoice":      "Invoice generation and management",
+		"payment":      "Payment processing and gateway integration",
+		"inventory":    "Inventory and warehouse management",
+		"calendar":     "Scheduling and calendar management",
+		"verifactu":    "Spanish fiscal compliance (VeriFACTU)",
+		"oauthsso":     "OAuth and SSO integration",
+		"realtime":     "Real-time communication and WebSocket support",
+		"audit":        "Audit logging and compliance tracking",
+		"notification": "Multi-channel notification system",
+	}
+
+	moduleCategories = map[string]string{
+		"user":         "Core",
+		"auth":         "Core",
+		"organization": "Core",
+		"contact":      "Business",
+		"product":      "Business",
+		"invoice":      "Business",
+		"payment":      "Integration",
+		"inventory":    "Business",
+		"calendar":     "Business",
+		"verifactu":    "Compliance",
+		"oauthsso":     "Integration",
+		"realtime":     "Infrastructure",
+		"audit":        "Compliance",
+		"notification": "Infrastructure",
+	}
+
+	incompatibleModulePairs = map[string][]string{
+		"sqlite":     {"mysql", "postgresql"},
+		"mysql":      {"postgresql"},
+		"local_auth": {"oauthsso"},
+		// Add more incompatible combinations
+	}
+
+	optionalModuleSuggestions = map[string][]string{
+		"user":         {"notification", "audit"},
+		"organization": {"contact", "calendar"},
+		"product":      {"inventory", "pricing"},
+		"invoice":      {"payment", "verifactu"},
+		"contact":      {"calendar", "communication"},
+	}
+)
+
 // NewDependencyResolver creates a new dependency resolver
 func NewDependencyResolver(analysis *parser.ProjectAnalysis) *DependencyResolver {
 	resolver := &DependencyResolver{
@@ -273,7 +325,7 @@ func (r *DependencyResolver) checkIncompatibleModules(plan *ResolutionPlan) {
 		moduleSet[module] = true
 	}
 
-	for module, incompatibles := range incompatiblePairs {
+	for module, incompatibles := range incompatibleModulePairs {
 		if moduleSet[module] {
 			for _, incompatible := range incompatibles {
 				if moduleSet[incompatible] {
