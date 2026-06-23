@@ -37,7 +37,7 @@ kthulu version
 You should see output similar to:
 
 ```text
-Kthulu CLI v1.0.0
+Kthulu CLI v1.3.5
 ```
 
 ## Setup & Configuration

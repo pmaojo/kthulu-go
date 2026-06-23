@@ -131,7 +131,7 @@ export default async function DocPage({ params }: { params: { slug: string[] } }
                  <div className="bg-white/[0.02] border border-white/10 rounded-xl p-6">
                    <h3 className="text-lg font-bold mb-2">Requirements</h3>
                    <ul className="list-disc list-inside space-y-2 text-muted-foreground text-sm">
-                     <li>Kthulu CLI v1.0.0+</li>
+                     <li>Kthulu CLI v1.3.5+</li>
                      <li>Go 1.21+</li>
                      <li>Docker (Optional)</li>
                    </ul>
