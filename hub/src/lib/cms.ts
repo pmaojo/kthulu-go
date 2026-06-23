@@ -18,14 +18,18 @@ export interface DocContent {
 async function readFrontMatter(filePath: string): Promise<Record<string, any>> {
   const fd = await fs.promises.open(filePath, 'r');
   try {
-    const buffer = Buffer.alloc(4096);
+    // Optimization: allocUnsafe is faster as it skips zero-filling
+    const buffer = Buffer.allocUnsafe(4096);
     const { bytesRead } = await fd.read(buffer, 0, 4096, 0);
     const content = buffer.toString('utf8', 0, bytesRead);
 
     if (content.startsWith('---')) {
       const end = content.indexOf('\n---', 3);
       if (end !== -1) {
-        return matter(content).data;
+        // Optimization: Slice string to only include frontmatter block
+        // This prevents gray-matter from processing the body content
+        const fmBlock = content.substring(0, end + 4);
+        return matter(fmBlock).data;
       }
     }
     // Fallback: read full file if frontmatter is huge or not found in first 4KB
