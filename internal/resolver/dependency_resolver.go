@@ -149,10 +149,12 @@ func (r *DependencyResolver) ResolveDependencies(requestedModules []string) (*Re
 		r.resolveDependenciesRecursive(module, allRequired, plan)
 	}
 
-	// Convert map to slice
+	// Convert map to slice. Sorted, because ranging a map yields a different
+	// order on every run and this slice is what the caller scaffolds from.
 	for module := range allRequired {
 		plan.RequiredModules = append(plan.RequiredModules, module)
 	}
+	sort.Strings(plan.RequiredModules)
 
 	// Step 2: Calculate installation order (topological sort)
 	installOrder, err := r.calculateInstallOrder(plan.RequiredModules)
@@ -225,12 +227,18 @@ func (r *DependencyResolver) calculateInstallOrder(modules []string) ([]string, 
 	var result []string
 	queue := []string{}
 
-	// Find nodes with no incoming edges
+	// Find nodes with no incoming edges.
+	//
+	// Ties are broken by name here and below. A graph usually admits several
+	// valid orders, and picking whichever one map iteration happened to
+	// produce made the install order — and so the generated project — differ
+	// between runs on identical input.
 	for module, degree := range inDegree {
 		if degree == 0 {
 			queue = append(queue, module)
 		}
 	}
+	sort.Strings(queue)
 
 	for len(queue) > 0 {
 		// Remove node from queue
@@ -239,12 +247,15 @@ func (r *DependencyResolver) calculateInstallOrder(modules []string) ([]string, 
 		result = append(result, current)
 
 		// Remove edges from current node
+		freed := []string{}
 		for _, neighbor := range graph[current] {
 			inDegree[neighbor]--
 			if inDegree[neighbor] == 0 {
-				queue = append(queue, neighbor)
+				freed = append(freed, neighbor)
 			}
 		}
+		sort.Strings(freed)
+		queue = append(queue, freed...)
 	}
 
 	// Check for cycles
