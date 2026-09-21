@@ -1,0 +1,69 @@
+// @kthulu:core:{{.Name}}
+package core
+
+import (
+	"errors"
+	"time"
+)
+
+// Errors the authentication flow reports. Handlers map these to status codes.
+var (
+	// ErrInvalidCredentials covers both an unknown email and a wrong password.
+	// They are one error on purpose: answering them differently tells an
+	// attacker which addresses are registered.
+	ErrInvalidCredentials = errors.New("invalid credentials")
+	ErrEmailTaken         = errors.New("that email is already registered")
+	ErrAccountDisabled    = errors.New("this account is disabled")
+	ErrWeakPassword       = errors.New("password must be at least 8 characters")
+	ErrNoSigningKey       = errors.New("JWT_SECRET is not set, so no token can be issued")
+)
+
+// SearchFilter represents search criteria
+type SearchFilter struct {
+	Query  string
+	Limit  int
+	Offset int
+}
+
+// {{.Title}} is an identity that can authenticate against this service.
+type {{.Title}} struct {
+	ID        uint      `json:"id" gorm:"primaryKey"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+
+{{range .Fields}}	{{.Name}} {{.Type}} `json:"{{if .Secret}}-{{else}}{{.JSONTag}}{{end}}" gorm:"{{.GormTag}}{{if eq .JSONTag "email"}};uniqueIndex{{end}}"`
+{{end}}}
+
+// TableName overrides the table name used by {{.Title}} to `{{.TableName}}`
+func ({{.Title}}) TableName() string {
+	return "{{.TableName}}"
+}
+
+// Session is what a successful login hands back.
+type Session struct {
+	Token     string    `json:"token"`
+	TokenType string    `json:"token_type"`
+	ExpiresAt time.Time `json:"expires_at"`
+	Identity  *{{.Title}} `json:"identity"`
+}
+
+// {{.Title}}Repository defines the repository interface
+type {{.Title}}Repository interface {
+	Create(entity *{{.Title}}) error
+	GetByID(id uint) (*{{.Title}}, error)
+	// FindByEmail returns the identity with this email, or nil when there is
+	// none. Looking one up by scanning the table would make every login cost
+	// a full read of the identity store.
+	FindByEmail(email string) (*{{.Title}}, error)
+	Update(entity *{{.Title}}) error
+	Delete(id uint) error
+	List(filter SearchFilter) ([]*{{.Title}}, error)
+}
+
+// {{.Title}}Service defines the service interface
+type {{.Title}}Service interface {
+	Register(email, password string) (*{{.Title}}, error)
+	Login(email, password string) (*Session, error)
+	Get{{.Title}}ByID(id uint) (*{{.Title}}, error)
+	List{{.PluralTitle}}(filter SearchFilter) ([]*{{.Title}}, error)
+}

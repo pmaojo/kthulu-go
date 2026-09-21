@@ -135,6 +135,26 @@ type BackendField struct {
 	RelTable     string
 	FKColumnName string
 	Rules        []FieldRule
+	// Secret marks a column that must never be serialised back to a client,
+	// such as a password hash. It still has a column and a migration; only
+	// the JSON tag is suppressed.
+	Secret bool
+}
+
+// secretColumns are the column names whose value is a credential. A module
+// declaring one of these was otherwise generated with a plain json tag, so
+// every list and read response handed the stored hash back to the caller.
+var secretColumns = map[string]bool{
+	"password":      true,
+	"password_hash": true,
+	"secret":        true,
+	"token":         true,
+	"api_key":       true,
+}
+
+// IsSecretColumn reports whether a column holds a credential.
+func IsSecretColumn(column string) bool {
+	return secretColumns[strings.ToLower(column)]
 }
 
 // FieldRule is a single validation rule declared in the field DSL, e.g.
@@ -184,7 +204,9 @@ func ParseBackendFields(rawFields []string) []BackendField {
 			relTarget := parts[2]
 			singularTarget := inflection.Singular(relTarget)
 			relTargetTitle := Capitalize(singularTarget)
-			relTable := Pluralize(relTargetTitle)
+			// The referenced table, not the Go type: a foreign key pointing at
+			// Customers finds nothing once the table is created as customers.
+			relTable := SQLTableName(singularTarget)
 
 			// 1. Foreign Key
 			fields = append(fields, BackendField{
@@ -236,14 +258,26 @@ func ParseBackendFields(rawFields []string) []BackendField {
 			rules = ParseFieldRules(strings.Join(parts[2:], ":"))
 		}
 
+		column := ToSnakeCase(name)
 		fields = append(fields, BackendField{
 			Name:    name,
 			Type:    goType,
-			JSONTag: ToSnakeCase(name),
-			GormTag: "column:" + ToSnakeCase(name),
+			JSONTag: column,
+			GormTag: "column:" + column,
 			SQLType: sqlType,
 			Rules:   rules,
+			Secret:  IsSecretColumn(column),
 		})
 	}
 	return fields
+}
+
+// SQLTableName returns the table a module's entity is stored in.
+//
+// It is deliberately not PluralTitle, which is a Go identifier: that produced
+// table names like "Repair_orders". Postgres folds an unquoted identifier to
+// lower case but GORM quotes it, so the table was created as "Repair_orders"
+// and every hand-written query spelling it repair_orders failed to find it.
+func SQLTableName(name string) string {
+	return Pluralize(ToSnakeCase(name))
 }

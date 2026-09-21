@@ -489,7 +489,13 @@ func buildProjectConfig(projectName string) (*generator.GeneratorConfig, error) 
 	if newDatabase != "" {
 		config.Database = newDatabase
 	}
-	if newFrontend != "none" && newFrontend != "" {
+	// "none" is a real, explicit choice (no GTH scaffold, no frozen
+	// gth.RegisterRoutes signature to fall out of sync as modules are added
+	// later) and must override the template default, not defer to it. Only
+	// an unset flag ("") should fall back to what the template picks; the
+	// --frontend flag's own default is "templ", so "" only happens when a
+	// plan file omits the field.
+	if newFrontend != "" {
 		config.Frontend = newFrontend
 	}
 	if newAuth != "" {

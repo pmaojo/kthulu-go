@@ -284,11 +284,13 @@ func runAddAuthModule() error {
 		return err
 	}
 
-	// Auto register in main.go
-	if err := generator.InjectModuleRegistration(base, "auth", projectModule, DefaultModulesPath); err != nil {
+	// Wire the module into pkg/bootstrap/app.go alongside whatever the project
+	// already has (see writeBootstrap for why this rebuilds the file rather
+	// than patching main.go).
+	if err := registerModuleInBootstrap(base, "auth"); err != nil {
 		fmt.Printf("⚠️  Failed to register auth module: %v\n", err)
 	} else {
-		fmt.Println("🔌 Registered auth module in main.go")
+		fmt.Println("🔌 Registered auth module in pkg/bootstrap/app.go")
 	}
 
 	// Add dependencies
@@ -459,11 +461,15 @@ func runAddModule(module string, fields []string, integrations []string, complia
 	}
 	templateGenerator.SetConfig(config)
 
+	// The handler template mounts this under router.PathPrefix("/" + RoutePrefix),
+	// so RoutePrefix itself must not carry a leading slash: --prefix's own help
+	// text shows "/api/v1", and the old default built "/"+module, so either one
+	// produced a route mounted at "//..." that nothing could ever reach.
 	if prefix != "" {
-		config.CustomValues["route_prefix"] = prefix
+		config.CustomValues["route_prefix"] = strings.TrimPrefix(prefix, "/")
 	} else {
 		// Default to module name as prefix
-		config.CustomValues["route_prefix"] = fmt.Sprintf("/%s", module)
+		config.CustomValues["route_prefix"] = module
 	}
 
 	if protected {
@@ -491,25 +497,17 @@ func runAddModule(module string, fields []string, integrations []string, complia
 		return fmt.Errorf("error generating module: %w", err)
 	}
 
-	// Register module in main.go
-	if err != nil {
-		fmt.Printf("   ⚠️  Warning: Could not detect project module from go.mod: %v\n", err)
-		// Fallback to trying the framework path only if we are seemingly running tests in the framework itself
-		// but typically we should just fail gracefully.
+	// Wire the module into pkg/bootstrap/app.go: its providers, its place in
+	// RegisterRoutes's parameter list, and its route registration. That file
+	// is generated wholesale from the project's full module list, so the new
+	// module is added by redoing that derivation over every module the
+	// project already has plus this one, not by patching main.go in place.
+	if projectModule == "" {
+		fmt.Printf("   ⚠️  Warning: Could not detect project module from go.mod; skipping bootstrap wiring\n")
+	} else if err := writeBootstrap(templateGenerator, config.OutputPath, allProjectModules(analysis, plan.RequiredModules)); err != nil {
+		fmt.Printf("   ⚠️  Warning: Failed to update pkg/bootstrap/app.go: %v\n", err)
 	} else {
-		if err := generator.InjectModuleRegistration(config.OutputPath, module, projectModule, moduleRelPath); err != nil {
-			fmt.Printf("   ⚠️  Warning: Failed to auto-register module in main.go: %v\n", err)
-		} else {
-			fmt.Printf("   🔌 Auto-registered module '%s' in main.go\n", module)
-
-			// Register Routes
-			entityName := generator.Capitalize(generator.Singularize(module))
-			if err := generator.InjectRouteRegistration(config.OutputPath, module, projectModule, moduleRelPath, entityName); err != nil {
-				fmt.Printf("   ⚠️  Warning: Failed to auto-register routes in main.go: %v\n", err)
-			} else {
-				fmt.Printf("   🚦 Auto-registered routes for '%s' in main.go\n", entityName)
-			}
-		}
+		fmt.Printf("   🔌 Registered module '%s' in pkg/bootstrap/app.go\n", module)
 	}
 
 	// Step 8b: Generate GTH frontend views if frontend is not 'none'
@@ -812,6 +810,69 @@ func generateSpecificModule(config *generator.GeneratorConfig, moduleName string
 	}
 
 	return nil
+}
+
+// allProjectModules returns every module the project already has, plus
+// newModules, deduplicated. The dependency resolver re-derives the closure
+// and install order from this set; it does not need it sorted or resolved
+// going in.
+func allProjectModules(analysis *parser.ProjectAnalysis, newModules []string) []string {
+	seen := make(map[string]bool, len(analysis.Modules)+len(newModules))
+	all := make([]string, 0, len(analysis.Modules)+len(newModules))
+
+	for name := range analysis.Modules {
+		if !seen[name] {
+			seen[name] = true
+			all = append(all, name)
+		}
+	}
+	for _, name := range newModules {
+		if !seen[name] {
+			seen[name] = true
+			all = append(all, name)
+		}
+	}
+	return all
+}
+
+// writeBootstrap rebuilds pkg/bootstrap/app.go for allModules and writes it.
+func writeBootstrap(gen *generator.TemplateGenerator, outputPath string, allModules []string) error {
+	content := gen.RegenerateBootstrap(allModules)
+	if strings.TrimSpace(content) == "" {
+		return fmt.Errorf("generated bootstrap/app.go was empty")
+	}
+	return os.WriteFile(filepath.Join(outputPath, "pkg", "bootstrap", "app.go"), []byte(content), 0644)
+}
+
+// registerModuleInBootstrap wires newModule into pkg/bootstrap/app.go
+// alongside every module currentDir's project already has. It parses the
+// project fresh, for callers (like `kthulu add auth`) that have not already
+// built a resolver and generator of their own.
+func registerModuleInBootstrap(currentDir, newModule string) error {
+	tagParser := parser.NewTagParser(nil)
+	analysis, err := tagParser.AnalyzeProject(currentDir)
+	if err != nil {
+		return fmt.Errorf("error analyzing project: %w", err)
+	}
+
+	projectModule, err := getProjectModule(currentDir)
+	if err != nil {
+		return fmt.Errorf("could not detect project module from go.mod: %w", err)
+	}
+
+	dependencyResolver := resolver.NewDependencyResolver(analysis)
+	templateGenerator := generator.NewTemplateGenerator(dependencyResolver)
+	templateGenerator.SetConfig(&generator.GeneratorConfig{
+		ProjectName:   filepath.Base(currentDir),
+		ProjectModule: projectModule,
+		OutputPath:    currentDir,
+		Database:      detectDatabase(currentDir),
+		Frontend:      detectFrontend(currentDir),
+		Auth:          detectAuth(currentDir),
+		CustomValues:  make(map[string]string),
+	})
+
+	return writeBootstrap(templateGenerator, currentDir, allProjectModules(analysis, []string{newModule}))
 }
 
 func updateProjectConfig(dir string, plan *resolver.ResolutionPlan) error {

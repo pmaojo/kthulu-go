@@ -1,0 +1,110 @@
+// @kthulu:handler:{{.Name}}
+package api
+
+import (
+	"encoding/json"
+	"errors"
+	"net/http"
+
+	"github.com/gorilla/mux"
+
+	"{{.ProjectModule}}/internal/infrastructure/middleware"
+	"{{.CoreImport}}"
+)
+
+type {{.Title}}Handler struct {
+	service core.{{.Title}}Service
+}
+
+func New{{.Title}}Handler(service core.{{.Title}}Service) *{{.Title}}Handler {
+	return &{{.Title}}Handler{service: service}
+}
+
+type credentials struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+// RegisterRoutes mounts the authentication endpoints.
+//
+// Register and login are deliberately outside the protected subrouter: a
+// caller has no token yet when it asks for one.
+func (h *{{.Title}}Handler) RegisterRoutes(router *mux.Router) {
+	{{if .RoutePrefix}}sub := router.PathPrefix("/{{.RoutePrefix}}").Subrouter(){{else}}sub := router{{end}}
+
+	sub.HandleFunc("/register", h.Register).Methods("POST")
+	sub.HandleFunc("/login", h.Login).Methods("POST")
+
+	protected := sub.NewRoute().Subrouter()
+	protected.Use(middleware.AuthMiddleware)
+	protected.HandleFunc("/me", h.Me).Methods("GET")
+}
+
+// Register creates an identity.
+func (h *{{.Title}}Handler) Register(w http.ResponseWriter, r *http.Request) {
+	var body credentials
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "the request body is not valid JSON")
+		return
+	}
+
+	identity, err := h.service.Register(body.Email, body.Password)
+	switch {
+	case errors.Is(err, core.ErrEmailTaken):
+		writeError(w, http.StatusConflict, err.Error())
+		return
+	case errors.Is(err, core.ErrWeakPassword), errors.Is(err, core.ErrInvalidCredentials):
+		writeError(w, http.StatusUnprocessableEntity, err.Error())
+		return
+	case err != nil:
+		writeError(w, http.StatusInternalServerError, "could not register this identity")
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, identity)
+}
+
+// Login exchanges credentials for a token.
+func (h *{{.Title}}Handler) Login(w http.ResponseWriter, r *http.Request) {
+	var body credentials
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "the request body is not valid JSON")
+		return
+	}
+
+	session, err := h.service.Login(body.Email, body.Password)
+	switch {
+	case errors.Is(err, core.ErrInvalidCredentials), errors.Is(err, core.ErrAccountDisabled):
+		// One answer for both an unknown email and a wrong password.
+		writeError(w, http.StatusUnauthorized, "invalid credentials")
+		return
+	case errors.Is(err, core.ErrNoSigningKey):
+		writeError(w, http.StatusInternalServerError, "authentication is not configured: set JWT_SECRET")
+		return
+	case err != nil:
+		writeError(w, http.StatusInternalServerError, "could not complete the login")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, session)
+}
+
+// Me returns the identity the bearer token belongs to.
+func (h *{{.Title}}Handler) Me(w http.ResponseWriter, r *http.Request) {
+	claims, ok := middleware.Claims(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "a bearer token is required")
+		return
+	}
+	writeJSON(w, http.StatusOK, claims)
+}
+
+func writeJSON(w http.ResponseWriter, status int, payload interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(payload)
+}
+
+func writeError(w http.ResponseWriter, status int, message string) {
+	writeJSON(w, status, map[string]string{"error": message})
+}

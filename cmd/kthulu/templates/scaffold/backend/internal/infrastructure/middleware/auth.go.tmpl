@@ -1,0 +1,101 @@
+// @kthulu:infrastructure:middleware
+package middleware
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"os"
+	"strings"
+
+	"github.com/golang-jwt/jwt/v5"
+)
+
+// contextKey keeps the values this middleware puts on the request context from
+// colliding with anything else stored there.
+type contextKey string
+
+const (
+	// SubjectContextKey holds the "sub" claim of the verified token.
+	SubjectContextKey contextKey = "auth.subject"
+	// ClaimsContextKey holds every claim of the verified token.
+	ClaimsContextKey contextKey = "auth.claims"
+)
+
+// AuthMiddleware rejects any request that does not carry a valid bearer token.
+//
+// Routes generated with --protected mount this. The signing key comes from
+// JWT_SECRET; with no key configured every request is refused, because
+// serving traffic from routes declared protected while verifying nothing is
+// the one outcome worth failing loudly over.
+func AuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		secret := os.Getenv("JWT_SECRET")
+		if secret == "" {
+			unauthorized(w, "authentication is not configured: set JWT_SECRET")
+			return
+		}
+
+		token, found := bearerToken(r)
+		if !found {
+			unauthorized(w, "a bearer token is required")
+			return
+		}
+
+		claims := jwt.MapClaims{}
+		parsed, err := jwt.ParseWithClaims(token, claims, func(t *jwt.Token) (interface{}, error) {
+			// Pin the algorithm family. Accepting whatever the token asks for
+			// is how a caller talks a verifier into checking nothing.
+			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, jwt.ErrSignatureInvalid
+			}
+			return []byte(secret), nil
+		}, jwt.WithValidMethods([]string{"HS256", "HS384", "HS512"}))
+		if err != nil || !parsed.Valid {
+			unauthorized(w, "the token is invalid or has expired")
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), ClaimsContextKey, claims)
+		if subject, err := claims.GetSubject(); err == nil && subject != "" {
+			ctx = context.WithValue(ctx, SubjectContextKey, subject)
+		}
+
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// bearerToken pulls the credential out of the Authorization header.
+func bearerToken(r *http.Request) (string, bool) {
+	header := r.Header.Get("Authorization")
+	if header == "" {
+		return "", false
+	}
+
+	scheme, credential, found := strings.Cut(header, " ")
+	if !found || !strings.EqualFold(scheme, "Bearer") {
+		return "", false
+	}
+
+	credential = strings.TrimSpace(credential)
+	return credential, credential != ""
+}
+
+// Subject returns the authenticated subject carried on the request context.
+func Subject(ctx context.Context) (string, bool) {
+	subject, ok := ctx.Value(SubjectContextKey).(string)
+	return subject, ok && subject != ""
+}
+
+// Claims returns every claim of the verified token.
+func Claims(ctx context.Context) (jwt.MapClaims, bool) {
+	claims, ok := ctx.Value(ClaimsContextKey).(jwt.MapClaims)
+	return claims, ok
+}
+
+func unauthorized(w http.ResponseWriter, reason string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("WWW-Authenticate", "Bearer")
+	w.WriteHeader(http.StatusUnauthorized)
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": reason})
+}
