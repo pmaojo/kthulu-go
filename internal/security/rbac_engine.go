@@ -3,6 +3,8 @@ package security
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -168,10 +170,7 @@ func (e *RBACEngine) CheckAccess(ctx context.Context, request *AccessRequest) (*
 
 	// Check cache first
 	if e.config.CacheEnabled {
-		if cached := e.cache.Get(cacheKey); cached != nil && !cached.IsExpired() {
-			cached.HitCount++
-			result := cached.Result
-			result.CacheHit = true
+		if result := e.cache.Hit(cacheKey); result != nil {
 			result.ProcessingTime = time.Since(startTime)
 			return result, nil
 		}
@@ -321,7 +320,7 @@ func (e *RBACEngine) evaluateConditions(conditions map[string]interface{}, conte
 			return false
 		}
 
-		if contextValue != expectedValue {
+		if !reflect.DeepEqual(contextValue, expectedValue) {
 			return false
 		}
 	}
@@ -329,10 +328,39 @@ func (e *RBACEngine) evaluateConditions(conditions map[string]interface{}, conte
 	return true
 }
 
-// generateCacheKey creates a cache key for the request
+// generateCacheKey creates a cache key for the request.
+//
+// The context is part of the key because evaluateConditions decides on it: a
+// policy gated on something like {"mfa": true} would otherwise be evaluated
+// once and then replayed from the cache for the same subject, resource,
+// action and roles presenting a context that does not satisfy it.
 func (e *RBACEngine) generateCacheKey(request *AccessRequest) string {
 	rolesStr := strings.Join(request.UserRoles, ",")
-	return fmt.Sprintf("rbac:%s:%s:%s:%s", request.Subject, request.Resource, request.Action, rolesStr)
+	return fmt.Sprintf("rbac:%s:%s:%s:%s:%s", request.Subject, request.Resource,
+		request.Action, rolesStr, canonicalContext(request.Context))
+}
+
+// canonicalContext renders a context map so that equal maps always produce the
+// same string and different maps do not collide, whatever the iteration order.
+func canonicalContext(ctx map[string]interface{}) string {
+	if len(ctx) == 0 {
+		return ""
+	}
+
+	keys := make([]string, 0, len(ctx))
+	for key := range ctx {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	var b strings.Builder
+	for i, key := range keys {
+		if i > 0 {
+			b.WriteByte(';')
+		}
+		fmt.Fprintf(&b, "%s=%#v", key, ctx[key])
+	}
+	return b.String()
 }
 
 // createAuditEntry creates an audit log entry
@@ -413,6 +441,29 @@ func (c *RBACCache) Get(key string) *CachedDecision {
 	return decision
 }
 
+// Hit records a use of the cached decision for key and returns a copy of it,
+// or nil when there is nothing live to serve.
+//
+// Callers get a copy because the stored decision is shared by every request
+// that maps to the same key: handing out the pointer let concurrent callers
+// write CacheHit and ProcessingTime over each other, and left the stored
+// decision permanently marked as a cache hit.
+func (c *RBACCache) Hit(key string) *AccessResult {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	decision, exists := c.decisions[key]
+	if !exists || decision.IsExpired() || decision.Result == nil {
+		return nil
+	}
+
+	decision.HitCount++
+
+	result := *decision.Result
+	result.CacheHit = true
+	return &result
+}
+
 func (c *RBACCache) Set(key string, result *AccessResult) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -422,8 +473,12 @@ func (c *RBACCache) Set(key string, result *AccessResult) {
 		c.cleanup()
 	}
 
+	// Store a copy: the caller keeps the result it was handed and may write
+	// to it, which would otherwise edit what every later request reads back.
+	stored := *result
+
 	c.decisions[key] = &CachedDecision{
-		Result:    result,
+		Result:    &stored,
 		ExpiresAt: time.Now().Add(c.ttl),
 		CreatedAt: time.Now(),
 		HitCount:  0,
