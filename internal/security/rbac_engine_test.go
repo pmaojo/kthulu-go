@@ -183,10 +183,10 @@ func TestHierarchicalRolesGrantThroughDirectParent(t *testing.T) {
 	}
 }
 
-// Parent lookup walks exactly one level: junior -> senior -> admin does not
-// reach admin. Pinned because the engine advertises HierarchicalRoles, and a
-// reader may expect the grandparent to be inherited too.
-func TestHierarchicalRolesAreNotTransitive(t *testing.T) {
+// Parent lookup walks the whole chain: junior -> senior -> admin reaches
+// admin. Declaring a hierarchy and then honouring only its first step refused
+// access the hierarchy says the user has.
+func TestHierarchicalRolesAreTransitive(t *testing.T) {
 	e := testEngine(nil)
 	e.AddRole(&Role{ID: "junior", Name: "junior", ParentRoles: []string{"senior"}})
 	e.AddRole(&Role{ID: "senior", Name: "senior", ParentRoles: []string{"admin"}})
@@ -198,8 +198,8 @@ func TestHierarchicalRolesAreNotTransitive(t *testing.T) {
 	res := allow(t, e, &AccessRequest{
 		Subject: "u", Resource: "vault", Action: "read", UserRoles: []string{"junior"},
 	})
-	if res.Allowed {
-		t.Error("role inheritance is one level deep; a grandparent role must not be granted")
+	if !res.Allowed {
+		t.Errorf("junior inherits senior which inherits admin, got %q", res.Reason)
 	}
 }
 
