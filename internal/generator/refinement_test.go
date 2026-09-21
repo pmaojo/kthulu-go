@@ -247,3 +247,143 @@ func TestRegenerateBootstrap_IncludesEveryModulePassed(t *testing.T) {
 	assert.Contains(t, content, "wood_stockHandler.RegisterRoutes(apiRouter)")
 	assert.Contains(t, content, "customer.Providers()", "must still carry the module that was already there")
 }
+
+// "user" is generally pulled in only as auth's dependency, not written
+// literally in a plan's features list. The per-module GTH view step used to
+// walk config.Features raw, so a module present only through dependency
+// resolution — like user through auth — was wired into RegisterRoutes and
+// pkg/bootstrap/app.go's call to it, with no views ever generated for it:
+// the generated project failed to compile from the moment it was created,
+// whenever frontend was "templ" and any feature list included auth.
+func TestGenerateProject_TransitiveModuleGetsGTHViewsToo(t *testing.T) {
+	gen := newTestGenerator()
+
+	structure, err := gen.GenerateProject(&GeneratorConfig{
+		ProjectName:   "gth-shop",
+		ProjectModule: "github.com/example/gthshop",
+		TemplateType:  "server",
+		Database:      "sqlite",
+		Auth:          "jwt",
+		Frontend:      "templ",
+		Features:      []string{"auth", "customer"},
+		ModuleFields:  map[string][]string{"customer": {"full_name:string:required"}},
+	})
+	require.NoError(t, err)
+
+	// "user" was pulled in as auth's dependency and must have gotten the
+	// same views as any other module.
+	page := findFile(t, structure, "internal/views/pages/user_page.templ")
+	assert.Contains(t, page, "UsersPage")
+
+	routes := findFile(t, structure, "internal/adapters/http/gth/routes.go")
+	assert.Contains(t, routes, "handleUserPage")
+}
+
+// RegenerateGTHRoutes is what `kthulu add module` now uses to rebuild
+// internal/adapters/http/gth/routes.go, the GTH counterpart to
+// RegenerateBootstrap. It must wire every module passed in.
+func TestRegenerateGTHRoutes_IncludesEveryModulePassed(t *testing.T) {
+	gen := newTestGenerator()
+
+	_, err := gen.GenerateProject(&GeneratorConfig{
+		ProjectName:   "gth-shop",
+		ProjectModule: "github.com/example/gthshop",
+		TemplateType:  "server",
+		Database:      "sqlite",
+		Auth:          "jwt",
+		Frontend:      "templ",
+		Features:      []string{"auth", "customer"},
+		ModuleFields:  map[string][]string{"customer": {"full_name:string:required"}},
+	})
+	require.NoError(t, err)
+
+	content, err := gen.RegenerateGTHRoutes([]string{"auth", "customer", "user", "wood_stock"})
+	require.NoError(t, err)
+	assert.Contains(t, content, "handleWood_stockPage", "the new module must get a page handler")
+	assert.Contains(t, content, "handleCustomerPage", "the module that was already there must survive")
+	assert.NotContains(t, content, "handleAuthPage", "auth mounts its own routes and gets no admin CRUD page")
+}
+
+// pkg/bootstrap/app.go's call to gth.RegisterRoutes and that function's own
+// signature are positional arguments on either side of one call: even when
+// both files agree on which modules exist, they must also agree on what
+// order the parameters come in. RegenerateBootstrap and RegenerateGTHRoutes
+// are called separately by `add module`, from a module list built by
+// walking a map (so its order is not guaranteed), which is exactly the
+// scenario that produced a swapped customerService/userService pair that
+// type-checked as "does not implement" rather than "not enough arguments".
+func TestRegenerateBootstrapAndGTHRoutes_AgreeOnParameterOrderRegardlessOfInputOrder(t *testing.T) {
+	gen := newTestGenerator()
+
+	_, err := gen.GenerateProject(&GeneratorConfig{
+		ProjectName:   "gth-shop",
+		ProjectModule: "github.com/example/gthshop",
+		TemplateType:  "server",
+		Database:      "sqlite",
+		Auth:          "jwt",
+		Frontend:      "templ",
+		Features:      []string{"auth", "customer"},
+		ModuleFields:  map[string][]string{"customer": {"full_name:string:required"}},
+	})
+	require.NoError(t, err)
+
+	// Deliberately different orderings of the same module set, as two
+	// independent map iterations might produce.
+	bootstrap := gen.RegenerateBootstrap([]string{"wood_stock", "user", "customer", "auth"})
+	routes, err := gen.RegenerateGTHRoutes([]string{"customer", "auth", "wood_stock", "user"})
+	require.NoError(t, err)
+
+	callLine := extractCall(bootstrap, "gth.RegisterRoutes(router,")
+	sigLine := extractCall(routes, "func RegisterRoutes(router *mux.Router,")
+	require.NotEmpty(t, callLine, "expected a gth.RegisterRoutes call in bootstrap")
+	require.NotEmpty(t, sigLine, "expected a RegisterRoutes signature in routes.go")
+
+	callOrder := serviceOrder(callLine)
+	sigOrder := serviceOrder(sigLine)
+	assert.Equal(t, sigOrder, callOrder,
+		"the call's argument order must match the signature's parameter order:\ncall: %s\nsig:  %s", callLine, sigLine)
+}
+
+// extractCall returns the parenthesised argument list that starts at marker
+// (marker must include the opening paren), tracking paren depth so it stops
+// at the call or signature's own closing paren — whether that's on the same
+// line (a call statement) or several lines down (a multi-line signature).
+func extractCall(content, marker string) string {
+	idx := strings.Index(content, marker)
+	if idx == -1 {
+		return ""
+	}
+	depth := 0
+	for i := idx; i < len(content); i++ {
+		switch content[i] {
+		case '(':
+			depth++
+		case ')':
+			depth--
+			if depth == 0 {
+				return content[idx : i+1]
+			}
+		}
+	}
+	return ""
+}
+
+// serviceOrder returns the module name prefixes of every "<name>Service"
+// argument or parameter, in the order they appear. It looks only at each
+// comma-separated entry's first word (the argument name, or the parameter
+// name in a signature) so a typed signature entry like
+// "customerService customercore.CustomerService" counts once, not twice.
+func serviceOrder(call string) []string {
+	var order []string
+	for _, part := range strings.Split(call, ",") {
+		fields := strings.Fields(part)
+		if len(fields) == 0 {
+			continue
+		}
+		name := fields[0]
+		if idx := strings.Index(name, "Service"); idx > 0 {
+			order = append(order, name[:idx])
+		}
+	}
+	return order
+}

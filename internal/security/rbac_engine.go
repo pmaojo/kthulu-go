@@ -29,6 +29,19 @@ type RBACConfig struct {
 	DefaultDenyPolicy  bool          `json:"default_deny_policy"`
 	HierarchicalRoles  bool          `json:"hierarchical_roles"`
 	ContextualSecurity bool          `json:"contextual_security"`
+
+	// RoleHierarchyDepth controls how many levels of ParentRoles are
+	// followed when HierarchicalRoles is enabled: 0 (the default) is one
+	// level, a role's direct parents only; a positive N follows N levels;
+	// -1 follows the whole chain, however deep, cycles included (a cycle is
+	// still visited once, not forever).
+	//
+	// How far a hierarchy reaches is a per-deployment policy, not something
+	// the engine should decide by having one fixed traversal baked into its
+	// code — whether "junior" should reach all the way to "admin" through
+	// "senior" depends on what that project's roles are actually meant to
+	// grant, which this engine has no way to know on its own.
+	RoleHierarchyDepth int `json:"role_hierarchy_depth"`
 }
 
 // SecurityPolicy represents a security policy derived from @kthulu:security tags
@@ -304,34 +317,62 @@ func (e *RBACEngine) userHasRequiredRole(userRoles, requiredRoles []string) bool
 }
 
 // expandRoles returns the roles a user effectively holds: the ones granted
-// directly plus, when the hierarchy is enabled, everything reachable through
-// ParentRoles.
+// directly plus, when the hierarchy is enabled, whatever RoleHierarchyDepth
+// says is reachable through ParentRoles.
 //
-// The walk is transitive. Expanding only the direct parents meant a role two
-// steps below the one a policy names was refused, which is the whole point of
-// declaring a hierarchy. A role cycle is walked once, not forever.
+// A role cycle is visited once, not forever, whatever the configured depth.
 func (e *RBACEngine) expandRoles(userRoles []string) map[string]bool {
 	expanded := make(map[string]bool, len(userRoles))
 
-	pending := append([]string(nil), userRoles...)
+	if !e.config.HierarchicalRoles {
+		for _, role := range userRoles {
+			expanded[role] = true
+		}
+		return expanded
+	}
+
+	maxDepth := e.roleHierarchyDepth()
+
+	type pendingRole struct {
+		name  string
+		depth int
+	}
+	pending := make([]pendingRole, 0, len(userRoles))
+	for _, role := range userRoles {
+		pending = append(pending, pendingRole{name: role, depth: 0})
+	}
+
 	for len(pending) > 0 {
-		role := pending[len(pending)-1]
+		current := pending[len(pending)-1]
 		pending = pending[:len(pending)-1]
 
-		if expanded[role] {
+		if expanded[current.name] {
 			continue
 		}
-		expanded[role] = true
+		expanded[current.name] = true
 
-		if !e.config.HierarchicalRoles {
+		if maxDepth >= 0 && current.depth >= maxDepth {
 			continue
 		}
-		if roleObj, exists := e.roles[role]; exists {
-			pending = append(pending, roleObj.ParentRoles...)
+		if roleObj, exists := e.roles[current.name]; exists {
+			for _, parent := range roleObj.ParentRoles {
+				pending = append(pending, pendingRole{name: parent, depth: current.depth + 1})
+			}
 		}
 	}
 
 	return expanded
+}
+
+// roleHierarchyDepth resolves the configured depth to a concrete limit: -1
+// (RoleHierarchyDepth's own sentinel) means unlimited, 0 (unset) preserves
+// the original single-level default so that a config from before this field
+// existed keeps behaving exactly as it did.
+func (e *RBACEngine) roleHierarchyDepth() int {
+	if e.config.RoleHierarchyDepth == 0 {
+		return 1
+	}
+	return e.config.RoleHierarchyDepth
 }
 
 // evaluateConditions checks if conditions are met

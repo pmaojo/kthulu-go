@@ -778,7 +778,60 @@ func (g *TemplateGenerator) RegenerateBootstrap(allFeatures []string) string {
 	return g.generateBootstrapApp()
 }
 
+// RegenerateGTHRoutes rebuilds internal/adapters/http/gth/routes.go for a
+// project's full module set, the GTH-frontend counterpart to
+// RegenerateBootstrap.
+//
+// Its RegisterRoutes signature and every per-module handler come from
+// config.Features exactly as at initial generation. pkg/bootstrap/app.go's
+// RegisterRoutes already calls gth.RegisterRoutes with one service argument
+// per current module (see the template's FeatureList loop); a routes.go left
+// over from project creation stops matching that call's argument count the
+// moment a module is added, so `add module` must redo this derivation too
+// whenever the project has a GTH frontend, not just pkg/bootstrap/app.go.
+func (g *TemplateGenerator) RegenerateGTHRoutes(allFeatures []string) (string, error) {
+	g.config.Features, g.infra = extractInfraFeatures(allFeatures)
+
+	// Features must be resolvedFeatures(), not g.config.Features raw: this
+	// is the same value generateBootstrapApp's FeatureList now uses for the
+	// call to gth.RegisterRoutes, and the two are positional arguments on
+	// either side of the same call. allFeatures itself can arrive in
+	// whatever order the caller's bookkeeping produced (add module builds it
+	// by walking a map), so without resolving both through the same
+	// deterministic, sorted path here and in generateBootstrapApp, the two
+	// files agree on which modules exist but can still disagree on what
+	// order their parameters come in — which is a silent type mismatch at
+	// every position after the first swapped pair, not a missing-module
+	// error.
+	layoutData := map[string]interface{}{
+		"ProjectName":   g.config.ProjectName,
+		"ProjectModule": g.modulePath(),
+		"Features":      g.resolvedFeatures(),
+		"ModulesPath":   g.getModuleRelPath(),
+	}
+
+	return g.executeTemplate("gth_routes", TmplGTHRoutes, layoutData)
+}
+
 // generateBootstrapApp generates the bootstrap/app.go file
+// resolvedFeatures returns config.Features expanded to its full dependency
+// closure — the same set generateModuleProviders, generateModuleRoutes,
+// generateInvokeParams and generateModuleImports already compute for
+// themselves. Anything that decides which modules a template wires together
+// must use this, not config.Features directly: a module pulled in only as
+// another one's dependency (like "user" through "auth") is real for every
+// one of those call sites, and treating it as absent in just one of them —
+// which FeatureList and generateGTHFrontend's layoutData both used to do —
+// is what left gth.RegisterRoutes's own signature, the call to it, and the
+// nav it renders all disagreeing about which modules exist.
+func (g *TemplateGenerator) resolvedFeatures() []string {
+	plan, err := g.resolver.ResolveDependencies(g.config.Features)
+	if err != nil {
+		return g.config.Features
+	}
+	return plan.RequiredModules
+}
+
 func (g *TemplateGenerator) generateBootstrapApp() string {
 	coreImport := g.moduleImportPath("internal/core")
 	data := map[string]interface{}{
@@ -792,7 +845,7 @@ func (g *TemplateGenerator) generateBootstrapApp() string {
 		"QueueEnabled":    g.infra["queue"],
 		"InfraImports":    g.generateInfraImports(),
 		"InfraProviders":  g.generateInfraProviders(),
-		"FeatureList":     g.config.Features,
+		"FeatureList":     g.resolvedFeatures(),
 	}
 
 	content, err := g.executeTemplate("bootstrap_app", TmplBootstrapApp, data)
@@ -1208,11 +1261,14 @@ func (g *TemplateGenerator) generateGTHFrontend(structure *ProjectStructure) err
 
 	structure.Directories = append(structure.Directories, dirs...)
 
-	// Generate base layouts
+	// Generate base layouts. Features is the resolved set (see
+	// resolvedFeatures), so a module pulled in only as another one's
+	// dependency still gets a nav entry, a RegisterRoutes parameter and an
+	// argument at the call site, consistently with pkg/bootstrap/app.go.
 	layoutData := map[string]interface{}{
 		"ProjectName":   g.config.ProjectName,
 		"ProjectModule": g.modulePath(),
-		"Features":      g.config.Features,
+		"Features":      g.resolvedFeatures(),
 		"ModulesPath":   g.getModuleRelPath(),
 	}
 
@@ -1286,9 +1342,15 @@ func (g *TemplateGenerator) generateGTHFrontend(structure *ProjectStructure) err
 		Content: routesContent,
 	})
 
-	// Generate module-specific views
-	for _, feature := range g.config.Features {
-		if feature == "auth" || feature == "users" {
+	// Generate module-specific views, over the same resolved set layoutData
+	// above uses, so every module routes.go now references has views to
+	// render.
+	for _, feature := range g.resolvedFeatures() {
+		// Only auth is excluded here, matching routes_gth.go.tmpl's own
+		// {{if ne . "auth"}} guard: user and organization get full admin
+		// CRUD pages like any other module (see the RegisterRoutes params
+		// and the routes it registers, which do not exclude them).
+		if feature == "auth" {
 			continue
 		}
 

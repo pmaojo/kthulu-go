@@ -529,6 +529,20 @@ func runAddModule(module string, fields []string, integrations []string, complia
 				fmt.Printf("   🎨 Generated GTH views for %s\n", module)
 			}
 		}
+
+		// internal/adapters/http/gth/routes.go carries the same problem
+		// pkg/bootstrap/app.go did: its RegisterRoutes signature is derived
+		// from the project's full module list at generation time and left
+		// untouched by GenerateGTHModule above, so it must be rebuilt the
+		// same way, over every module the project now has, or it stops
+		// matching the call pkg/bootstrap/app.go just regenerated for it.
+		if content, err := templateGenerator.RegenerateGTHRoutes(allProjectModules(analysis, plan.RequiredModules)); err != nil {
+			fmt.Printf("   ⚠️  Warning: Failed to update internal/adapters/http/gth/routes.go: %v\n", err)
+		} else if err := os.WriteFile(filepath.Join(config.OutputPath, "internal", "adapters", "http", "gth", "routes.go"), []byte(content), 0644); err != nil {
+			fmt.Printf("   ⚠️  Warning: Failed to write internal/adapters/http/gth/routes.go: %v\n", err)
+		} else {
+			fmt.Printf("   🎨 Updated internal/adapters/http/gth/routes.go for %s\n", module)
+		}
 	}
 
 	// Step 9: Update project configuration
