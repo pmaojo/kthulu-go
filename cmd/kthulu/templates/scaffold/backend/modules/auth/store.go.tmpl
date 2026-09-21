@@ -1,0 +1,76 @@
+// @kthulu:store:{{.Name}}
+package store
+
+import (
+	"errors"
+	"strings"
+
+	"gorm.io/gorm"
+
+	"{{.CoreImport}}"
+)
+
+type {{.Title}}Repository struct {
+	db *gorm.DB
+}
+
+func New{{.Title}}Repository(db *gorm.DB) core.{{.Title}}Repository {
+	return &{{.Title}}Repository{db: db}
+}
+
+func (r *{{.Title}}Repository) Create(entity *core.{{.Title}}) error {
+	return r.db.Create(entity).Error
+}
+
+func (r *{{.Title}}Repository) GetByID(id uint) (*core.{{.Title}}, error) {
+	var entity core.{{.Title}}
+	err := r.db.First(&entity, id).Error
+	return &entity, err
+}
+
+// FindByEmail returns nil without an error when nobody holds this email, so
+// that "no such identity" is a normal outcome of a login rather than a
+// database failure the handler has to tell apart.
+func (r *{{.Title}}Repository) FindByEmail(email string) (*core.{{.Title}}, error) {
+	var entity core.{{.Title}}
+	err := r.db.Where("email = ?", normalizeEmail(email)).First(&entity).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &entity, nil
+}
+
+func (r *{{.Title}}Repository) Update(entity *core.{{.Title}}) error {
+	return r.db.Save(entity).Error
+}
+
+func (r *{{.Title}}Repository) Delete(id uint) error {
+	return r.db.Delete(&core.{{.Title}}{}, id).Error
+}
+
+func (r *{{.Title}}Repository) List(filter core.SearchFilter) ([]*core.{{.Title}}, error) {
+	var entities []*core.{{.Title}}
+	query := r.db.Model(&core.{{.Title}}{})
+
+	if filter.Query != "" {
+		query = query.Where("email LIKE ?", "%"+filter.Query+"%")
+	}
+	if filter.Limit > 0 {
+		query = query.Limit(filter.Limit)
+	}
+	if filter.Offset > 0 {
+		query = query.Offset(filter.Offset)
+	}
+
+	err := query.Find(&entities).Error
+	return entities, err
+}
+
+// normalizeEmail keeps lookups and the unique index agreeing with each other:
+// addresses differing only in case or padding are the same account.
+func normalizeEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
+}

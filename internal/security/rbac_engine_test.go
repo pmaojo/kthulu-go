@@ -183,10 +183,10 @@ func TestHierarchicalRolesGrantThroughDirectParent(t *testing.T) {
 	}
 }
 
-// Parent lookup walks exactly one level: junior -> senior -> admin does not
-// reach admin. Pinned because the engine advertises HierarchicalRoles, and a
-// reader may expect the grandparent to be inherited too.
-func TestHierarchicalRolesAreNotTransitive(t *testing.T) {
+// Parent lookup walks the whole chain: junior -> senior -> admin reaches
+// admin. Declaring a hierarchy and then honouring only its first step refused
+// access the hierarchy says the user has.
+func TestHierarchicalRolesAreOneLevelByDefault(t *testing.T) {
 	e := testEngine(nil)
 	e.AddRole(&Role{ID: "junior", Name: "junior", ParentRoles: []string{"senior"}})
 	e.AddRole(&Role{ID: "senior", Name: "senior", ParentRoles: []string{"admin"}})
@@ -199,7 +199,90 @@ func TestHierarchicalRolesAreNotTransitive(t *testing.T) {
 		Subject: "u", Resource: "vault", Action: "read", UserRoles: []string{"junior"},
 	})
 	if res.Allowed {
-		t.Error("role inheritance is one level deep; a grandparent role must not be granted")
+		t.Error("RoleHierarchyDepth defaults to one level; a grandparent role must not be granted")
+	}
+}
+
+// RoleHierarchyDepth is a deployment's own choice, not a fixed policy this
+// engine imposes: -1 opts into the full chain, however deep.
+func TestRoleHierarchyDepthUnlimitedReachesTheWholeChain(t *testing.T) {
+	e := testEngine(&RBACConfig{
+		CacheEnabled: false, HierarchicalRoles: true, RoleHierarchyDepth: -1,
+	})
+	e.AddRole(&Role{ID: "junior", Name: "junior", ParentRoles: []string{"senior"}})
+	e.AddRole(&Role{ID: "senior", Name: "senior", ParentRoles: []string{"admin"}})
+	e.AddPolicy(&SecurityPolicy{
+		ID: "admin-only", Name: "admin only", Resource: "*",
+		Actions: []string{"*"}, RequiredRoles: []string{"admin"},
+	})
+
+	res := allow(t, e, &AccessRequest{
+		Subject: "u", Resource: "vault", Action: "read", UserRoles: []string{"junior"},
+	})
+	if !res.Allowed {
+		t.Errorf("RoleHierarchyDepth: -1 must reach the whole chain, got %q", res.Reason)
+	}
+}
+
+// A configured depth of N reaches exactly N levels up, not more.
+func TestRoleHierarchyDepthStopsAtTheConfiguredLevel(t *testing.T) {
+	e := testEngine(&RBACConfig{
+		CacheEnabled: false, HierarchicalRoles: true, RoleHierarchyDepth: 2,
+	})
+	e.AddRole(&Role{ID: "junior", Name: "junior", ParentRoles: []string{"senior"}})
+	e.AddRole(&Role{ID: "senior", Name: "senior", ParentRoles: []string{"admin"}})
+	e.AddRole(&Role{ID: "admin", Name: "admin", ParentRoles: []string{"root"}})
+	e.AddPolicy(&SecurityPolicy{
+		ID: "admin-only", Name: "admin only", Resource: "vault",
+		Actions: []string{"*"}, RequiredRoles: []string{"admin"},
+	})
+	e.AddPolicy(&SecurityPolicy{
+		ID: "root-only", Name: "root only", Resource: "vault-of-vaults",
+		Actions: []string{"*"}, RequiredRoles: []string{"root"},
+	})
+
+	granted := allow(t, e, &AccessRequest{
+		Subject: "u", Resource: "vault", Action: "read", UserRoles: []string{"junior"},
+	})
+	if !granted.Allowed {
+		t.Errorf("depth 2 must reach admin (junior -> senior -> admin), got %q", granted.Reason)
+	}
+
+	denied := allow(t, e, &AccessRequest{
+		Subject: "u", Resource: "vault-of-vaults", Action: "read", UserRoles: []string{"junior"},
+	})
+	if denied.Allowed {
+		t.Error("depth 2 must not reach root, a third level up")
+	}
+}
+
+// A cycle must not hang the walk regardless of the configured depth,
+// including the unlimited (-1) setting.
+func TestRoleHierarchyCycleTerminatesEvenWhenUnlimited(t *testing.T) {
+	e := testEngine(&RBACConfig{
+		CacheEnabled: false, HierarchicalRoles: true, RoleHierarchyDepth: -1,
+	})
+	e.AddRole(&Role{ID: "a", Name: "a", ParentRoles: []string{"b"}})
+	e.AddRole(&Role{ID: "b", Name: "b", ParentRoles: []string{"a"}})
+	e.AddPolicy(&SecurityPolicy{
+		ID: "admin-only", Name: "admin only", Resource: "*",
+		Actions: []string{"*"}, RequiredRoles: []string{"admin"},
+	})
+
+	done := make(chan bool, 1)
+	go func() {
+		done <- allow(t, e, &AccessRequest{
+			Subject: "u", Resource: "vault", Action: "read", UserRoles: []string{"a"},
+		}).Allowed
+	}()
+
+	select {
+	case allowed := <-done:
+		if allowed {
+			t.Error("neither a nor b reaches admin")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("role expansion did not terminate on a cycle with unlimited depth")
 	}
 }
 

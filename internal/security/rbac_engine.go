@@ -29,6 +29,19 @@ type RBACConfig struct {
 	DefaultDenyPolicy  bool          `json:"default_deny_policy"`
 	HierarchicalRoles  bool          `json:"hierarchical_roles"`
 	ContextualSecurity bool          `json:"contextual_security"`
+
+	// RoleHierarchyDepth controls how many levels of ParentRoles are
+	// followed when HierarchicalRoles is enabled: 0 (the default) is one
+	// level, a role's direct parents only; a positive N follows N levels;
+	// -1 follows the whole chain, however deep, cycles included (a cycle is
+	// still visited once, not forever).
+	//
+	// How far a hierarchy reaches is a per-deployment policy, not something
+	// the engine should decide by having one fixed traversal baked into its
+	// code — whether "junior" should reach all the way to "admin" through
+	// "senior" depends on what that project's roles are actually meant to
+	// grant, which this engine has no way to know on its own.
+	RoleHierarchyDepth int `json:"role_hierarchy_depth"`
 }
 
 // SecurityPolicy represents a security policy derived from @kthulu:security tags
@@ -165,29 +178,36 @@ func NewRBACEngine(config *RBACConfig) *RBACEngine {
 func (e *RBACEngine) CheckAccess(ctx context.Context, request *AccessRequest) (*AccessResult, error) {
 	startTime := time.Now()
 
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	// Generate cache key
 	cacheKey := e.generateCacheKey(request)
 
 	// Check cache first
 	if e.config.CacheEnabled {
 		if result := e.cache.Hit(cacheKey); result != nil {
+			// The decision is reused; the audit record is not. Each request
+			// is audited in its own right, or a cached allow would leave one
+			// entry standing for every request that hit it.
+			if e.config.AuditEnabled {
+				result.AuditLog = e.createAuditEntry(request, result)
+			}
 			result.ProcessingTime = time.Since(startTime)
 			return result, nil
 		}
 	}
 
-	// Perform authorization logic
+	// Perform authorization logic. The engine denies unless a policy grants:
+	// DefaultDenyPolicy does not switch that off, it only describes it.
 	result := &AccessResult{
 		Allowed:         false,
+		Reason:          "Default deny policy - no explicit allow found",
 		AppliedPolicies: []string{},
 		Conditions:      make(map[string]interface{}),
 		CacheHit:        false,
 		ProcessingTime:  0,
-	}
-
-	// Apply default deny policy
-	if e.config.DefaultDenyPolicy {
-		result.Reason = "Default deny policy - no explicit allow found"
 	}
 
 	// Check user roles and permissions
@@ -285,19 +305,7 @@ func (e *RBACEngine) userHasRequiredRole(userRoles, requiredRoles []string) bool
 		return true // No specific roles required
 	}
 
-	userRoleSet := make(map[string]bool)
-	for _, role := range userRoles {
-		userRoleSet[role] = true
-
-		// Check hierarchical roles if enabled
-		if e.config.HierarchicalRoles {
-			if roleObj, exists := e.roles[role]; exists {
-				for _, parentRole := range roleObj.ParentRoles {
-					userRoleSet[parentRole] = true
-				}
-			}
-		}
-	}
+	userRoleSet := e.expandRoles(userRoles)
 
 	for _, requiredRole := range requiredRoles {
 		if userRoleSet[requiredRole] {
@@ -306,6 +314,65 @@ func (e *RBACEngine) userHasRequiredRole(userRoles, requiredRoles []string) bool
 	}
 
 	return false
+}
+
+// expandRoles returns the roles a user effectively holds: the ones granted
+// directly plus, when the hierarchy is enabled, whatever RoleHierarchyDepth
+// says is reachable through ParentRoles.
+//
+// A role cycle is visited once, not forever, whatever the configured depth.
+func (e *RBACEngine) expandRoles(userRoles []string) map[string]bool {
+	expanded := make(map[string]bool, len(userRoles))
+
+	if !e.config.HierarchicalRoles {
+		for _, role := range userRoles {
+			expanded[role] = true
+		}
+		return expanded
+	}
+
+	maxDepth := e.roleHierarchyDepth()
+
+	type pendingRole struct {
+		name  string
+		depth int
+	}
+	pending := make([]pendingRole, 0, len(userRoles))
+	for _, role := range userRoles {
+		pending = append(pending, pendingRole{name: role, depth: 0})
+	}
+
+	for len(pending) > 0 {
+		current := pending[len(pending)-1]
+		pending = pending[:len(pending)-1]
+
+		if expanded[current.name] {
+			continue
+		}
+		expanded[current.name] = true
+
+		if maxDepth >= 0 && current.depth >= maxDepth {
+			continue
+		}
+		if roleObj, exists := e.roles[current.name]; exists {
+			for _, parent := range roleObj.ParentRoles {
+				pending = append(pending, pendingRole{name: parent, depth: current.depth + 1})
+			}
+		}
+	}
+
+	return expanded
+}
+
+// roleHierarchyDepth resolves the configured depth to a concrete limit: -1
+// (RoleHierarchyDepth's own sentinel) means unlimited, 0 (unset) preserves
+// the original single-level default so that a config from before this field
+// existed keeps behaving exactly as it did.
+func (e *RBACEngine) roleHierarchyDepth() int {
+	if e.config.RoleHierarchyDepth == 0 {
+		return 1
+	}
+	return e.config.RoleHierarchyDepth
 }
 
 // evaluateConditions checks if conditions are met
@@ -334,10 +401,53 @@ func (e *RBACEngine) evaluateConditions(conditions map[string]interface{}, conte
 // policy gated on something like {"mfa": true} would otherwise be evaluated
 // once and then replayed from the cache for the same subject, resource,
 // action and roles presenting a context that does not satisfy it.
+// Every component is length-prefixed rather than delimiter-joined. Subject and
+// resource come from request data, so with a plain separator a subject of
+// "alice:orders" and a resource of "read" produced the same key as the subject
+// "alice" on resource "orders:read", and one of them was answered out of the
+// other one's cache entry.
 func (e *RBACEngine) generateCacheKey(request *AccessRequest) string {
-	rolesStr := strings.Join(request.UserRoles, ",")
-	return fmt.Sprintf("rbac:%s:%s:%s:%s:%s", request.Subject, request.Resource,
-		request.Action, rolesStr, canonicalContext(request.Context))
+	var b strings.Builder
+	b.WriteString("rbac")
+	writeField(&b, request.Subject)
+	writeField(&b, request.Resource)
+	writeField(&b, request.Action)
+	writeField(&b, canonicalRoles(request.UserRoles))
+	writeField(&b, canonicalContext(request.Context))
+	return b.String()
+}
+
+// writeField appends one length-prefixed component to a cache key. The length
+// makes the encoding unambiguous: no value a caller can supply can be read
+// back as a different split of the same key.
+func writeField(b *strings.Builder, value string) {
+	fmt.Fprintf(b, ":%d:%s", len(value), value)
+}
+
+// canonicalRoles renders the role list so that role sets that authorize
+// identically share one cache entry. Authorization is set-based
+// (userHasRequiredRole only asks whether a role is present), so order and
+// repetition carry no meaning and must not split the entry.
+func canonicalRoles(roles []string) string {
+	if len(roles) == 0 {
+		return ""
+	}
+
+	seen := make(map[string]bool, len(roles))
+	unique := make([]string, 0, len(roles))
+	for _, role := range roles {
+		if !seen[role] {
+			seen[role] = true
+			unique = append(unique, role)
+		}
+	}
+	sort.Strings(unique)
+
+	var b strings.Builder
+	for _, role := range unique {
+		writeField(&b, role)
+	}
+	return b.String()
 }
 
 // canonicalContext renders a context map so that equal maps always produce the
@@ -354,11 +464,9 @@ func canonicalContext(ctx map[string]interface{}) string {
 	sort.Strings(keys)
 
 	var b strings.Builder
-	for i, key := range keys {
-		if i > 0 {
-			b.WriteByte(';')
-		}
-		fmt.Fprintf(&b, "%s=%#v", key, ctx[key])
+	for _, key := range keys {
+		writeField(&b, key)
+		writeField(&b, fmt.Sprintf("%#v", ctx[key]))
 	}
 	return b.String()
 }
@@ -388,6 +496,10 @@ func (e *RBACEngine) AddPolicy(policy *SecurityPolicy) {
 	}
 
 	e.policies[policy.ID] = policy
+	// Decisions cached under the old rule set are no longer trustworthy: a
+	// policy tightened here would otherwise keep granting access until the
+	// TTL ran out.
+	e.cache.Flush()
 }
 
 // AddRole adds a role to the engine
@@ -400,6 +512,10 @@ func (e *RBACEngine) AddRole(role *Role) {
 	}
 
 	e.roles[role.ID] = role
+	// Decisions cached under the old rule set are no longer trustworthy: a
+	// policy tightened here would otherwise keep granting access until the
+	// TTL ran out.
+	e.cache.Flush()
 }
 
 // AddPermission adds a permission to the engine
@@ -412,6 +528,10 @@ func (e *RBACEngine) AddPermission(permission *Permission) {
 	}
 
 	e.permissions[permission.ID] = permission
+	// Decisions cached under the old rule set are no longer trustworthy: a
+	// policy tightened here would otherwise keep granting access until the
+	// TTL ran out.
+	e.cache.Flush()
 }
 
 // GetStats returns RBAC engine statistics
@@ -423,7 +543,7 @@ func (e *RBACEngine) GetStats() map[string]interface{} {
 		"total_policies":    len(e.policies),
 		"total_roles":       len(e.roles),
 		"total_permissions": len(e.permissions),
-		"cache_size":        len(e.cache.decisions),
+		"cache_size":        e.cache.Len(),
 		"config":            e.config,
 	}
 }
@@ -459,30 +579,57 @@ func (c *RBACCache) Hit(key string) *AccessResult {
 
 	decision.HitCount++
 
-	result := *decision.Result
+	result := decision.Result.clone()
 	result.CacheHit = true
-	return &result
+	return result
 }
 
 func (c *RBACCache) Set(key string, result *AccessResult) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	// Clean up expired entries if cache is full
+	// Drop expired entries first, then evict by age if that freed nothing:
+	// cleanup alone does not bound the map, and the key now carries the
+	// request context, so a caller varying it can mint entries without limit.
 	if len(c.decisions) >= c.maxSize {
 		c.cleanup()
+		c.evictOldest(len(c.decisions) - c.maxSize + 1)
 	}
 
 	// Store a copy: the caller keeps the result it was handed and may write
 	// to it, which would otherwise edit what every later request reads back.
-	stored := *result
+	stored := result.clone()
+
+	// The audit entry belongs to the request that produced it, not to the
+	// decision. Keeping it would replay one request's audit record, with its
+	// own id and timestamp, for every later request that hits this entry.
+	stored.AuditLog = nil
 
 	c.decisions[key] = &CachedDecision{
-		Result:    &stored,
+		Result:    stored,
 		ExpiresAt: time.Now().Add(c.ttl),
 		CreatedAt: time.Now(),
 		HitCount:  0,
 	}
+}
+
+// Len reports how many decisions are held, taking the cache's own lock.
+// Readers outside the cache must go through this: the engine's lock does not
+// cover this map, so reading it directly raced with Set.
+func (c *RBACCache) Len() int {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
+	return len(c.decisions)
+}
+
+// Flush drops every cached decision. Policy and role changes call it, so a
+// tightened rule takes effect on the next request instead of after the TTL.
+func (c *RBACCache) Flush() {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	c.decisions = make(map[string]*CachedDecision)
 }
 
 func (c *RBACCache) cleanup() {
@@ -492,6 +639,55 @@ func (c *RBACCache) cleanup() {
 			delete(c.decisions, key)
 		}
 	}
+}
+
+// evictOldest removes n entries, oldest first. Caller holds the write lock.
+func (c *RBACCache) evictOldest(n int) {
+	if n <= 0 {
+		return
+	}
+
+	keys := make([]string, 0, len(c.decisions))
+	for key := range c.decisions {
+		keys = append(keys, key)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		a, b := c.decisions[keys[i]], c.decisions[keys[j]]
+		if a.CreatedAt.Equal(b.CreatedAt) {
+			return keys[i] < keys[j]
+		}
+		return a.CreatedAt.Before(b.CreatedAt)
+	})
+
+	if n > len(keys) {
+		n = len(keys)
+	}
+	for _, key := range keys[:n] {
+		delete(c.decisions, key)
+	}
+}
+
+// clone returns a decision that shares nothing writable with the receiver.
+// A shallow copy still shared AppliedPolicies and Conditions, so a caller
+// writing into either one edited what every later request read back.
+func (r *AccessResult) clone() *AccessResult {
+	copied := *r
+
+	if r.AppliedPolicies != nil {
+		copied.AppliedPolicies = append([]string(nil), r.AppliedPolicies...)
+	}
+	if r.Conditions != nil {
+		copied.Conditions = make(map[string]interface{}, len(r.Conditions))
+		for key, value := range r.Conditions {
+			copied.Conditions[key] = value
+		}
+	}
+	if r.AuditLog != nil {
+		entry := *r.AuditLog
+		copied.AuditLog = &entry
+	}
+
+	return &copied
 }
 
 func (d *CachedDecision) IsExpired() bool {

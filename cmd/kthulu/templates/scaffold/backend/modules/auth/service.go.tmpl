@@ -1,0 +1,148 @@
+// @kthulu:service:{{.Name}}
+package core
+
+import (
+	"os"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
+)
+
+// minPasswordLength is the shortest password Register accepts.
+const minPasswordLength = 8
+
+// defaultTokenTTL is how long an issued token stays valid when
+// JWT_TTL_MINUTES says nothing.
+const defaultTokenTTL = time.Hour
+
+type {{.Title | lower}}Service struct {
+	repo {{.Title}}Repository
+}
+
+func New{{.Title}}Service(repo {{.Title}}Repository) {{.Title}}Service {
+	return &{{.Title | lower}}Service{repo: repo}
+}
+
+// Register stores a new identity with the password hashed.
+func (s *{{.Title | lower}}Service) Register(email, password string) (*{{.Title}}, error) {
+	email = normalizeEmail(email)
+	if email == "" {
+		return nil, ErrInvalidCredentials
+	}
+	if len(password) < minPasswordLength {
+		return nil, ErrWeakPassword
+	}
+
+	existing, err := s.repo.FindByEmail(email)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil {
+		return nil, ErrEmailTaken
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
+	identity := &{{.Title}}{Email: email, PasswordHash: string(hash), Provider: "password"}
+	if err := s.repo.Create(identity); err != nil {
+		return nil, err
+	}
+	return identity, nil
+}
+
+// Login verifies the password and issues a token.
+func (s *{{.Title | lower}}Service) Login(email, password string) (*Session, error) {
+	identity, err := s.repo.FindByEmail(email)
+	if err != nil {
+		return nil, err
+	}
+
+	// Hash even when there is no such identity, so that a request for an
+	// unknown address takes about as long as one for a known address. Timing
+	// alone would otherwise say which addresses are registered.
+	storedHash := placeholderHash
+	if identity != nil {
+		storedHash = identity.PasswordHash
+	}
+	passwordMatches := bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(password)) == nil
+
+	if identity == nil || !passwordMatches {
+		return nil, ErrInvalidCredentials
+	}
+
+	identity.LastLoginAt = time.Now().UTC().Format(time.RFC3339)
+	if err := s.repo.Update(identity); err != nil {
+		return nil, err
+	}
+
+	token, expiresAt, err := issueToken(identity)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Session{
+		Token:     token,
+		TokenType: "Bearer",
+		ExpiresAt: expiresAt,
+		Identity:  identity,
+	}, nil
+}
+
+func (s *{{.Title | lower}}Service) Get{{.Title}}ByID(id uint) (*{{.Title}}, error) {
+	return s.repo.GetByID(id)
+}
+
+func (s *{{.Title | lower}}Service) List{{.PluralTitle}}(filter SearchFilter) ([]*{{.Title}}, error) {
+	return s.repo.List(filter)
+}
+
+// placeholderHash is a valid bcrypt hash of a value no password equals. It
+// exists only to give the unknown-identity path the same cost as the real one.
+const placeholderHash = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy"
+
+// issueToken signs a token for this identity.
+func issueToken(identity *{{.Title}}) (string, time.Time, error) {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		return "", time.Time{}, ErrNoSigningKey
+	}
+
+	issuedAt := time.Now().UTC()
+	expiresAt := issuedAt.Add(tokenTTL())
+
+	claims := jwt.MapClaims{
+		"sub":   strconv.FormatUint(uint64(identity.ID), 10),
+		"email": identity.Email,
+		"iat":   issuedAt.Unix(),
+		"exp":   expiresAt.Unix(),
+	}
+
+	signed, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(secret))
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	return signed, expiresAt, nil
+}
+
+func tokenTTL() time.Duration {
+	raw := strings.TrimSpace(os.Getenv("JWT_TTL_MINUTES"))
+	if raw == "" {
+		return defaultTokenTTL
+	}
+	minutes, err := strconv.Atoi(raw)
+	if err != nil || minutes <= 0 {
+		return defaultTokenTTL
+	}
+	return time.Duration(minutes) * time.Minute
+}
+
+// normalizeEmail mirrors the store: the service compares what the store stores.
+func normalizeEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
+}

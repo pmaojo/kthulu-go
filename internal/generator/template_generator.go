@@ -56,12 +56,20 @@ const (
 	// Infrastructure Templates
 	TmplInfraRecovery   = "scaffold/backend/internal/infrastructure/middleware/recovery.go.tmpl"
 	TmplInfraMiddleware = "scaffold/backend/internal/infrastructure/middleware/middleware.go.tmpl"
-	TmplInfraLogger     = "scaffold/backend/internal/infrastructure/observability/logger.go.tmpl"
-	TmplInfraMetrics    = "scaffold/backend/internal/infrastructure/observability/metrics.go.tmpl"
-	TmplInfraServer     = "scaffold/backend/internal/infrastructure/server/server.go.tmpl"
-	TmplInfraStaticFS   = "scaffold/backend/internal/infrastructure/static/fs.go.tmpl"
-	TmplInfraConfig     = "scaffold/backend/internal/infrastructure/config/config.go.tmpl"
-	TmplBootstrapApp    = "scaffold/backend/internal/bootstrap/app.go.tmpl"
+	TmplInfraAuth       = "scaffold/backend/internal/infrastructure/middleware/auth.go.tmpl"
+
+	// The auth module is generated from its own templates: an identity that
+	// can register, log in and be verified, rather than one more CRUD entity.
+	TmplAuthCore      = "scaffold/backend/modules/auth/core.go.tmpl"
+	TmplAuthStore     = "scaffold/backend/modules/auth/store.go.tmpl"
+	TmplAuthService   = "scaffold/backend/modules/auth/service.go.tmpl"
+	TmplAuthHandler   = "scaffold/backend/modules/auth/handler.go.tmpl"
+	TmplInfraLogger   = "scaffold/backend/internal/infrastructure/observability/logger.go.tmpl"
+	TmplInfraMetrics  = "scaffold/backend/internal/infrastructure/observability/metrics.go.tmpl"
+	TmplInfraServer   = "scaffold/backend/internal/infrastructure/server/server.go.tmpl"
+	TmplInfraStaticFS = "scaffold/backend/internal/infrastructure/static/fs.go.tmpl"
+	TmplInfraConfig   = "scaffold/backend/internal/infrastructure/config/config.go.tmpl"
+	TmplBootstrapApp  = "scaffold/backend/internal/bootstrap/app.go.tmpl"
 
 	// Test Templates
 	TmplModuleTest  = "scaffold/backend/layers/module_providers_test.go.tmpl"
@@ -200,14 +208,71 @@ func IsInfraFeature(name string) bool {
 	return ok
 }
 
+// IsAuthModule reports whether a module is the authentication module.
+func IsAuthModule(name string) bool {
+	return strings.EqualFold(strings.TrimSpace(name), "auth")
+}
+
+// AuthConfigured reports whether a project asked for authentication.
+func AuthConfigured(auth string) bool {
+	switch strings.ToLower(strings.TrimSpace(auth)) {
+	case "", "none", "false", "off":
+		return false
+	}
+	return true
+}
+
+// protectRoutes reports whether a module's routes are mounted behind the auth
+// middleware.
+//
+// A project that declares auth: jwt used to get the dependency in its go.mod,
+// a line in its README and nothing else: every CRUD route was served without
+// a token. The auth module itself is excluded because it mounts its own
+// routes, and login cannot require the token it issues.
+func (g *TemplateGenerator) protectRoutes(moduleName string) bool {
+	return AuthConfigured(g.config.Auth) && !IsAuthModule(moduleName)
+}
+
+// CuratedDefaultFields returns the fields a well-known module is generated with
+// when the blueprint declares none, and reports whether the module has any.
+//
+// This is the only list of curated defaults. "auth", "user" and "organization"
+// used to be named as curated and then skipped before any fields were
+// assigned, so they were generated carrying nothing but an id and timestamps —
+// a user with no email and no password — while the warning about fieldless
+// modules exempted exactly those three, so nobody was told.
+func CuratedDefaultFields(name string) ([]string, bool) {
+	switch name {
+	case "auth":
+		// The identity an authenticated session is established against.
+		// Note that generating this entity does not generate authentication:
+		// see GeneratorConfig.Auth.
+		return []string{"email:string", "password_hash:string", "provider:string", "last_login_at:string"}, true
+	case "user":
+		return []string{FieldNameString, "email:string", "password_hash:string", "role:string", "active:bool"}, true
+	case "organization":
+		return []string{FieldNameString, "slug:string", "description:text"}, true
+	case "product":
+		return []string{FieldNameString, "sku:string", "price:int", "description:text", "stock:int"}, true
+	case "contact":
+		return []string{FieldNameString, "email:string", "phone:string", "company:string"}, true
+	case "calendar":
+		return []string{FieldNameString, "start_time:string", "end_time:string", "location:string"}, true
+	case "inventory":
+		return []string{"product_id:int", "quantity:int", "warehouse:string"}, true
+	case "invoice":
+		return []string{"customer_id:int", "amount:int", "status:string", "due_date:string"}, true
+	case "verifactu":
+		return []string{"invoice_id:int", "status:string", "fiscal_data:text"}, true
+	}
+	return nil, false
+}
+
 // HasCuratedDefaultFields reports whether a module gets meaningful default
 // fields when none are declared (instead of the single-name fallback).
 func HasCuratedDefaultFields(name string) bool {
-	switch name {
-	case "auth", "user", "organization", "product", "contact", "calendar", "inventory", "invoice", "verifactu":
-		return true
-	}
-	return false
+	_, ok := CuratedDefaultFields(name)
+	return ok
 }
 
 // extractInfraFeatures removes infrastructure feature aliases from the list
@@ -395,34 +460,22 @@ func (g *TemplateGenerator) GenerateProject(config *GeneratorConfig) (*ProjectSt
 	}
 
 	// Step 4: Ensure default fields for GTH and Backend consistency
+	if config.ModuleFields == nil {
+		config.ModuleFields = make(map[string][]string)
+	}
 	for _, feature := range config.Features {
-		if feature == "auth" || feature == "user" || feature == "organization" {
+		if len(config.ModuleFields[feature]) > 0 {
 			continue
 		}
-		if len(config.ModuleFields[feature]) == 0 {
-			if config.ModuleFields == nil {
-				config.ModuleFields = make(map[string][]string)
-			}
 
-			switch feature {
-			case "product":
-				config.ModuleFields[feature] = []string{FieldNameString, "sku:string", "price:int", "description:text", "stock:int"}
-			case "contact":
-				config.ModuleFields[feature] = []string{FieldNameString, "email:string", "phone:string", "company:string"}
-			case "calendar":
-				config.ModuleFields[feature] = []string{FieldNameString, "start_time:string", "end_time:string", "location:string"}
-			case "inventory":
-				config.ModuleFields[feature] = []string{"product_id:int", "quantity:int", "warehouse:string"}
-			case "invoice":
-				config.ModuleFields[feature] = []string{"customer_id:int", "amount:int", "status:string", "due_date:string"}
-			case "verifactu":
-				config.ModuleFields[feature] = []string{"invoice_id:int", "status:string", "fiscal_data:text"}
-			default:
-				fmt.Printf("⚠️  Module '%s' has no fields declared — defaulting to a single 'name' field.\n", feature)
-				fmt.Printf("   Declare real fields via the blueprint (modules.%s.fields) or 'kthulu add module %s <name:type...>'.\n", feature, feature)
-				config.ModuleFields[feature] = []string{FieldNameString}
-			}
+		if curated, ok := CuratedDefaultFields(feature); ok {
+			config.ModuleFields[feature] = curated
+			continue
 		}
+
+		fmt.Printf("⚠️  Module '%s' has no fields declared — defaulting to a single 'name' field.\n", feature)
+		fmt.Printf("   Declare real fields via the blueprint (modules.%s.fields) or 'kthulu add module %s <name:type...>'.\n", feature, feature)
+		config.ModuleFields[feature] = []string{FieldNameString}
 	}
 
 	// Step 4.1: Generate module files (only for server templates)
@@ -556,6 +609,7 @@ func (g *TemplateGenerator) generateBaseStructure(structure *ProjectStructure) e
 	infraFiles := map[string]string{
 		"internal/infrastructure/middleware/recovery.go":   TmplInfraRecovery,
 		"internal/infrastructure/middleware/middleware.go": TmplInfraMiddleware,
+		"internal/infrastructure/middleware/auth.go":       TmplInfraAuth,
 		"internal/infrastructure/observability/logger.go":  TmplInfraLogger,
 		"internal/infrastructure/observability/metrics.go": TmplInfraMetrics,
 		"internal/infrastructure/server/server.go":         TmplInfraServer,
@@ -631,7 +685,7 @@ func (g *TemplateGenerator) generateModuleFiles(moduleName string, structure *Pr
 
 	// Generate module files using GenerateBackendModule to ensure consistency
 	fields := g.config.ModuleFields[moduleName]
-	files, migrationContent, err := g.GenerateBackendModule(moduleName, fields, relPath, ToKebabCase(moduleName), false)
+	files, migrationContent, err := g.GenerateBackendModule(moduleName, fields, relPath, ToKebabCase(moduleName), g.protectRoutes(moduleName))
 	if err != nil {
 		return err
 	}
@@ -706,7 +760,78 @@ func (g *TemplateGenerator) generateInfraProviders() string {
 	return strings.Join(providers, "\n")
 }
 
+// RegenerateBootstrap rebuilds pkg/bootstrap/app.go for a project's full
+// module set (its existing modules plus whatever the caller is adding) and
+// returns the file's new content.
+//
+// Every provider, the RegisterRoutes parameter list and every route
+// registration in that file is derived from config.Features, so the only
+// reliable way to add a module to it is to redo that derivation over the
+// full set — not to patch the file module by module, as `kthulu add module`
+// used to by rewriting cmd/server/main.go's AST. That patch targeted a
+// local `apiRouter` variable and a plain fx.New(directArgs...) call, a shape
+// the generator stopped producing once routing moved into this file behind
+// fx.New(opts...); every `add module` run since has silently corrupted
+// main.go instead of registering anything.
+func (g *TemplateGenerator) RegenerateBootstrap(allFeatures []string) string {
+	g.config.Features, g.infra = extractInfraFeatures(allFeatures)
+	return g.generateBootstrapApp()
+}
+
+// RegenerateGTHRoutes rebuilds internal/adapters/http/gth/routes.go for a
+// project's full module set, the GTH-frontend counterpart to
+// RegenerateBootstrap.
+//
+// Its RegisterRoutes signature and every per-module handler come from
+// config.Features exactly as at initial generation. pkg/bootstrap/app.go's
+// RegisterRoutes already calls gth.RegisterRoutes with one service argument
+// per current module (see the template's FeatureList loop); a routes.go left
+// over from project creation stops matching that call's argument count the
+// moment a module is added, so `add module` must redo this derivation too
+// whenever the project has a GTH frontend, not just pkg/bootstrap/app.go.
+func (g *TemplateGenerator) RegenerateGTHRoutes(allFeatures []string) (string, error) {
+	g.config.Features, g.infra = extractInfraFeatures(allFeatures)
+
+	// Features must be resolvedFeatures(), not g.config.Features raw: this
+	// is the same value generateBootstrapApp's FeatureList now uses for the
+	// call to gth.RegisterRoutes, and the two are positional arguments on
+	// either side of the same call. allFeatures itself can arrive in
+	// whatever order the caller's bookkeeping produced (add module builds it
+	// by walking a map), so without resolving both through the same
+	// deterministic, sorted path here and in generateBootstrapApp, the two
+	// files agree on which modules exist but can still disagree on what
+	// order their parameters come in — which is a silent type mismatch at
+	// every position after the first swapped pair, not a missing-module
+	// error.
+	layoutData := map[string]interface{}{
+		"ProjectName":   g.config.ProjectName,
+		"ProjectModule": g.modulePath(),
+		"Features":      g.resolvedFeatures(),
+		"ModulesPath":   g.getModuleRelPath(),
+	}
+
+	return g.executeTemplate("gth_routes", TmplGTHRoutes, layoutData)
+}
+
 // generateBootstrapApp generates the bootstrap/app.go file
+// resolvedFeatures returns config.Features expanded to its full dependency
+// closure — the same set generateModuleProviders, generateModuleRoutes,
+// generateInvokeParams and generateModuleImports already compute for
+// themselves. Anything that decides which modules a template wires together
+// must use this, not config.Features directly: a module pulled in only as
+// another one's dependency (like "user" through "auth") is real for every
+// one of those call sites, and treating it as absent in just one of them —
+// which FeatureList and generateGTHFrontend's layoutData both used to do —
+// is what left gth.RegisterRoutes's own signature, the call to it, and the
+// nav it renders all disagreeing about which modules exist.
+func (g *TemplateGenerator) resolvedFeatures() []string {
+	plan, err := g.resolver.ResolveDependencies(g.config.Features)
+	if err != nil {
+		return g.config.Features
+	}
+	return plan.RequiredModules
+}
+
 func (g *TemplateGenerator) generateBootstrapApp() string {
 	coreImport := g.moduleImportPath("internal/core")
 	data := map[string]interface{}{
@@ -720,7 +845,7 @@ func (g *TemplateGenerator) generateBootstrapApp() string {
 		"QueueEnabled":    g.infra["queue"],
 		"InfraImports":    g.generateInfraImports(),
 		"InfraProviders":  g.generateInfraProviders(),
-		"FeatureList":     g.config.Features,
+		"FeatureList":     g.resolvedFeatures(),
 	}
 
 	content, err := g.executeTemplate("bootstrap_app", TmplBootstrapApp, data)
@@ -771,6 +896,7 @@ func (g *TemplateGenerator) generateGoMod() string {
 	addDep("gorm.io/driver/sqlite v1.5.4")
 	addDep("gorm.io/driver/postgres v1.5.4") // For Vercel/Neon
 	addDep("github.com/golang-jwt/jwt/v5 v5.2.0")
+	addDep("golang.org/x/crypto v0.31.0") // bcrypt, for the auth module
 	addDep("github.com/pressly/goose/v3 v3.24.3")
 	addDep("github.com/a-h/templ v0.3.977") // GTH frontend
 
@@ -972,6 +1098,7 @@ func (g *TemplateGenerator) GenerateDomainFile(name string, fields []BackendFiel
 		"Name":        name,
 		"Title":       Capitalize(inflection.Singular(name)),
 		"PluralTitle": Pluralize(Capitalize(name)),
+		"TableName":   SQLTableName(name),
 		"Fields":      fields,
 	}
 
@@ -1005,6 +1132,7 @@ func (g *TemplateGenerator) GenerateServiceFile(name string) string {
 		"Name":        name,
 		"Title":       Capitalize(inflection.Singular(name)),
 		"PluralTitle": Pluralize(Capitalize(name)),
+		"TableName":   SQLTableName(name),
 		"CoreImport":  g.moduleImportPath(relPath, name, "core"),
 	}
 
@@ -1022,6 +1150,7 @@ func (g *TemplateGenerator) GenerateHandlerFile(name string) string {
 		"Name":         name,
 		"Title":        Capitalize(inflection.Singular(name)),
 		"PluralTitle":  Pluralize(Capitalize(name)),
+		"TableName":    SQLTableName(name),
 		"RoutePrefix":  ToKebabCase(name),
 		"DomainImport": g.moduleImportPath(relPath, name, "domain"),
 	}
@@ -1061,6 +1190,7 @@ func (g *TemplateGenerator) GenerateBackendModule(moduleName string, fields []st
 		"Name":          moduleName,
 		"Title":         Capitalize(inflection.Singular(moduleName)),
 		"PluralTitle":   Pluralize(Capitalize(moduleName)),
+		"TableName":     SQLTableName(moduleName),
 		"Fields":        backendFields,
 		"Imports":       imports,
 		"Database":      g.config.Database,
@@ -1082,6 +1212,15 @@ func (g *TemplateGenerator) GenerateBackendModule(moduleName string, fields []st
 		"api/" + moduleName + "_handler.go":  TmplLayerHandler,
 	}
 
+	// The auth module keeps the same provider names, so nothing that wires it
+	// changes, but its layers do the work its name promises.
+	if IsAuthModule(moduleName) {
+		layers["core/"+moduleName+".go"] = TmplAuthCore
+		layers["store/"+moduleName+"_store.go"] = TmplAuthStore
+		layers["core/"+moduleName+"_service.go"] = TmplAuthService
+		layers["api/"+moduleName+"_handler.go"] = TmplAuthHandler
+	}
+
 	for relPath, tmplPath := range layers {
 		content, err := g.executeTemplate(relPath, tmplPath, data)
 		if err != nil {
@@ -1092,8 +1231,10 @@ func (g *TemplateGenerator) GenerateBackendModule(moduleName string, fields []st
 
 	// Validation layer (built from field rules; always generated so the
 	// service-level Validate() call compiles for every module).
-	title := Capitalize(inflection.Singular(moduleName))
-	files["core/"+moduleName+"_validation.go"] = GenerateValidationFile(moduleName, title, backendFields)
+	if !IsAuthModule(moduleName) {
+		title := Capitalize(inflection.Singular(moduleName))
+		files["core/"+moduleName+"_validation.go"] = GenerateValidationFile(moduleName, title, backendFields)
+	}
 
 	// Migration
 	migrationContent, err := g.executeTemplate("migration", TmplMigration, data)
@@ -1120,11 +1261,14 @@ func (g *TemplateGenerator) generateGTHFrontend(structure *ProjectStructure) err
 
 	structure.Directories = append(structure.Directories, dirs...)
 
-	// Generate base layouts
+	// Generate base layouts. Features is the resolved set (see
+	// resolvedFeatures), so a module pulled in only as another one's
+	// dependency still gets a nav entry, a RegisterRoutes parameter and an
+	// argument at the call site, consistently with pkg/bootstrap/app.go.
 	layoutData := map[string]interface{}{
 		"ProjectName":   g.config.ProjectName,
 		"ProjectModule": g.modulePath(),
-		"Features":      g.config.Features,
+		"Features":      g.resolvedFeatures(),
 		"ModulesPath":   g.getModuleRelPath(),
 	}
 
@@ -1198,9 +1342,15 @@ func (g *TemplateGenerator) generateGTHFrontend(structure *ProjectStructure) err
 		Content: routesContent,
 	})
 
-	// Generate module-specific views
-	for _, feature := range g.config.Features {
-		if feature == "auth" || feature == "users" {
+	// Generate module-specific views, over the same resolved set layoutData
+	// above uses, so every module routes.go now references has views to
+	// render.
+	for _, feature := range g.resolvedFeatures() {
+		// Only auth is excluded here, matching routes_gth.go.tmpl's own
+		// {{if ne . "auth"}} guard: user and organization get full admin
+		// CRUD pages like any other module (see the RegisterRoutes params
+		// and the routes it registers, which do not exclude them).
+		if feature == "auth" {
 			continue
 		}
 
@@ -1225,6 +1375,7 @@ func (g *TemplateGenerator) GenerateGTHModule(moduleName string, fields []string
 		"Name":          moduleName,
 		"Title":         Capitalize(Singularize(moduleName)),
 		"PluralTitle":   Pluralize(Capitalize(Singularize(moduleName))),
+		"TableName":     SQLTableName(Singularize(moduleName)),
 		"Fields":        backendFields,
 		"ProjectModule": g.modulePath(),
 		"RoutePrefix":   ToKebabCase(moduleName),
@@ -1472,6 +1623,7 @@ func (g *TemplateGenerator) generateServiceTestFile(name string) string {
 		"Name":         name,
 		"Title":        Capitalize(inflection.Singular(name)),
 		"PluralTitle":  Pluralize(Capitalize(name)),
+		"TableName":    SQLTableName(name),
 		"DomainImport": g.moduleImportPath(PathAdaptersHttpModules, name, "domain"),
 	}
 
@@ -1488,6 +1640,7 @@ func (g *TemplateGenerator) generateHandlerTestFile(name string) string {
 		"Name":         name,
 		"Title":        Capitalize(inflection.Singular(name)),
 		"PluralTitle":  Pluralize(Capitalize(name)),
+		"TableName":    SQLTableName(name),
 		"DomainImport": g.moduleImportPath(PathAdaptersHttpModules, name, "domain"),
 	}
 
@@ -1629,10 +1782,10 @@ func (g *TemplateGenerator) generateMCPStructure(structure *ProjectStructure) er
 	files := map[string]string{
 		FileGoMod: "scaffold/mcp/go.mod.tmpl",
 		fmt.Sprintf("cmd/%s/main.go", g.config.ProjectName): "scaffold/mcp/main.go.tmpl",
-		"internal/mcp/server.go":           "scaffold/mcp/server.go.tmpl",
-		"internal/mcp/server_test.go":      "scaffold/mcp/server_test.go.tmpl",
-		"internal/tools/tools.go":          "scaffold/mcp/tools.go.tmpl",
-		"internal/tools/ui/dashboard.html": "scaffold/mcp/ui_dashboard.html.tmpl",
+		"internal/mcp/server.go":                            "scaffold/mcp/server.go.tmpl",
+		"internal/mcp/server_test.go":                       "scaffold/mcp/server_test.go.tmpl",
+		"internal/tools/tools.go":                           "scaffold/mcp/tools.go.tmpl",
+		"internal/tools/ui/dashboard.html":                  "scaffold/mcp/ui_dashboard.html.tmpl",
 	}
 	for path, tmpl := range files {
 		content, err := g.executeTemplate(path, tmpl, data)
