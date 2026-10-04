@@ -538,7 +538,7 @@ func runAddModule(module string, fields []string, integrations []string, complia
 		// matching the call pkg/bootstrap/app.go just regenerated for it.
 		if content, err := templateGenerator.RegenerateGTHRoutes(allProjectModules(analysis, plan.RequiredModules)); err != nil {
 			fmt.Printf("   ⚠️  Warning: Failed to update internal/adapters/http/gth/routes.go: %v\n", err)
-		} else if err := os.WriteFile(filepath.Join(config.OutputPath, "internal", "adapters", "http", "gth", "routes.go"), []byte(content), 0644); err != nil {
+		} else if err := generator.WriteGeneratedFile(filepath.Join(config.OutputPath, "internal", "adapters", "http", "gth", "routes.go"), content, 0644); err != nil {
 			fmt.Printf("   ⚠️  Warning: Failed to write internal/adapters/http/gth/routes.go: %v\n", err)
 		} else {
 			fmt.Printf("   🎨 Updated internal/adapters/http/gth/routes.go for %s\n", module)
@@ -804,10 +804,9 @@ func generateSpecificModule(config *generator.GeneratorConfig, moduleName string
 
 	for relPath, content := range files {
 		filePath := filepath.Join(moduleDir, relPath)
-		if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
-			return fmt.Errorf("failed to create directory for %s: %w", filePath, err)
-		}
-		if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+		// Re-adding an existing module regenerates its files; the
+		// hand-written content of their vord holes is carried over.
+		if err := generator.WriteGeneratedFile(filePath, content, 0644); err != nil {
 			return fmt.Errorf("failed to write file %s: %w", filePath, err)
 		}
 		fmt.Printf("   📝 Generated %s\n", relPath)
@@ -855,7 +854,7 @@ func writeBootstrap(gen *generator.TemplateGenerator, outputPath string, allModu
 	if strings.TrimSpace(content) == "" {
 		return fmt.Errorf("generated bootstrap/app.go was empty")
 	}
-	return os.WriteFile(filepath.Join(outputPath, "pkg", "bootstrap", "app.go"), []byte(content), 0644)
+	return generator.WriteGeneratedFile(filepath.Join(outputPath, "pkg", "bootstrap", "app.go"), content, 0644)
 }
 
 // registerModuleInBootstrap wires newModule into pkg/bootstrap/app.go

@@ -184,9 +184,11 @@ func parseSchedule(schedule string) (time.Duration, error) {
 		return duration, nil
 	}
 	
+	// vord:hole scheduler-cron-parse
 	// TODO: Parse full cron expressions
 	// For now, default to hourly
 	return time.Hour, fmt.Errorf("cron expressions not yet supported, using hourly")
+	// vord:end-hole
 }
 
 // StartScheduler is an Fx lifecycle hook to start the scheduler

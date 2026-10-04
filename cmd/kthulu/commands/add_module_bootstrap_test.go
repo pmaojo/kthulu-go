@@ -5,6 +5,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	genparser "github.com/pmaojo/kthulu-go/internal/adapters/cli/parser"
@@ -104,4 +105,45 @@ func TestRunAddModule_ExplicitPrefixIsNotDoubled(t *testing.T) {
 	handlerSrc := string(handler)
 	assert.Contains(t, handlerSrc, `PathPrefix("/api/v2/invoice-lines")`)
 	assert.NotContains(t, handlerSrc, `PathPrefix("//api/v2/invoice-lines")`)
+}
+
+// Re-running `kthulu add module` on an existing module regenerates its
+// files: hand-written code inside vord holes survives, everything outside
+// them (the generated part) is rebuilt.
+func TestRunAddModule_RegenerationPreservesHoles(t *testing.T) {
+	dir := t.TempDir()
+	generateTestProject(t, dir, "github.com/example/luthier", []string{"auth", "customer"})
+
+	originalWd, _ := os.Getwd()
+	require.NoError(t, os.Chdir(dir))
+	defer os.Chdir(originalWd)
+
+	require.NoError(t, runAddModule("guitar", []string{"model:string"}, nil, "", false, true, "", false, false))
+
+	servicePath := filepath.Join(dir, "internal", "modules", "guitar", "core", "guitar_service.go")
+	src, err := os.ReadFile(servicePath)
+	require.NoError(t, err)
+	assert.True(t, generator.HasGeneratedHeader(string(src)), "generated service must carry the header")
+
+	edited := strings.Replace(string(src),
+		"// vord:hole guitar-service-create\n\t// Add business logic here\n",
+		"// vord:hole guitar-service-create\n\tentity.Model = strings.TrimSpace(entity.Model)\n", 1)
+	edited = strings.Replace(edited,
+		"// vord:hole guitar-service-imports\n",
+		"// vord:hole guitar-service-imports\nimport \"strings\"\n", 1)
+	edited = strings.Replace(edited, "return s.repo.Update(entity)", "return nil // tampered", 1)
+	require.NotEqual(t, string(src), edited)
+	require.NoError(t, os.WriteFile(servicePath, []byte(edited), 0o644))
+
+	require.NoError(t, runAddModule("guitar", []string{"model:string"}, nil, "", false, true, "", false, false))
+
+	out, err := os.ReadFile(servicePath)
+	require.NoError(t, err)
+	got := string(out)
+	assert.Contains(t, got, "\tentity.Model = strings.TrimSpace(entity.Model)\n")
+	assert.Contains(t, got, "import \"strings\"\n")
+	assert.Contains(t, got, "return s.repo.Update(entity)")
+	assert.NotContains(t, got, "tampered")
+	_, err = parser.ParseFile(token.NewFileSet(), "guitar_service.go", out, 0)
+	assert.NoError(t, err)
 }

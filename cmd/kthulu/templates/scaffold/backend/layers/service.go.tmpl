@@ -1,6 +1,9 @@
 // @kthulu:service:{{.Name}}
 package core
 
+// vord:hole {{ToKebabCase .Name}}-service-imports
+// vord:end-hole
+
 type {{.Title | lower}}Service struct {
 	repo {{.Title}}Repository
 }
@@ -13,7 +16,9 @@ func (s *{{.Title | lower}}Service) Create{{.Title}}(entity *{{.Title}}) error {
 	if err := entity.Validate(); err != nil {
 		return err
 	}
+	// vord:hole {{ToKebabCase .Name}}-service-create
 	// Add business logic here
+	// vord:end-hole
 	return s.repo.Create(entity)
 }
 
@@ -25,12 +30,16 @@ func (s *{{.Title | lower}}Service) Update{{.Title}}(entity *{{.Title}}) error {
 	if err := entity.Validate(); err != nil {
 		return err
 	}
+	// vord:hole {{ToKebabCase .Name}}-service-update
 	// Add business logic here
+	// vord:end-hole
 	return s.repo.Update(entity)
 }
 
 func (s *{{.Title | lower}}Service) Delete{{.Title}}(id uint) error {
+	// vord:hole {{ToKebabCase .Name}}-service-delete
 	// Add business logic here
+	// vord:end-hole
 	return s.repo.Delete(id)
 }
 

@@ -131,8 +131,10 @@ func (v *Validator) Validate(data map[string]interface{}, rules map[string]strin
 
 // ValidateStruct validates a struct using struct tags
 func (v *Validator) ValidateStruct(s interface{}) Errors {
+	// vord:hole validate-struct
 	// TODO: Implement reflection-based struct validation
 	return make(Errors)
+	// vord:end-hole
 }
 
 func (v *Validator) formatMessage(rule, field string, params ...string) string {
