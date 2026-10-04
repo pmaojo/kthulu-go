@@ -12,6 +12,9 @@ import (
 	"time"
 )
 
+// vord:hole cache-imports
+// vord:end-hole
+
 // Cache defines the interface for caching operations
 type Cache interface {
 	Get(ctx context.Context, key string) ([]byte, error)
@@ -275,6 +278,7 @@ func (c *MemoryCache) cleanup() {
 // Redis Cache Implementation
 // ===============================
 
+// vord:hole cache-redis
 type RedisCache struct {
 	config *Config
 }
@@ -335,11 +339,13 @@ func (c *RedisCache) Lock(ctx context.Context, key string, ttl time.Duration) (b
 func (c *RedisCache) Unlock(ctx context.Context, key string) error {
 	return fmt.Errorf("Redis cache not yet implemented")
 }
+// vord:end-hole
 
 // ===============================
 // Memcached Cache Implementation
 // ===============================
 
+// vord:hole cache-memcached
 type MemcachedCache struct {
 	config *Config
 }
@@ -400,3 +406,4 @@ func (c *MemcachedCache) Lock(ctx context.Context, key string, ttl time.Duration
 func (c *MemcachedCache) Unlock(ctx context.Context, key string) error {
 	return fmt.Errorf("Memcached cache not yet implemented")
 }
+// vord:end-hole

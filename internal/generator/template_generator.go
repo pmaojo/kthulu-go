@@ -517,6 +517,9 @@ func (g *TemplateGenerator) GenerateProject(config *GeneratorConfig) (*ProjectSt
 		}
 	}
 
+	// Mark everything kthulu derived from the plan as generated code.
+	markStructure(structure)
+
 	fmt.Printf("✅ Project generated successfully: %d files, %d directories\n",
 		len(structure.Files), len(structure.Directories))
 
@@ -775,7 +778,7 @@ func (g *TemplateGenerator) generateInfraProviders() string {
 // main.go instead of registering anything.
 func (g *TemplateGenerator) RegenerateBootstrap(allFeatures []string) string {
 	g.config.Features, g.infra = extractInfraFeatures(allFeatures)
-	return g.generateBootstrapApp()
+	return MarkGenerated("pkg/bootstrap/app.go", g.generateBootstrapApp())
 }
 
 // RegenerateGTHRoutes rebuilds internal/adapters/http/gth/routes.go for a
@@ -810,7 +813,11 @@ func (g *TemplateGenerator) RegenerateGTHRoutes(allFeatures []string) (string, e
 		"ModulesPath":   g.getModuleRelPath(),
 	}
 
-	return g.executeTemplate("gth_routes", TmplGTHRoutes, layoutData)
+	content, err := g.executeTemplate("gth_routes", TmplGTHRoutes, layoutData)
+	if err != nil {
+		return "", err
+	}
+	return MarkGenerated("internal/adapters/http/gth/routes.go", content), nil
 }
 
 // generateBootstrapApp generates the bootstrap/app.go file
@@ -1226,14 +1233,14 @@ func (g *TemplateGenerator) GenerateBackendModule(moduleName string, fields []st
 		if err != nil {
 			return nil, "", fmt.Errorf(ErrGenerateFmt, relPath, err)
 		}
-		files[relPath] = content
+		files[relPath] = MarkGenerated(relPath, content)
 	}
 
 	// Validation layer (built from field rules; always generated so the
 	// service-level Validate() call compiles for every module).
 	if !IsAuthModule(moduleName) {
 		title := Capitalize(inflection.Singular(moduleName))
-		files["core/"+moduleName+"_validation.go"] = GenerateValidationFile(moduleName, title, backendFields)
+		files["core/"+moduleName+"_validation.go"] = MarkGenerated(".go", GenerateValidationFile(moduleName, title, backendFields))
 	}
 
 	// Migration
@@ -1241,6 +1248,7 @@ func (g *TemplateGenerator) GenerateBackendModule(moduleName string, fields []st
 	if err != nil {
 		fmt.Printf("⚠️  Warning: Failed to generate migration: %v\n", err)
 	}
+	migrationContent = MarkGenerated("migration.sql", migrationContent)
 
 	return files, migrationContent, nil
 }
@@ -1397,7 +1405,7 @@ func (g *TemplateGenerator) GenerateGTHModule(moduleName string, fields []string
 		}
 		structure.Files = append(structure.Files, GeneratedFile{
 			Path:    filePath,
-			Content: content,
+			Content: MarkGenerated(filePath, content),
 		})
 	}
 
@@ -1676,11 +1684,9 @@ func (g *TemplateGenerator) WriteProject(structure *ProjectStructure) error {
 			}
 		}
 
-		// Write file content
-		if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
-			return fmt.Errorf("failed to create directory for %s: %w", filePath, err)
-		}
-		if err := os.WriteFile(filePath, []byte(file.Content), 0644); err != nil {
+		// Write file content. Overwriting a file kthulu generated before
+		// keeps the hand-written content of its holes.
+		if err := WriteGeneratedFile(filePath, MarkGenerated(file.Path, file.Content), 0644); err != nil {
 			return fmt.Errorf("failed to write file %s: %w", filePath, err)
 		}
 

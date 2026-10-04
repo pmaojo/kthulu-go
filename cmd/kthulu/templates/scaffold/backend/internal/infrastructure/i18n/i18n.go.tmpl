@@ -181,7 +181,9 @@ func (t *Translator) Choice(locale, key string, count int, args ...interface{}) 
 	}
 	
 	// Extended pluralization: "{0} none|{1} one|[2,*] many"
+	// vord:hole i18n-icu-format
 	// TODO: Implement full ICU message format
+	// vord:end-hole
 	
 	return translation
 }

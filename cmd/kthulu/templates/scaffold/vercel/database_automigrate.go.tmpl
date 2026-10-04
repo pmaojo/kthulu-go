@@ -17,12 +17,14 @@ func AutoMigrate(db *gorm.DB) error {
 
 	fmt.Println("🔄 Running auto-migrations...")
 
+	// vord:hole automigrate-models
 	// Add your models here for auto-migration
 	// Example:
 	// err := db.AutoMigrate(
 	//     &user.User{},
 	//     &task.Task{},
 	// )
+	// vord:end-hole
 
 	fmt.Println("✅ Migrations complete")
 	return nil

@@ -201,8 +201,10 @@ func (p *ResourcePolicy) Delete(user User, resource interface{}) bool {
 }
 
 func (p *ResourcePolicy) isOwner(user User, resource interface{}) bool {
+	// vord:hole policy-is-owner
 	// TODO: Use reflection to check owner field
 	return true
+	// vord:end-hole
 }
 
 // ===============================

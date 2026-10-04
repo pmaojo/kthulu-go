@@ -1,16 +1,24 @@
 // @kthulu:gth:routes
 package gth
+{{- /* Module handlers are the only users of strconv, components and partials;
+     without a module feature (e.g. only cache,mail) those imports would be
+     unused, and partials would not even exist. */}}
+{{- $modules := false}}{{range .Features}}{{if ne . "auth"}}{{$modules = true}}{{end}}{{end}}
 
 import (
 	"net/http"
+{{- if $modules}}
 	"strconv"
+{{- end}}
 
 	"github.com/gorilla/mux"
 	"github.com/a-h/templ"
 
 	"{{.ProjectModule}}/internal/views/pages"
+{{- if $modules}}
 	"{{.ProjectModule}}/internal/views/components"
 	"{{.ProjectModule}}/internal/views/partials"
+{{- end}}
 
 	// Module Core Imports
 	{{range .Features}}

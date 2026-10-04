@@ -91,6 +91,7 @@ func RegisterRoutes(router *mux.Router, {{.InvokeParams}}) {
 {{end}}
 	// Register API routes
 	apiRouter := router.PathPrefix("/api/v1").Subrouter()
+	_ = apiRouter // unused when no module has API routes (e.g. only cache,mail)
 
 {{.ModuleRoutes}}
 }

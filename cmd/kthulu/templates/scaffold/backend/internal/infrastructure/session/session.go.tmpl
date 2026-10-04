@@ -13,6 +13,9 @@ import (
 	"time"
 )
 
+// vord:hole session-imports
+// vord:end-hole
+
 // Session represents a user session
 type Session struct {
 	ID        string
@@ -319,6 +322,7 @@ func (s *MemoryStore) startGC() {
 // Redis Store Implementation  
 // ===============================
 
+// vord:hole session-redis
 type RedisStore struct {
 	config *Config
 }
@@ -342,11 +346,13 @@ func (s *RedisStore) Delete(ctx context.Context, id string) error {
 func (s *RedisStore) GarbageCollect(ctx context.Context) error {
 	return nil // Redis handles TTL automatically
 }
+// vord:end-hole
 
 // ===============================
 // Database Store Implementation
 // ===============================
 
+// vord:hole session-database
 type DatabaseStore struct {
 	config *Config
 }
@@ -370,6 +376,7 @@ func (s *DatabaseStore) Delete(ctx context.Context, id string) error {
 func (s *DatabaseStore) GarbageCollect(ctx context.Context) error {
 	return fmt.Errorf("Database session store not yet implemented")
 }
+// vord:end-hole
 
 // ===============================
 // HTTP Middleware

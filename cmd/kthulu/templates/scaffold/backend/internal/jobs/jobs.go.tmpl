@@ -45,7 +45,9 @@ func HandleWelcomeEmail(ctx context.Context, payload []byte) error {
 	if err := json.Unmarshal(payload, &p); err != nil {
 		return err
 	}
+	// vord:hole jobs-welcome-email
 	// TODO: integrate your mailer here.
+	// vord:end-hole
 	log.Printf("jobs: sending welcome email to user %d <%s>", p.UserID, p.Email)
 	return nil
 }

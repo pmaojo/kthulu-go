@@ -12,6 +12,9 @@ import (
 	"time"
 )
 
+// vord:hole storage-imports
+// vord:end-hole
+
 // Storage defines the interface for file storage operations
 type Storage interface {
 	// Basic operations
@@ -260,6 +263,7 @@ func (s *LocalStorage) Move(ctx context.Context, from, to string) error {
 // S3 Storage Implementation
 // ===============================
 
+// vord:hole storage-s3
 type S3Storage struct {
 	config *Config
 }
@@ -324,11 +328,13 @@ func (s *S3Storage) Copy(ctx context.Context, from, to string) error {
 func (s *S3Storage) Move(ctx context.Context, from, to string) error {
 	return fmt.Errorf("S3 storage not yet implemented")
 }
+// vord:end-hole
 
 // ===============================
 // GCS Storage Implementation
 // ===============================
 
+// vord:hole storage-gcs
 type GCSStorage struct {
 	config *Config
 }
@@ -392,11 +398,13 @@ func (s *GCSStorage) Copy(ctx context.Context, from, to string) error {
 func (s *GCSStorage) Move(ctx context.Context, from, to string) error {
 	return fmt.Errorf("GCS storage not yet implemented")
 }
+// vord:end-hole
 
 // ===============================
 // Azure Storage Implementation
 // ===============================
 
+// vord:hole storage-azure
 type AzureStorage struct {
 	config *Config
 }
@@ -460,3 +468,4 @@ func (s *AzureStorage) Copy(ctx context.Context, from, to string) error {
 func (s *AzureStorage) Move(ctx context.Context, from, to string) error {
 	return fmt.Errorf("Azure storage not yet implemented")
 }
+// vord:end-hole

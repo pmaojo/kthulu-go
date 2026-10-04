@@ -11,6 +11,9 @@ import (
 	"strings"
 )
 
+// vord:hole mail-imports
+// vord:end-hole
+
 // Mailer defines the interface for sending emails
 type Mailer interface {
 	Send(ctx context.Context, msg *Message) error
@@ -137,10 +140,12 @@ func (m *SMTPMailer) Send(ctx context.Context, msg *Message) error {
 }
 
 func (m *SMTPMailer) SendAsync(ctx context.Context, msg *Message) error {
+	// vord:hole mail-smtp-send-async
 	// TODO: Integrate with queue system
 	go func() {
 		_ = m.Send(context.Background(), msg)
 	}()
+	// vord:end-hole
 	return nil
 }
 
@@ -172,6 +177,7 @@ func truncate(s string, max int) string {
 	return s[:max]
 }
 
+// vord:hole mail-ses
 // SESMailer implements Mailer using AWS SES
 type SESMailer struct {
 	config *Config
@@ -191,7 +197,9 @@ func (m *SESMailer) SendAsync(ctx context.Context, msg *Message) error {
 	go func() { _ = m.Send(context.Background(), msg) }()
 	return nil
 }
+// vord:end-hole
 
+// vord:hole mail-sendgrid
 // SendGridMailer implements Mailer using SendGrid API
 type SendGridMailer struct {
 	config *Config
@@ -211,7 +219,9 @@ func (m *SendGridMailer) SendAsync(ctx context.Context, msg *Message) error {
 	go func() { _ = m.Send(context.Background(), msg) }()
 	return nil
 }
+// vord:end-hole
 
+// vord:hole mail-mailgun
 // MailgunMailer implements Mailer using Mailgun API
 type MailgunMailer struct {
 	config *Config
@@ -231,7 +241,9 @@ func (m *MailgunMailer) SendAsync(ctx context.Context, msg *Message) error {
 	go func() { _ = m.Send(context.Background(), msg) }()
 	return nil
 }
+// vord:end-hole
 
+// vord:hole mail-resend
 // ResendMailer implements Mailer using Resend API
 type ResendMailer struct {
 	config *Config
@@ -251,6 +263,7 @@ func (m *ResendMailer) SendAsync(ctx context.Context, msg *Message) error {
 	go func() { _ = m.Send(context.Background(), msg) }()
 	return nil
 }
+// vord:end-hole
 
 // TemplateMailer wraps a Mailer with template support
 type TemplateMailer struct {
